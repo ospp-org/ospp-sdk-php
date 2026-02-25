@@ -163,14 +163,18 @@ final class ProtocolVersionTest extends TestCase
     }
 
     #[Test]
-    public function defaultWithCustomVersionString(): void
+    public function defaultWithCustomResolver(): void
     {
-        $version = ProtocolVersion::default('2.1.3');
+        ProtocolVersion::setDefaultResolver(fn () => '2.1.3');
+
+        $version = ProtocolVersion::default();
 
         self::assertSame(2, $version->major);
         self::assertSame(1, $version->minor);
         self::assertSame(3, $version->patch);
         self::assertSame('2.1.3', $version->value);
+
+        ProtocolVersion::setDefaultResolver(null);
     }
 
     // ---------------------------------------------------------------

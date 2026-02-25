@@ -31,8 +31,8 @@ final class CanonicalJsonSerializer
      */
     private function recursiveKeySort(array $data): array
     {
-        // Only sort if this is an associative array (object), not a sequential array
-        if ($this->isAssociative($data)) {
+        // Only sort associative arrays (objects), preserve sequential array order
+        if (! array_is_list($data)) {
             ksort($data, SORT_STRING);
         }
 
@@ -43,17 +43,5 @@ final class CanonicalJsonSerializer
         }
 
         return $data;
-    }
-
-    /**
-     * @param  array<mixed>  $data
-     */
-    private function isAssociative(array $data): bool
-    {
-        if ($data === []) {
-            return false;
-        }
-
-        return array_keys($data) !== range(0, count($data) - 1);
     }
 }

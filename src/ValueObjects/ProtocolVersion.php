@@ -10,14 +10,14 @@ use InvalidArgumentException;
  * Semantic version for OSPP protocol (e.g., "1.0.0").
  * Immutable. Supports major version compatibility checking.
  */
-final readonly class ProtocolVersion implements \JsonSerializable, \Stringable
+final class ProtocolVersion implements \JsonSerializable, \Stringable
 {
-    public string $value;
+    public readonly string $value;
 
     public function __construct(
-        public int $major,
-        public int $minor,
-        public int $patch,
+        public readonly int $major,
+        public readonly int $minor,
+        public readonly int $patch,
     ) {
         if ($major < 0 || $minor < 0 || $patch < 0) {
             throw new InvalidArgumentException('Version components must be non-negative.');
@@ -43,8 +43,23 @@ final readonly class ProtocolVersion implements \JsonSerializable, \Stringable
         );
     }
 
-    public static function default(string $version = '1.0.0'): self
+    private static ?\Closure $defaultResolver = null;
+
+    /**
+     * Set a custom resolver for the default protocol version.
+     * Allows frameworks to provide config-driven defaults (e.g., Laravel config()).
+     */
+    public static function setDefaultResolver(?\Closure $resolver): void
     {
+        self::$defaultResolver = $resolver;
+    }
+
+    public static function default(): self
+    {
+        $version = self::$defaultResolver !== null
+            ? (self::$defaultResolver)()
+            : '1.0.0';
+
         return self::fromString($version);
     }
 
