@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\StateMachines;
+namespace Ospp\Protocol\StateMachines;
 
-use OneStopPay\OsppProtocol\Enums\BayStatus;
-use OneStopPay\OsppProtocol\Enums\ReservationStatus;
+use Ospp\Protocol\Enums\BayStatus;
+use Ospp\Protocol\Enums\ReservationStatus;
 
 final class ReservationTransitions
 {

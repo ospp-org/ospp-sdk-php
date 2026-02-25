@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Envelope;
+namespace Ospp\Protocol\Envelope;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
-use OneStopPay\OsppProtocol\Enums\MessageType;
-use OneStopPay\OsppProtocol\ValueObjects\MessageId;
-use OneStopPay\OsppProtocol\ValueObjects\ProtocolVersion;
+use Ospp\Protocol\Enums\MessageType;
+use Ospp\Protocol\ValueObjects\MessageId;
+use Ospp\Protocol\ValueObjects\ProtocolVersion;
 
 final readonly class MessageBuilder
 {

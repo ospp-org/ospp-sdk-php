@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Crypto;
+namespace Ospp\Protocol\Crypto;
 
-use OneStopPay\OsppProtocol\Crypto\Contracts\EcdsaServiceInterface;
+use Ospp\Protocol\Crypto\Contracts\EcdsaServiceInterface;
 use RuntimeException;
 
 /**

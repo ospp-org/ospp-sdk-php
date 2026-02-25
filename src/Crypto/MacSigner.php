@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Crypto;
+namespace Ospp\Protocol\Crypto;
 
 /**
  * HMAC-SHA256 message signer and verifier.

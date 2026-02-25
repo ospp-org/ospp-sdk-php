@@ -13,7 +13,7 @@
   ## Installation
 
   ```bash
-  composer require onestoppay/ospp-sdk-php
+  composer require ospp/protocol
 
   For private repositories, add the VCS source first:
 
@@ -52,8 +52,8 @@
 
   Build and sign a message
 
-  use OneStopPay\OsppProtocol\Envelope\MessageBuilder;
-  use OneStopPay\OsppProtocol\Crypto\MacSigner;
+  use Ospp\Protocol\Envelope\MessageBuilder;
+  use Ospp\Protocol\Crypto\MacSigner;
 
   $envelope = MessageBuilder::request('StartService')
       ->withPayload(['bayId' => 'bay-1', 'userId' => 'user-123'])
@@ -66,15 +66,15 @@
 
   Check state transitions
 
-  use OneStopPay\OsppProtocol\Enums\SessionStatus;
-  use OneStopPay\OsppProtocol\StateMachines\SessionTransitions;
+  use Ospp\Protocol\Enums\SessionStatus;
+  use Ospp\Protocol\StateMachines\SessionTransitions;
 
   $allowed = SessionTransitions::canTransition('pending', 'authorized'); // true
   $timeout = SessionTransitions::timeout('active'); // 3600
 
   Wire format conversion
 
-  use OneStopPay\OsppProtocol\Enums\BayStatus;
+  use Ospp\Protocol\Enums\BayStatus;
 
   $status = BayStatus::fromOspp('Available'); // BayStatus::AVAILABLE
   $wire = BayStatus::OCCUPIED->toOspp();      // 'Occupied'
@@ -85,7 +85,7 @@
   - Pure PHP 8.3 — readonly classes, enums, match expressions, named arguments
   - Immutable — all DTOs and value objects are final readonly
   - Framework-agnostic — no Laravel, Symfony, or other framework dependency
-  - PSR-4 autoloading — OneStopPay\OsppProtocol\ namespace
+  - PSR-4 autoloading — Ospp\Protocol\ namespace
 
   Testing
 

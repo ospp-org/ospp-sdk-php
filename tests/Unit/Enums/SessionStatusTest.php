@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Unit\Enums;
+namespace Ospp\Protocol\Tests\Unit\Enums;
 
-use OneStopPay\OsppProtocol\Enums\SessionStatus;
+use Ospp\Protocol\Enums\SessionStatus;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

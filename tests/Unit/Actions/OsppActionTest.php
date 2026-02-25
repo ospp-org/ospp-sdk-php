@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Unit\Actions;
+namespace Ospp\Protocol\Tests\Unit\Actions;
 
-use OneStopPay\OsppProtocol\Actions\OsppAction;
+use Ospp\Protocol\Actions\OsppAction;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

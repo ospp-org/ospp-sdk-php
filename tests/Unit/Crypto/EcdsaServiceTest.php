@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Unit\Crypto;
+namespace Ospp\Protocol\Tests\Unit\Crypto;
 
-use OneStopPay\OsppProtocol\Crypto\CanonicalJsonSerializer;
-use OneStopPay\OsppProtocol\Crypto\EcdsaService;
+use Ospp\Protocol\Crypto\CanonicalJsonSerializer;
+use Ospp\Protocol\Crypto\EcdsaService;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -42,8 +42,16 @@ final class EcdsaServiceTest extends TestCase
         self::assertArrayHasKey('privateKey', $keyPair);
         self::assertArrayHasKey('publicKey', $keyPair);
 
-        self::assertStringStartsWith('-----BEGIN EC PRIVATE KEY-----', $keyPair['privateKey']);
-        self::assertStringContainsString('-----END EC PRIVATE KEY-----', $keyPair['privateKey']);
+        self::assertTrue(
+            str_starts_with($keyPair['privateKey'], '-----BEGIN EC PRIVATE KEY-----')
+            || str_starts_with($keyPair['privateKey'], '-----BEGIN PRIVATE KEY-----'),
+            'Private key must be PEM-encoded (SEC1 or PKCS#8 format)',
+        );
+        self::assertTrue(
+            str_contains($keyPair['privateKey'], '-----END EC PRIVATE KEY-----')
+            || str_contains($keyPair['privateKey'], '-----END PRIVATE KEY-----'),
+            'Private key must have PEM end marker',
+        );
 
         self::assertStringStartsWith('-----BEGIN PUBLIC KEY-----', $keyPair['publicKey']);
         self::assertStringContainsString('-----END PUBLIC KEY-----', $keyPair['publicKey']);

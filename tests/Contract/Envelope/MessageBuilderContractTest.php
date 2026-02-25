@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Contract\Envelope;
+namespace Ospp\Protocol\Tests\Contract\Envelope;
 
 use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
-use OneStopPay\OsppProtocol\Envelope\MessageBuilder;
-use OneStopPay\OsppProtocol\ValueObjects\MessageId;
-use OneStopPay\OsppProtocol\ValueObjects\ProtocolVersion;
+use Ospp\Protocol\Envelope\MessageBuilder;
+use Ospp\Protocol\ValueObjects\MessageId;
+use Ospp\Protocol\ValueObjects\ProtocolVersion;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

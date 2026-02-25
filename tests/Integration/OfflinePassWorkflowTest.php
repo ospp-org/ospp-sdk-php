@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Integration;
+namespace Ospp\Protocol\Tests\Integration;
 
-use OneStopPay\OsppProtocol\Crypto\CanonicalJsonSerializer;
-use OneStopPay\OsppProtocol\Crypto\EcdsaService;
+use Ospp\Protocol\Crypto\CanonicalJsonSerializer;
+use Ospp\Protocol\Crypto\EcdsaService;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

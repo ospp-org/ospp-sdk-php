@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Enums;
+namespace Ospp\Protocol\Enums;
 
 enum DiagnosticsStatus: string
 {

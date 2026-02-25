@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Integration;
+namespace Ospp\Protocol\Tests\Integration;
 
 use DateTimeImmutable;
-use OneStopPay\OsppProtocol\Envelope\MessageBuilder;
-use OneStopPay\OsppProtocol\ValueObjects\MessageId;
-use OneStopPay\OsppProtocol\ValueObjects\ProtocolVersion;
+use Ospp\Protocol\Envelope\MessageBuilder;
+use Ospp\Protocol\ValueObjects\MessageId;
+use Ospp\Protocol\ValueObjects\ProtocolVersion;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -20,10 +20,10 @@ final class EnvelopeSerializationTest extends TestCase
             ->withMessageId(MessageId::fromString('cmd_550e8400-e29b-41d4-a716-446655440000'))
             ->withTimestamp(new DateTimeImmutable('2025-01-15T10:30:00.500+00:00'))
             ->withProtocolVersion(ProtocolVersion::fromString('1.0.0'))
-            ->withPayload(['vendor' => 'OneStopPay', 'model' => 'OSP-100'])
+            ->withPayload(['vendor' => 'AcmeCorp', 'model' => 'OSP-100'])
             ->build();
 
-        $expectedJson = '{"messageId":"cmd_550e8400-e29b-41d4-a716-446655440000","messageType":"REQUEST","action":"BootNotification","timestamp":"2025-01-15T10:30:00.500Z","source":"server","protocolVersion":"1.0.0","payload":{"vendor":"OneStopPay","model":"OSP-100"}}';
+        $expectedJson = '{"messageId":"cmd_550e8400-e29b-41d4-a716-446655440000","messageType":"REQUEST","action":"BootNotification","timestamp":"2025-01-15T10:30:00.500Z","source":"server","protocolVersion":"1.0.0","payload":{"vendor":"AcmeCorp","model":"OSP-100"}}';
 
         self::assertSame($expectedJson, $envelope->toJson());
     }

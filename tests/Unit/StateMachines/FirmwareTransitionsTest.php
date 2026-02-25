@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Unit\StateMachines;
+namespace Ospp\Protocol\Tests\Unit\StateMachines;
 
-use OneStopPay\OsppProtocol\Enums\FirmwareUpdateStatus;
-use OneStopPay\OsppProtocol\StateMachines\FirmwareTransitions;
+use Ospp\Protocol\Enums\FirmwareUpdateStatus;
+use Ospp\Protocol\StateMachines\FirmwareTransitions;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

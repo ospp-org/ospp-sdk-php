@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Crypto\Contracts;
+namespace Ospp\Protocol\Crypto\Contracts;
 
 /**
  * Interface for HMAC-SHA256 message signing operations.

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Unit\StateMachines;
+namespace Ospp\Protocol\Tests\Unit\StateMachines;
 
-use OneStopPay\OsppProtocol\Enums\BayStatus;
-use OneStopPay\OsppProtocol\StateMachines\BayTransitions;
+use Ospp\Protocol\Enums\BayStatus;
+use Ospp\Protocol\StateMachines\BayTransitions;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

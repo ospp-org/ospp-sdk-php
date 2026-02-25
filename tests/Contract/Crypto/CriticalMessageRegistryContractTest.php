@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Contract\Crypto;
+namespace Ospp\Protocol\Tests\Contract\Crypto;
 
-use OneStopPay\OsppProtocol\Actions\OsppAction;
-use OneStopPay\OsppProtocol\Crypto\CriticalMessageRegistry;
+use Ospp\Protocol\Actions\OsppAction;
+use Ospp\Protocol\Crypto\CriticalMessageRegistry;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

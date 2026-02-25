@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Regression;
+namespace Ospp\Protocol\Tests\Regression;
 
-use OneStopPay\OsppProtocol\Enums\BayStatus;
-use OneStopPay\OsppProtocol\Enums\DiagnosticsStatus;
-use OneStopPay\OsppProtocol\Enums\FirmwareUpdateStatus;
-use OneStopPay\OsppProtocol\Enums\SessionStatus;
+use Ospp\Protocol\Enums\BayStatus;
+use Ospp\Protocol\Enums\DiagnosticsStatus;
+use Ospp\Protocol\Enums\FirmwareUpdateStatus;
+use Ospp\Protocol\Enums\SessionStatus;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

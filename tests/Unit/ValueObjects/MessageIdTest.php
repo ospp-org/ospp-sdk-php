@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Unit\ValueObjects;
+namespace Ospp\Protocol\Tests\Unit\ValueObjects;
 
 use InvalidArgumentException;
-use OneStopPay\OsppProtocol\ValueObjects\MessageId;
+use Ospp\Protocol\ValueObjects\MessageId;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

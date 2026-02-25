@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Integration;
+namespace Ospp\Protocol\Tests\Integration;
 
-use OneStopPay\OsppProtocol\Actions\OsppAction;
-use OneStopPay\OsppProtocol\Crypto\CanonicalJsonSerializer;
-use OneStopPay\OsppProtocol\Crypto\CriticalMessageRegistry;
-use OneStopPay\OsppProtocol\Crypto\MacSigner;
-use OneStopPay\OsppProtocol\Envelope\MessageBuilder;
-use OneStopPay\OsppProtocol\Enums\SigningMode;
+use Ospp\Protocol\Actions\OsppAction;
+use Ospp\Protocol\Crypto\CanonicalJsonSerializer;
+use Ospp\Protocol\Crypto\CriticalMessageRegistry;
+use Ospp\Protocol\Crypto\MacSigner;
+use Ospp\Protocol\Envelope\MessageBuilder;
+use Ospp\Protocol\Enums\SigningMode;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\ValueObjects;
+namespace Ospp\Protocol\ValueObjects;
 
 use InvalidArgumentException;
 

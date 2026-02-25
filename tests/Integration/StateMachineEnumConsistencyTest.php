@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Integration;
+namespace Ospp\Protocol\Tests\Integration;
 
-use OneStopPay\OsppProtocol\Enums\BayStatus;
-use OneStopPay\OsppProtocol\Enums\DiagnosticsStatus;
-use OneStopPay\OsppProtocol\Enums\FirmwareUpdateStatus;
-use OneStopPay\OsppProtocol\Enums\ReservationStatus;
-use OneStopPay\OsppProtocol\Enums\SessionStatus;
-use OneStopPay\OsppProtocol\StateMachines\BayTransitions;
-use OneStopPay\OsppProtocol\StateMachines\DiagnosticsTransitions;
-use OneStopPay\OsppProtocol\StateMachines\FirmwareTransitions;
-use OneStopPay\OsppProtocol\StateMachines\ReservationTransitions;
-use OneStopPay\OsppProtocol\StateMachines\SessionTransitions;
+use Ospp\Protocol\Enums\BayStatus;
+use Ospp\Protocol\Enums\DiagnosticsStatus;
+use Ospp\Protocol\Enums\FirmwareUpdateStatus;
+use Ospp\Protocol\Enums\ReservationStatus;
+use Ospp\Protocol\Enums\SessionStatus;
+use Ospp\Protocol\StateMachines\BayTransitions;
+use Ospp\Protocol\StateMachines\DiagnosticsTransitions;
+use Ospp\Protocol\StateMachines\FirmwareTransitions;
+use Ospp\Protocol\StateMachines\ReservationTransitions;
+use Ospp\Protocol\StateMachines\SessionTransitions;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

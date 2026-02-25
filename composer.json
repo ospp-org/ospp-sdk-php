@@ -1,5 +1,5 @@
 {
-    "name": "onestoppay/ospp-sdk-php",
+    "name": "ospp/protocol",
     "description": "PHP SDK for the OSPP (Open Self-Service Point Protocol) — enums, envelope, crypto, state machines",
     "type": "library",
     "license": "MIT",
@@ -17,12 +17,12 @@
     },
     "autoload": {
         "psr-4": {
-            "OneStopPay\\OsppProtocol\\": "src/"
+            "Ospp\\Protocol\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "OneStopPay\\OsppProtocol\\Tests\\": "tests/"
+            "Ospp\\Protocol\\Tests\\": "tests/"
         }
     },
     "config": {

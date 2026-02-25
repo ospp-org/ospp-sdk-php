@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Crypto;
+namespace Ospp\Protocol\Crypto;
 
 /**
  * Registry of OSPP messages that MUST be signed in `critical` mode.

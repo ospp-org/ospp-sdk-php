@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Contract\Crypto;
+namespace Ospp\Protocol\Tests\Contract\Crypto;
 
-use OneStopPay\OsppProtocol\Crypto\CanonicalJsonSerializer;
+use Ospp\Protocol\Crypto\CanonicalJsonSerializer;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

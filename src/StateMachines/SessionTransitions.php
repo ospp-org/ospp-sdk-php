@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\StateMachines;
+namespace Ospp\Protocol\StateMachines;
 
-use OneStopPay\OsppProtocol\Enums\SessionStatus;
+use Ospp\Protocol\Enums\SessionStatus;
 
 final class SessionTransitions
 {

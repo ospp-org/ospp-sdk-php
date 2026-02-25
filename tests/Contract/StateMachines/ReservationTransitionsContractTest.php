@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Contract\StateMachines;
+namespace Ospp\Protocol\Tests\Contract\StateMachines;
 
-use OneStopPay\OsppProtocol\Enums\BayStatus;
-use OneStopPay\OsppProtocol\Enums\OsppErrorCode;
-use OneStopPay\OsppProtocol\Enums\ReservationStatus;
-use OneStopPay\OsppProtocol\StateMachines\ReservationTransitions;
+use Ospp\Protocol\Enums\BayStatus;
+use Ospp\Protocol\Enums\OsppErrorCode;
+use Ospp\Protocol\Enums\ReservationStatus;
+use Ospp\Protocol\StateMachines\ReservationTransitions;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

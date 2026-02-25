@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Crypto\Contracts;
+namespace Ospp\Protocol\Crypto\Contracts;
 
 /**
  * Interface for ECDSA P-256 digital signature operations.

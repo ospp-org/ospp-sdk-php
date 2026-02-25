@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Crypto;
+namespace Ospp\Protocol\Crypto;
 
 final class CanonicalJsonSerializer
 {

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Enums;
+namespace Ospp\Protocol\Enums;
 
-use OneStopPay\OsppProtocol\Crypto\CriticalMessageRegistry;
+use Ospp\Protocol\Crypto\CriticalMessageRegistry;
 
 enum SigningMode: string
 {

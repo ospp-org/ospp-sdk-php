@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Tests\Contract\Enums;
+namespace Ospp\Protocol\Tests\Contract\Enums;
 
-use OneStopPay\OsppProtocol\Enums\FirmwareUpdateStatus;
+use Ospp\Protocol\Enums\FirmwareUpdateStatus;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 

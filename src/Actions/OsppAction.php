@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace OneStopPay\OsppProtocol\Actions;
+namespace Ospp\Protocol\Actions;
 
 /**
  * All 24 OSPP action constants (21 MQTT + 3 API-only).
