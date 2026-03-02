@@ -22,16 +22,23 @@ final class CriticalMessageRegistry
         'TransactionEvent',
 
         // Security Profile
-        'SecurityEvent',
         'AuthorizeOfflinePass',
+        'SignCertificate',
+        'CertificateInstall',
+        'TriggerCertificateRenewal',
 
         // Device Management Profile
         'ChangeConfiguration',
         'Reset',
         'UpdateFirmware',
+        'SetMaintenanceMode',
+        'UpdateServiceCatalog',
 
         // Core Profile — critical response
         'BootNotification',
+
+        // General Profile
+        'TriggerMessage',
 
         // Offline Profile
         'IssueOfflinePass',

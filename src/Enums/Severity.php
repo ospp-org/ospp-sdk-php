@@ -15,4 +15,20 @@ enum Severity: string
     {
         return $this === self::CRITICAL || $this === self::ERROR;
     }
+
+    /**
+     * Create from PascalCase wire value (SecurityEvent payload).
+     */
+    public static function fromOspp(string $osppValue): self
+    {
+        return self::from(strtoupper($osppValue));
+    }
+
+    /**
+     * Convert to PascalCase wire value for SecurityEvent payload.
+     */
+    public function toOspp(): string
+    {
+        return ucfirst(strtolower($this->value));
+    }
 }

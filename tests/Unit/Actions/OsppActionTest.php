@@ -15,11 +15,11 @@ final class OsppActionTest extends TestCase
     // ---------------------------------------------------------------
 
     #[Test]
-    public function allReturns24Actions(): void
+    public function allReturns29Actions(): void
     {
         $all = OsppAction::all();
 
-        self::assertCount(24, $all);
+        self::assertCount(29, $all);
     }
 
     #[Test]
@@ -36,6 +36,11 @@ final class OsppActionTest extends TestCase
         self::assertContains('UpdateFirmware', $all);
         self::assertContains('AuthorizeOfflinePass', $all);
         self::assertContains('SecurityEvent', $all);
+        self::assertContains('SignCertificate', $all);
+        self::assertContains('CertificateInstall', $all);
+        self::assertContains('TriggerCertificateRenewal', $all);
+        self::assertContains('DataTransfer', $all);
+        self::assertContains('TriggerMessage', $all);
         self::assertContains('IssueOfflinePass', $all);
         self::assertContains('WebPaymentAuthorization', $all);
     }
@@ -53,11 +58,11 @@ final class OsppActionTest extends TestCase
     // ---------------------------------------------------------------
 
     #[Test]
-    public function mqttActionsReturns21(): void
+    public function mqttActionsReturns26(): void
     {
         $mqtt = OsppAction::mqttActions();
 
-        self::assertCount(21, $mqtt);
+        self::assertCount(26, $mqtt);
     }
 
     #[Test]
@@ -112,30 +117,30 @@ final class OsppActionTest extends TestCase
     // ---------------------------------------------------------------
 
     #[Test]
-    public function stationToServerReturns10Actions(): void
+    public function stationToServerReturns12Actions(): void
     {
         $s2s = OsppAction::stationToServer();
 
-        self::assertCount(10, $s2s);
+        self::assertCount(12, $s2s);
     }
 
     #[Test]
-    public function serverToStationReturns11Actions(): void
+    public function serverToStationReturns15Actions(): void
     {
         $s2st = OsppAction::serverToStation();
 
-        self::assertCount(11, $s2st);
+        self::assertCount(15, $s2st);
     }
 
     #[Test]
-    public function stationToServerAndServerToStationAreDisjoint(): void
+    public function stationToServerAndServerToStationOverlapOnlyOnBidirectional(): void
     {
         $s2s = OsppAction::stationToServer();
         $s2st = OsppAction::serverToStation();
 
-        $intersection = array_intersect($s2s, $s2st);
+        $intersection = array_values(array_intersect($s2s, $s2st));
 
-        self::assertEmpty($intersection, 'stationToServer and serverToStation must not overlap');
+        self::assertSame([OsppAction::DATA_TRANSFER], $intersection);
     }
 
     #[Test]
@@ -143,7 +148,7 @@ final class OsppActionTest extends TestCase
     {
         $s2s = OsppAction::stationToServer();
         $s2st = OsppAction::serverToStation();
-        $combined = [...$s2s, ...$s2st];
+        $combined = array_values(array_unique([...$s2s, ...$s2st]));
 
         sort($combined);
         $mqtt = OsppAction::mqttActions();
@@ -167,6 +172,8 @@ final class OsppActionTest extends TestCase
         self::assertContains('AuthorizeOfflinePass', $s2s);
         self::assertContains('TransactionEvent', $s2s);
         self::assertContains('SecurityEvent', $s2s);
+        self::assertContains('SignCertificate', $s2s);
+        self::assertContains('DataTransfer', $s2s);
     }
 
     #[Test]
@@ -185,6 +192,10 @@ final class OsppActionTest extends TestCase
         self::assertContains('Reset', $s2st);
         self::assertContains('SetMaintenanceMode', $s2st);
         self::assertContains('UpdateServiceCatalog', $s2st);
+        self::assertContains('CertificateInstall', $s2st);
+        self::assertContains('TriggerCertificateRenewal', $s2st);
+        self::assertContains('TriggerMessage', $s2st);
+        self::assertContains('DataTransfer', $s2st);
     }
 
     // ---------------------------------------------------------------
@@ -213,11 +224,11 @@ final class OsppActionTest extends TestCase
     }
 
     #[Test]
-    public function requestsReturns15Actions(): void
+    public function requestsReturns20Actions(): void
     {
         $requests = OsppAction::requests();
 
-        self::assertCount(15, $requests);
+        self::assertCount(20, $requests);
     }
 
     #[Test]
@@ -240,6 +251,11 @@ final class OsppActionTest extends TestCase
         self::assertContains('UpdateServiceCatalog', $requests);
         self::assertContains('AuthorizeOfflinePass', $requests);
         self::assertContains('TransactionEvent', $requests);
+        self::assertContains('SignCertificate', $requests);
+        self::assertContains('CertificateInstall', $requests);
+        self::assertContains('TriggerCertificateRenewal', $requests);
+        self::assertContains('DataTransfer', $requests);
+        self::assertContains('TriggerMessage', $requests);
     }
 
     #[Test]
@@ -258,7 +274,7 @@ final class OsppActionTest extends TestCase
     {
         $events = OsppAction::events();
         $requests = OsppAction::requests();
-        $combined = [...$events, ...$requests];
+        $combined = array_values(array_unique([...$events, ...$requests]));
 
         sort($combined);
         $mqtt = OsppAction::mqttActions();
@@ -391,6 +407,13 @@ final class OsppActionTest extends TestCase
 
         // Security Profile
         self::assertSame('SecurityEvent', OsppAction::SECURITY_EVENT);
+        self::assertSame('SignCertificate', OsppAction::SIGN_CERTIFICATE);
+        self::assertSame('CertificateInstall', OsppAction::CERTIFICATE_INSTALL);
+        self::assertSame('TriggerCertificateRenewal', OsppAction::TRIGGER_CERTIFICATE_RENEWAL);
+
+        // General Profile
+        self::assertSame('DataTransfer', OsppAction::DATA_TRANSFER);
+        self::assertSame('TriggerMessage', OsppAction::TRIGGER_MESSAGE);
 
         // API-Only
         self::assertSame('IssueOfflinePass', OsppAction::ISSUE_OFFLINE_PASS);

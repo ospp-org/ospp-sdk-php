@@ -22,9 +22,9 @@ final class SigningModeContractTest extends TestCase
     public function CRITICAL_mode_delegates_to_CriticalMessageRegistry(): void
     {
         $criticalActions = CriticalMessageRegistry::allCriticalActions();
-        self::assertCount(14, $criticalActions, 'Expected exactly 14 critical actions');
+        self::assertCount(19, $criticalActions, 'Expected exactly 19 critical actions');
 
-        // All 14 critical actions must return true
+        // All 19 critical actions must return true
         foreach ($criticalActions as $action) {
             self::assertTrue(
                 SigningMode::CRITICAL->shouldSign($action),
@@ -77,10 +77,10 @@ final class SigningModeContractTest extends TestCase
     }
 
     #[Test]
-    public function shouldVerify_identical_to_shouldSign_for_all_modes_and_all_24_actions(): void
+    public function shouldVerify_identical_to_shouldSign_for_all_modes_and_all_29_actions(): void
     {
         $allActions = OsppAction::all();
-        self::assertCount(24, $allActions, 'Expected exactly 24 OSPP actions');
+        self::assertCount(29, $allActions, 'Expected exactly 29 OSPP actions');
 
         foreach (SigningMode::cases() as $mode) {
             foreach ($allActions as $action) {

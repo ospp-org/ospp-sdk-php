@@ -11,17 +11,17 @@ use PHPUnit\Framework\TestCase;
 final class CriticalMessageRegistryTest extends TestCase
 {
     #[Test]
-    public function countReturnsFourteen(): void
+    public function countReturnsNineteen(): void
     {
-        self::assertSame(14, CriticalMessageRegistry::count());
+        self::assertSame(19, CriticalMessageRegistry::count());
     }
 
     #[Test]
-    public function allCriticalActionsReturnsArrayOfFourteenStrings(): void
+    public function allCriticalActionsReturnsArrayOfNineteenStrings(): void
     {
         $actions = CriticalMessageRegistry::allCriticalActions();
 
-        self::assertCount(14, $actions);
+        self::assertCount(19, $actions);
 
         foreach ($actions as $action) {
             self::assertIsString($action);
@@ -38,12 +38,17 @@ final class CriticalMessageRegistryTest extends TestCase
             'ReserveBay',
             'CancelReservation',
             'TransactionEvent',
-            'SecurityEvent',
             'AuthorizeOfflinePass',
+            'SignCertificate',
+            'CertificateInstall',
+            'TriggerCertificateRenewal',
             'ChangeConfiguration',
             'Reset',
             'UpdateFirmware',
+            'SetMaintenanceMode',
+            'UpdateServiceCatalog',
             'BootNotification',
+            'TriggerMessage',
             'IssueOfflinePass',
             'RevokeOfflinePass',
             'WebPaymentAuthorization',
@@ -63,6 +68,8 @@ final class CriticalMessageRegistryTest extends TestCase
         self::assertFalse(CriticalMessageRegistry::isCritical('Heartbeat'));
         self::assertFalse(CriticalMessageRegistry::isCritical('MeterValues'));
         self::assertFalse(CriticalMessageRegistry::isCritical('StatusNotification'));
+        self::assertFalse(CriticalMessageRegistry::isCritical('SecurityEvent'));
+        self::assertFalse(CriticalMessageRegistry::isCritical('DataTransfer'));
         self::assertFalse(CriticalMessageRegistry::isCritical(''));
         self::assertFalse(CriticalMessageRegistry::isCritical('NonExistentAction'));
     }

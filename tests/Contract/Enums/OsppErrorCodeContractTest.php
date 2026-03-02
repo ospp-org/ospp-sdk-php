@@ -12,15 +12,15 @@ use PHPUnit\Framework\TestCase;
 /**
  * Contract tests for OsppErrorCode enum.
  *
- * Pins the total count (80), category distribution, uniqueness,
+ * Pins the total count (102), category distribution, uniqueness,
  * and validates that every code returns valid metadata.
  */
 final class OsppErrorCodeContractTest extends TestCase
 {
     #[Test]
-    public function total_code_count_is_exactly_80(): void
+    public function total_code_count_is_exactly_102(): void
     {
-        self::assertCount(80, OsppErrorCode::cases());
+        self::assertCount(102, OsppErrorCode::cases());
     }
 
     #[Test]
@@ -38,24 +38,24 @@ final class OsppErrorCodeContractTest extends TestCase
     }
 
     #[Test]
-    public function session_category_has_16_codes(): void
+    public function session_category_has_17_codes(): void
     {
         $count = $this->countByCategory('session');
-        self::assertSame(16, $count);
+        self::assertSame(17, $count);
     }
 
     #[Test]
-    public function payment_category_has_9_codes(): void
+    public function payment_category_has_14_codes(): void
     {
         $count = $this->countByCategory('payment');
-        self::assertSame(9, $count);
+        self::assertSame(14, $count);
     }
 
     #[Test]
-    public function station_category_has_18_codes(): void
+    public function station_category_has_34_codes(): void
     {
         $count = $this->countByCategory('station');
-        self::assertSame(18, $count);
+        self::assertSame(34, $count);
     }
 
     #[Test]
@@ -66,7 +66,7 @@ final class OsppErrorCodeContractTest extends TestCase
     }
 
     #[Test]
-    public function category_counts_sum_to_80(): void
+    public function category_counts_sum_to_102(): void
     {
         $sum = $this->countByCategory('transport')
             + $this->countByCategory('auth')
@@ -75,14 +75,14 @@ final class OsppErrorCodeContractTest extends TestCase
             + $this->countByCategory('station')
             + $this->countByCategory('server');
 
-        self::assertSame(80, $sum);
+        self::assertSame(102, $sum);
     }
 
     #[Test]
-    public function all_80_codes_have_unique_integer_values(): void
+    public function all_102_codes_have_unique_integer_values(): void
     {
         $values = array_map(fn (OsppErrorCode $code) => $code->value, OsppErrorCode::cases());
-        self::assertCount(80, array_unique($values));
+        self::assertCount(102, array_unique($values));
     }
 
     #[Test]
@@ -105,7 +105,7 @@ final class OsppErrorCodeContractTest extends TestCase
     }
 
     #[Test]
-    public function severity_counts_sum_to_80(): void
+    public function severity_counts_sum_to_102(): void
     {
         $counts = [];
         foreach (Severity::cases() as $sev) {
@@ -116,11 +116,11 @@ final class OsppErrorCodeContractTest extends TestCase
             $counts[$code->severity()->value]++;
         }
 
-        self::assertSame(80, array_sum($counts));
+        self::assertSame(102, array_sum($counts));
     }
 
     #[Test]
-    public function recoverable_counts_sum_to_80(): void
+    public function recoverable_counts_sum_to_102(): void
     {
         $recoverable = 0;
         $nonRecoverable = 0;
@@ -133,7 +133,7 @@ final class OsppErrorCodeContractTest extends TestCase
             }
         }
 
-        self::assertSame(80, $recoverable + $nonRecoverable);
+        self::assertSame(102, $recoverable + $nonRecoverable);
     }
 
     #[Test]

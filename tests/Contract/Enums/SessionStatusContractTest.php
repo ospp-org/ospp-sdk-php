@@ -103,7 +103,7 @@ final class SessionStatusContractTest extends TestCase
     public function only_two_session_sources_exist(): void
     {
         self::assertCount(2, SessionSource::cases());
-        self::assertSame('mobile_app', SessionSource::MOBILE_APP->value);
-        self::assertSame('web_payment', SessionSource::WEB_PAYMENT->value);
+        self::assertSame('MobileApp', SessionSource::MOBILE_APP->value);
+        self::assertSame('WebPayment', SessionSource::WEB_PAYMENT->value);
     }
 }

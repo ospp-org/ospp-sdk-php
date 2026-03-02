@@ -19,9 +19,9 @@ final class SigningModeTest extends TestCase
     #[Test]
     public function all_cases_have_correct_values(): void
     {
-        self::assertSame('all', SigningMode::ALL->value);
-        self::assertSame('critical', SigningMode::CRITICAL->value);
-        self::assertSame('none', SigningMode::NONE->value);
+        self::assertSame('All', SigningMode::ALL->value);
+        self::assertSame('Critical', SigningMode::CRITICAL->value);
+        self::assertSame('None', SigningMode::NONE->value);
     }
 
     // --- shouldSign in ALL mode ---
@@ -54,12 +54,17 @@ final class SigningModeTest extends TestCase
             'ReserveBay',
             'CancelReservation',
             'TransactionEvent',
-            'SecurityEvent',
             'AuthorizeOfflinePass',
+            'SignCertificate',
+            'CertificateInstall',
+            'TriggerCertificateRenewal',
             'ChangeConfiguration',
             'Reset',
             'UpdateFirmware',
+            'SetMaintenanceMode',
+            'UpdateServiceCatalog',
             'BootNotification',
+            'TriggerMessage',
             'IssueOfflinePass',
             'RevokeOfflinePass',
             'WebPaymentAuthorization',
@@ -100,7 +105,7 @@ final class SigningModeTest extends TestCase
     {
         self::assertFalse(SigningMode::NONE->shouldSign('StartService'));
         self::assertFalse(SigningMode::NONE->shouldSign('BootNotification'));
-        self::assertFalse(SigningMode::NONE->shouldSign('SecurityEvent'));
+        self::assertFalse(SigningMode::NONE->shouldSign('SignCertificate'));
     }
 
     #[Test]
@@ -139,17 +144,17 @@ final class SigningModeTest extends TestCase
     #[Test]
     public function it_can_be_created_from_valid_string(): void
     {
-        self::assertSame(SigningMode::ALL, SigningMode::from('all'));
-        self::assertSame(SigningMode::CRITICAL, SigningMode::from('critical'));
-        self::assertSame(SigningMode::NONE, SigningMode::from('none'));
+        self::assertSame(SigningMode::ALL, SigningMode::from('All'));
+        self::assertSame(SigningMode::CRITICAL, SigningMode::from('Critical'));
+        self::assertSame(SigningMode::NONE, SigningMode::from('None'));
     }
 
     #[Test]
     public function try_from_returns_null_for_invalid_values(): void
     {
-        self::assertNull(SigningMode::tryFrom('ALL'));
+        self::assertNull(SigningMode::tryFrom('all'));
         self::assertNull(SigningMode::tryFrom(''));
-        self::assertNull(SigningMode::tryFrom('CRITICAL'));
+        self::assertNull(SigningMode::tryFrom('none'));
     }
 
     #[Test]

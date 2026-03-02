@@ -6,7 +6,7 @@ namespace Ospp\Protocol\Enums;
 
 /**
  * Complete OSPP Error Code registry.
- * 80 error codes across 6 categories.
+ * 102 error codes across 6 categories.
  */
 enum OsppErrorCode: int
 {
@@ -43,7 +43,7 @@ enum OsppErrorCode: int
     case SESSION_TOKEN_INVALID = 2012;
     case BLE_AUTH_FAILED = 2013;
 
-    // 3xxx - Session & Bay Errors (16 codes)
+    // 3xxx - Session & Bay Errors (17 codes)
     case SESSION_GENERIC = 3000;
     case BAY_BUSY = 3001;
     case BAY_NOT_READY = 3002;
@@ -60,8 +60,9 @@ enum OsppErrorCode: int
     case RESERVATION_EXPIRED = 3013;
     case BAY_RESERVED = 3014;
     case PAYLOAD_INVALID = 3015;
+    case ACTIVE_SESSIONS_PRESENT = 3016;
 
-    // 4xxx - Payment & Credit Errors (9 codes)
+    // 4xxx - Payment & Credit Errors (14 codes)
     case PAYMENT_GENERIC = 4000;
     case INSUFFICIENT_BALANCE = 4001;
     case OFFLINE_LIMIT_EXCEEDED = 4002;
@@ -71,18 +72,34 @@ enum OsppErrorCode: int
     case PAYMENT_TIMEOUT = 4006;
     case REFUND_FAILED = 4007;
     case WEBHOOK_SIGNATURE_INVALID = 4008;
+    case CSR_INVALID = 4010;
+    case CERTIFICATE_CHAIN_INVALID = 4011;
+    case CERTIFICATE_TYPE_MISMATCH = 4012;
+    case RENEWAL_DENIED = 4013;
+    case KEYPAIR_GENERATION_FAILED = 4014;
 
-    // 5xxx - Station Hardware & Software Errors (18 codes)
+    // 5xxx - Station Hardware & Software Errors (34 codes)
     case HARDWARE_GENERIC = 5000;
     case PUMP_SYSTEM = 5001;
-    case WATER_SYSTEM = 5002;
-    case CHEMICAL_SYSTEM = 5003;
+    case FLUID_SYSTEM = 5002;
+    case CONSUMABLE_SYSTEM = 5003;
     case ELECTRICAL_SYSTEM = 5004;
     case PAYMENT_HARDWARE = 5005;
     case HEATING_SYSTEM = 5006;
     case MECHANICAL_SYSTEM = 5007;
     case SENSOR_FAILURE = 5008;
     case EMERGENCY_STOP = 5009;
+    case DOWNLOAD_FAILED = 5014;
+    case CHECKSUM_MISMATCH = 5015;
+    case VERSION_ALREADY_INSTALLED = 5016;
+    case INSUFFICIENT_STORAGE = 5017;
+    case INSTALLATION_FAILED = 5018;
+    case UPLOAD_FAILED = 5019;
+    case INVALID_TIME_WINDOW = 5020;
+    case NO_DIAGNOSTICS_AVAILABLE = 5021;
+    case INVALID_CATALOG = 5023;
+    case UNSUPPORTED_SERVICE = 5024;
+    case CATALOG_TOO_LARGE = 5025;
     case SOFTWARE_GENERIC = 5100;
     case FIRMWARE_ERROR = 5101;
     case CONFIGURATION_ERROR = 5102;
@@ -91,6 +108,11 @@ enum OsppErrorCode: int
     case MEMORY_ERROR = 5105;
     case CLOCK_ERROR = 5106;
     case OPERATION_IN_PROGRESS = 5107;
+    case CONFIGURATION_KEY_READONLY = 5108;
+    case INVALID_CONFIGURATION_VALUE = 5109;
+    case RESET_FAILED = 5110;
+    case BUFFER_FULL = 5111;
+    case FIRMWARE_SIGNATURE_INVALID = 5112;
 
     // 6xxx - Server Errors (8 codes)
     case SERVER_GENERIC = 6000;
@@ -128,7 +150,12 @@ enum OsppErrorCode: int
             self::FIRMWARE_ERROR,
             self::WATCHDOG_RESET,
             self::MEMORY_ERROR,
-            self::WEBHOOK_SIGNATURE_INVALID => Severity::CRITICAL,
+            self::WEBHOOK_SIGNATURE_INVALID,
+            self::KEYPAIR_GENERATION_FAILED,
+            self::INSTALLATION_FAILED,
+            self::RESET_FAILED,
+            self::BUFFER_FULL,
+            self::FIRMWARE_SIGNATURE_INVALID => Severity::CRITICAL,
 
             self::TRANSPORT_GENERIC,
             self::MQTT_CONNECTION_LOST,
@@ -167,11 +194,18 @@ enum OsppErrorCode: int
             self::SERVER_INTERNAL_ERROR,
             self::VALIDATION_ERROR,
             self::SESSION_TOKEN_INVALID,
-            self::COMMAND_NOT_SUPPORTED,
-            self::SENSOR_FAILURE,
-            self::PAYMENT_HARDWARE,
-            self::MECHANICAL_SYSTEM,
-            self::URL_UNREACHABLE => Severity::ERROR,
+            self::URL_UNREACHABLE,
+            self::CSR_INVALID,
+            self::CERTIFICATE_CHAIN_INVALID,
+            self::RENEWAL_DENIED,
+            self::DOWNLOAD_FAILED,
+            self::CHECKSUM_MISMATCH,
+            self::INSUFFICIENT_STORAGE,
+            self::UPLOAD_FAILED,
+            self::INVALID_CATALOG,
+            self::CATALOG_TOO_LARGE,
+            self::CONFIGURATION_KEY_READONLY,
+            self::INVALID_CONFIGURATION_VALUE => Severity::ERROR,
 
             self::SERVICE_DEGRADED => Severity::INFO,
 
@@ -218,7 +252,22 @@ enum OsppErrorCode: int
             self::MECHANICAL_SYSTEM,
             self::EMERGENCY_STOP,
             self::FIRMWARE_ERROR,
-            self::VALIDATION_ERROR => false,
+            self::VALIDATION_ERROR,
+            self::RENEWAL_DENIED,
+            self::KEYPAIR_GENERATION_FAILED,
+            self::CHECKSUM_MISMATCH,
+            self::VERSION_ALREADY_INSTALLED,
+            self::INSUFFICIENT_STORAGE,
+            self::INSTALLATION_FAILED,
+            self::INVALID_TIME_WINDOW,
+            self::NO_DIAGNOSTICS_AVAILABLE,
+            self::INVALID_CATALOG,
+            self::UNSUPPORTED_SERVICE,
+            self::CATALOG_TOO_LARGE,
+            self::CONFIGURATION_KEY_READONLY,
+            self::INVALID_CONFIGURATION_VALUE,
+            self::RESET_FAILED,
+            self::FIRMWARE_SIGNATURE_INVALID => false,
 
             default => true,
         };

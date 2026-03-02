@@ -19,7 +19,7 @@ final class MessageEnvelopeTest extends TestCase
         MessageType $messageType = MessageType::REQUEST,
         string $action = 'BootNotification',
         ?DateTimeImmutable $timestamp = null,
-        string $source = 'station',
+        string $source = 'Station',
         ?ProtocolVersion $protocolVersion = null,
         array $payload = [],
         ?string $mac = null,
@@ -53,7 +53,7 @@ final class MessageEnvelopeTest extends TestCase
             messageType: MessageType::REQUEST,
             action: 'BootNotification',
             timestamp: $timestamp,
-            source: 'station',
+            source: 'Station',
             protocolVersion: $version,
             payload: $payload,
             mac: 'abc123mac',
@@ -63,7 +63,7 @@ final class MessageEnvelopeTest extends TestCase
         self::assertSame(MessageType::REQUEST, $envelope->messageType);
         self::assertSame('BootNotification', $envelope->action);
         self::assertSame($timestamp, $envelope->timestamp);
-        self::assertSame('station', $envelope->source);
+        self::assertSame('Station', $envelope->source);
         self::assertSame($version, $envelope->protocolVersion);
         self::assertSame($payload, $envelope->payload);
         self::assertSame('abc123mac', $envelope->mac);
@@ -170,7 +170,7 @@ final class MessageEnvelopeTest extends TestCase
             messageType: MessageType::REQUEST,
             action: 'BootNotification',
             timestamp: $timestamp,
-            source: 'station',
+            source: 'Station',
             protocolVersion: $version,
             payload: $payload,
         );
@@ -178,10 +178,10 @@ final class MessageEnvelopeTest extends TestCase
         $array = $envelope->toArray();
 
         self::assertSame('msg_550e8400-e29b-41d4-a716-446655440000', $array['messageId']);
-        self::assertSame('REQUEST', $array['messageType']);
+        self::assertSame('Request', $array['messageType']);
         self::assertSame('BootNotification', $array['action']);
         self::assertSame('2025-01-15T10:30:00.000Z', $array['timestamp']);
-        self::assertSame('station', $array['source']);
+        self::assertSame('Station', $array['source']);
         self::assertSame('1.0.0', $array['protocolVersion']);
         self::assertSame(['stationId' => 'ST-001'], $array['payload']);
         self::assertArrayNotHasKey('mac', $array);
@@ -338,7 +338,7 @@ final class MessageEnvelopeTest extends TestCase
     {
         $original = $this->makeEnvelope(
             action: 'Heartbeat',
-            source: 'server',
+            source: 'Server',
             payload: ['status' => 'ok'],
         );
 

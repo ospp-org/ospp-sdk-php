@@ -12,10 +12,10 @@ use PHPUnit\Framework\TestCase;
 final class CriticalMessageRegistryContractTest extends TestCase
 {
     #[Test]
-    public function exactly_14_critical_actions(): void
+    public function exactly_19_critical_actions(): void
     {
-        self::assertSame(14, CriticalMessageRegistry::count());
-        self::assertCount(14, CriticalMessageRegistry::allCriticalActions());
+        self::assertSame(19, CriticalMessageRegistry::count());
+        self::assertCount(19, CriticalMessageRegistry::allCriticalActions());
     }
 
     #[Test]
@@ -25,16 +25,21 @@ final class CriticalMessageRegistryContractTest extends TestCase
             'AuthorizeOfflinePass',
             'BootNotification',
             'CancelReservation',
+            'CertificateInstall',
             'ChangeConfiguration',
             'IssueOfflinePass',
             'ReserveBay',
             'Reset',
             'RevokeOfflinePass',
-            'SecurityEvent',
+            'SetMaintenanceMode',
+            'SignCertificate',
             'StartService',
             'StopService',
             'TransactionEvent',
+            'TriggerCertificateRenewal',
+            'TriggerMessage',
             'UpdateFirmware',
+            'UpdateServiceCatalog',
             'WebPaymentAuthorization',
         ];
 

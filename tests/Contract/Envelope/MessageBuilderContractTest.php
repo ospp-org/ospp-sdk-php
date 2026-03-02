@@ -46,9 +46,9 @@ final class MessageBuilderContractTest extends TestCase
         $response = MessageBuilder::response('TestAction')->build();
         $event = MessageBuilder::event('TestAction')->build();
 
-        self::assertSame('server', $request->source);
-        self::assertSame('server', $response->source);
-        self::assertSame('server', $event->source);
+        self::assertSame('Server', $request->source);
+        self::assertSame('Server', $response->source);
+        self::assertSame('Server', $event->source);
     }
 
     #[Test]
@@ -57,16 +57,16 @@ final class MessageBuilderContractTest extends TestCase
         $stationRequest = MessageBuilder::stationRequest('BootNotification')->build();
         $stationEvent = MessageBuilder::stationEvent('StatusNotification')->build();
 
-        self::assertSame('station', $stationRequest->source);
-        self::assertSame('station', $stationEvent->source);
+        self::assertSame('Station', $stationRequest->source);
+        self::assertSame('Station', $stationEvent->source);
     }
 
     #[Test]
-    public function default_protocolVersion_is_1_0_0(): void
+    public function default_protocolVersion_is_0_1_0(): void
     {
         $envelope = MessageBuilder::request('TestAction')->build();
 
-        self::assertSame('1.0.0', $envelope->protocolVersion->value);
+        self::assertSame('0.1.0', $envelope->protocolVersion->value);
     }
 
     #[Test]

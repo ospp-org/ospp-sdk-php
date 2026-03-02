@@ -19,26 +19,27 @@ final class SessionSourceTest extends TestCase
     #[Test]
     public function mobile_app_has_correct_value(): void
     {
-        self::assertSame('mobile_app', SessionSource::MOBILE_APP->value);
+        self::assertSame('MobileApp', SessionSource::MOBILE_APP->value);
     }
 
     #[Test]
     public function web_payment_has_correct_value(): void
     {
-        self::assertSame('web_payment', SessionSource::WEB_PAYMENT->value);
+        self::assertSame('WebPayment', SessionSource::WEB_PAYMENT->value);
     }
 
     #[Test]
     public function it_can_be_created_from_valid_string(): void
     {
-        self::assertSame(SessionSource::MOBILE_APP, SessionSource::from('mobile_app'));
-        self::assertSame(SessionSource::WEB_PAYMENT, SessionSource::from('web_payment'));
+        self::assertSame(SessionSource::MOBILE_APP, SessionSource::from('MobileApp'));
+        self::assertSame(SessionSource::WEB_PAYMENT, SessionSource::from('WebPayment'));
     }
 
     #[Test]
     public function try_from_returns_null_for_invalid_values(): void
     {
         self::assertNull(SessionSource::tryFrom('MOBILE_APP'));
+        self::assertNull(SessionSource::tryFrom('mobile_app'));
         self::assertNull(SessionSource::tryFrom('app'));
         self::assertNull(SessionSource::tryFrom('qr'));
         self::assertNull(SessionSource::tryFrom('ble'));

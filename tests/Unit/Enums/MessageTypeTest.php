@@ -19,27 +19,27 @@ final class MessageTypeTest extends TestCase
     #[Test]
     public function request_has_correct_value(): void
     {
-        self::assertSame('REQUEST', MessageType::REQUEST->value);
+        self::assertSame('Request', MessageType::REQUEST->value);
     }
 
     #[Test]
     public function response_has_correct_value(): void
     {
-        self::assertSame('RESPONSE', MessageType::RESPONSE->value);
+        self::assertSame('Response', MessageType::RESPONSE->value);
     }
 
     #[Test]
     public function event_has_correct_value(): void
     {
-        self::assertSame('EVENT', MessageType::EVENT->value);
+        self::assertSame('Event', MessageType::EVENT->value);
     }
 
     #[Test]
     public function it_can_be_created_from_valid_string(): void
     {
-        self::assertSame(MessageType::REQUEST, MessageType::from('REQUEST'));
-        self::assertSame(MessageType::RESPONSE, MessageType::from('RESPONSE'));
-        self::assertSame(MessageType::EVENT, MessageType::from('EVENT'));
+        self::assertSame(MessageType::REQUEST, MessageType::from('Request'));
+        self::assertSame(MessageType::RESPONSE, MessageType::from('Response'));
+        self::assertSame(MessageType::EVENT, MessageType::from('Event'));
     }
 
     #[Test]
@@ -58,10 +58,10 @@ final class MessageTypeTest extends TestCase
     }
 
     #[Test]
-    public function all_cases_are_backed_by_uppercase_strings(): void
+    public function all_cases_are_backed_by_PascalCase_strings(): void
     {
         foreach (MessageType::cases() as $case) {
-            self::assertSame($case->name, $case->value);
+            self::assertMatchesRegularExpression('/^[A-Z][a-z]+$/', $case->value);
         }
     }
 }

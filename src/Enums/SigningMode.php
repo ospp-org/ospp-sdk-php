@@ -8,9 +8,9 @@ use Ospp\Protocol\Crypto\CriticalMessageRegistry;
 
 enum SigningMode: string
 {
-    case ALL = 'all';
-    case CRITICAL = 'critical';
-    case NONE = 'none';
+    case ALL = 'All';
+    case CRITICAL = 'Critical';
+    case NONE = 'None';
 
     public function shouldSign(string $action): bool
     {

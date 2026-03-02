@@ -67,4 +67,32 @@ final class SeverityTest extends TestCase
         $this->expectException(\ValueError::class);
         Severity::from('invalid');
     }
+
+    // --- fromOspp / toOspp (wire format conversion) ---
+
+    #[Test]
+    public function from_ospp_converts_pascal_case_wire_values(): void
+    {
+        self::assertSame(Severity::CRITICAL, Severity::fromOspp('Critical'));
+        self::assertSame(Severity::ERROR, Severity::fromOspp('Error'));
+        self::assertSame(Severity::WARNING, Severity::fromOspp('Warning'));
+        self::assertSame(Severity::INFO, Severity::fromOspp('Info'));
+    }
+
+    #[Test]
+    public function to_ospp_returns_pascal_case_wire_values(): void
+    {
+        self::assertSame('Critical', Severity::CRITICAL->toOspp());
+        self::assertSame('Error', Severity::ERROR->toOspp());
+        self::assertSame('Warning', Severity::WARNING->toOspp());
+        self::assertSame('Info', Severity::INFO->toOspp());
+    }
+
+    #[Test]
+    public function from_ospp_roundtrips_with_to_ospp(): void
+    {
+        foreach (Severity::cases() as $severity) {
+            self::assertSame($severity, Severity::fromOspp($severity->toOspp()));
+        }
+    }
 }

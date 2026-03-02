@@ -23,7 +23,7 @@ final class MessageEnvelopeContractTest extends TestCase
             messageType: MessageType::REQUEST,
             action: 'TestAction',
             timestamp: new DateTimeImmutable('2025-06-15T14:30:45.123+00:00'),
-            source: 'server',
+            source: 'Server',
             protocolVersion: ProtocolVersion::default(),
             payload: ['key' => 'value'],
         );
@@ -44,7 +44,7 @@ final class MessageEnvelopeContractTest extends TestCase
             messageType: MessageType::REQUEST,
             action: 'TestAction',
             timestamp: new DateTimeImmutable('now', new DateTimeZone('UTC')),
-            source: 'server',
+            source: 'Server',
             protocolVersion: ProtocolVersion::default(),
             payload: [],
         );
@@ -65,7 +65,7 @@ final class MessageEnvelopeContractTest extends TestCase
             messageType: MessageType::REQUEST,
             action: 'TestAction',
             timestamp: new DateTimeImmutable('now', new DateTimeZone('UTC')),
-            source: 'server',
+            source: 'Server',
             protocolVersion: ProtocolVersion::default(),
             payload: [],
         );
@@ -83,7 +83,7 @@ final class MessageEnvelopeContractTest extends TestCase
             messageType: MessageType::REQUEST,
             action: 'TestAction',
             timestamp: new DateTimeImmutable('now', new DateTimeZone('UTC')),
-            source: 'server',
+            source: 'Server',
             protocolVersion: ProtocolVersion::default(),
             payload: [],
             mac: 'dGVzdC1tYWMtdmFsdWU=',
@@ -103,7 +103,7 @@ final class MessageEnvelopeContractTest extends TestCase
             messageType: MessageType::REQUEST,
             action: 'TestAction',
             timestamp: new DateTimeImmutable('now', new DateTimeZone('UTC')),
-            source: 'server',
+            source: 'Server',
             protocolVersion: ProtocolVersion::default(),
             payload: ['url' => 'https://example.com/path'],
         );
@@ -123,7 +123,7 @@ final class MessageEnvelopeContractTest extends TestCase
             messageType: MessageType::EVENT,
             action: 'StatusNotification',
             timestamp: new DateTimeImmutable('2025-03-10T08:00:00.500+00:00'),
-            source: 'station',
+            source: 'Station',
             protocolVersion: ProtocolVersion::default(),
             payload: ['stationId' => 'ST-001', 'status' => 'available'],
         );
@@ -134,12 +134,12 @@ final class MessageEnvelopeContractTest extends TestCase
     }
 
     #[Test]
-    public function toArray_messageType_is_UPPERCASE_string(): void
+    public function toArray_messageType_is_PascalCase_string(): void
     {
         $types = [
-            [MessageType::REQUEST, 'REQUEST'],
-            [MessageType::RESPONSE, 'RESPONSE'],
-            [MessageType::EVENT, 'EVENT'],
+            [MessageType::REQUEST, 'Request'],
+            [MessageType::RESPONSE, 'Response'],
+            [MessageType::EVENT, 'Event'],
         ];
 
         foreach ($types as [$type, $expected]) {
@@ -148,7 +148,7 @@ final class MessageEnvelopeContractTest extends TestCase
                 messageType: $type,
                 action: 'TestAction',
                 timestamp: new DateTimeImmutable('now', new DateTimeZone('UTC')),
-                source: 'server',
+                source: 'Server',
                 protocolVersion: ProtocolVersion::default(),
                 payload: [],
             );
@@ -156,7 +156,7 @@ final class MessageEnvelopeContractTest extends TestCase
             $array = $envelope->toArray();
 
             self::assertSame($expected, $array['messageType']);
-            self::assertMatchesRegularExpression('/^[A-Z]+$/', $array['messageType']);
+            self::assertMatchesRegularExpression('/^[A-Z][a-z]+$/', $array['messageType']);
         }
     }
 
@@ -168,8 +168,8 @@ final class MessageEnvelopeContractTest extends TestCase
             messageType: MessageType::REQUEST,
             action: 'TestAction',
             timestamp: new DateTimeImmutable('now', new DateTimeZone('UTC')),
-            source: 'server',
-            protocolVersion: ProtocolVersion::fromString('1.0.0'),
+            source: 'Server',
+            protocolVersion: ProtocolVersion::fromString('0.1.0'),
             payload: [],
         );
 
@@ -186,7 +186,7 @@ final class MessageEnvelopeContractTest extends TestCase
             messageType: MessageType::REQUEST,
             action: 'TestAction',
             timestamp: new DateTimeImmutable('now', new DateTimeZone('UTC')),
-            source: 'server',
+            source: 'Server',
             protocolVersion: ProtocolVersion::default(),
             payload: [],
             mac: null,
@@ -205,7 +205,7 @@ final class MessageEnvelopeContractTest extends TestCase
             messageType: MessageType::REQUEST,
             action: 'TestAction',
             timestamp: new DateTimeImmutable('2025-01-01T00:00:00.000000+00:00'),
-            source: 'server',
+            source: 'Server',
             protocolVersion: ProtocolVersion::default(),
             payload: [],
         );
@@ -224,7 +224,7 @@ final class MessageEnvelopeContractTest extends TestCase
             messageType: MessageType::REQUEST,
             action: 'TestAction',
             timestamp: new DateTimeImmutable('now', new DateTimeZone('UTC')),
-            source: 'server',
+            source: 'Server',
             protocolVersion: ProtocolVersion::default(),
             payload: ['key' => 'value'],
             mac: null,

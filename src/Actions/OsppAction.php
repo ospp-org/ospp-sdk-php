@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Ospp\Protocol\Actions;
 
 /**
- * All 24 OSPP action constants (21 MQTT + 3 API-only).
+ * All 29 OSPP action constants (26 MQTT + 3 API-only).
  */
 final class OsppAction
 {
@@ -39,8 +39,15 @@ final class OsppAction
     public const AUTHORIZE_OFFLINE_PASS = 'AuthorizeOfflinePass';
     public const TRANSACTION_EVENT = 'TransactionEvent';
 
-    // Security Profile — MQTT (1)
+    // Security Profile — MQTT (4)
     public const SECURITY_EVENT = 'SecurityEvent';
+    public const SIGN_CERTIFICATE = 'SignCertificate';
+    public const CERTIFICATE_INSTALL = 'CertificateInstall';
+    public const TRIGGER_CERTIFICATE_RENEWAL = 'TriggerCertificateRenewal';
+
+    // General Profile — MQTT (2)
+    public const DATA_TRANSFER = 'DataTransfer';
+    public const TRIGGER_MESSAGE = 'TriggerMessage';
 
     // API-Only Actions (3) — not transmitted via MQTT
     public const ISSUE_OFFLINE_PASS = 'IssueOfflinePass';
@@ -82,6 +89,11 @@ final class OsppAction
             self::AUTHORIZE_OFFLINE_PASS,
             self::TRANSACTION_EVENT,
             self::SECURITY_EVENT,
+            self::SIGN_CERTIFICATE,
+            self::CERTIFICATE_INSTALL,
+            self::TRIGGER_CERTIFICATE_RENEWAL,
+            self::DATA_TRANSFER,
+            self::TRIGGER_MESSAGE,
         ];
     }
 
@@ -115,6 +127,8 @@ final class OsppAction
             self::AUTHORIZE_OFFLINE_PASS,
             self::TRANSACTION_EVENT,
             self::SECURITY_EVENT,
+            self::SIGN_CERTIFICATE,
+            self::DATA_TRANSFER,
         ];
     }
 
@@ -137,6 +151,10 @@ final class OsppAction
             self::RESET,
             self::SET_MAINTENANCE_MODE,
             self::UPDATE_SERVICE_CATALOG,
+            self::CERTIFICATE_INSTALL,
+            self::TRIGGER_CERTIFICATE_RENEWAL,
+            self::TRIGGER_MESSAGE,
+            self::DATA_TRANSFER,
         ];
     }
 
@@ -180,6 +198,11 @@ final class OsppAction
             self::UPDATE_SERVICE_CATALOG,
             self::AUTHORIZE_OFFLINE_PASS,
             self::TRANSACTION_EVENT,
+            self::SIGN_CERTIFICATE,
+            self::CERTIFICATE_INSTALL,
+            self::TRIGGER_CERTIFICATE_RENEWAL,
+            self::DATA_TRANSFER,
+            self::TRIGGER_MESSAGE,
         ];
     }
 

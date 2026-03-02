@@ -31,8 +31,11 @@
   ┌──────────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
   │    Module    │                                                  Description                                                   │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ Enums        │ BayStatus, SessionStatus, FirmwareUpdateStatus, DiagnosticsStatus, ReservationStatus, OsppErrorCode,           │
-  │              │ SigningMode, Severity, SessionSource, MessageType                                                              │
+  │ Enums        │ MessageType, SessionSource, BayStatus, SessionStatus, Severity, SigningMode, OsppErrorCode (102 codes),        │
+  │              │ FirmwareUpdateStatus, DiagnosticsStatus, ReservationStatus, BootNotificationStatus, BootReason,               │
+  │              │ NetworkConnectionType, TransactionEventStatus, ChangeConfigResultStatus, DataTransferStatus,                  │
+  │              │ TriggerMessageStatus, CertificateType, ResetType, SecurityEventType, StationConnectivity,                    │
+  │              │ BleServiceStatus, PricingType, LogLevel, ConfigurationKey (41 keys with metadata)                            │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ State        │ Transition tables for Bay (7 states), Session (6 states), Firmware (10 states), Diagnostics (5 states),        │
   │ Machines     │ Reservation (5 states)                                                                                         │
@@ -40,12 +43,12 @@
   │ Envelope     │ MessageEnvelope, MessageBuilder — wire-format message construction with correlation support                    │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ Crypto       │ HMAC-SHA256 message signing (MacSigner), ECDSA P-256 offline pass signing, canonical JSON serialization,       │
-  │              │ critical message registry                                                                                      │
+  │              │ critical message registry (19 actions), SessionProofCalculator (BLE session proof)                            │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ Value        │ MessageId (UUID v4), ProtocolVersion (semver)                                                                  │
   │ Objects      │                                                                                                                │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ Actions      │ OsppAction — all 24 protocol actions with validation                                                           │
+  │ Actions      │ OsppAction — all 29 protocol actions (26 MQTT + 3 API-only) with validation                                   │
   └──────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
   Quick Start
@@ -92,12 +95,12 @@
   composer install
   vendor/bin/phpunit
 
-  528 tests across 4 test suites:
+  642 tests across 4 test suites:
 
   ┌─────────────┬───────┬───────────────────────────────────────┐
   │    Suite    │ Tests │                Purpose                │
   ├─────────────┼───────┼───────────────────────────────────────┤
-  │ Unit        │ 343   │ Individual class behavior             │
+  │ Unit        │ 457   │ Individual class behavior             │
   ├─────────────┼───────┼───────────────────────────────────────┤
   │ Regression  │ 10    │ Pins previously found bugs            │
   ├─────────────┼───────┼───────────────────────────────────────┤

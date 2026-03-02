@@ -26,7 +26,7 @@ final class MessageBuilderTest extends TestCase
         $envelope = MessageBuilder::response('BootNotification')->build();
 
         self::assertSame(MessageType::RESPONSE, $envelope->messageType);
-        self::assertSame('server', $envelope->source);
+        self::assertSame('Server', $envelope->source);
         self::assertSame('BootNotification', $envelope->action);
     }
 
@@ -48,7 +48,7 @@ final class MessageBuilderTest extends TestCase
         $envelope = MessageBuilder::request('StartService')->build();
 
         self::assertSame(MessageType::REQUEST, $envelope->messageType);
-        self::assertSame('server', $envelope->source);
+        self::assertSame('Server', $envelope->source);
         self::assertSame('StartService', $envelope->action);
     }
 
@@ -70,7 +70,7 @@ final class MessageBuilderTest extends TestCase
         $envelope = MessageBuilder::event('StatusNotification')->build();
 
         self::assertSame(MessageType::EVENT, $envelope->messageType);
-        self::assertSame('server', $envelope->source);
+        self::assertSame('Server', $envelope->source);
         self::assertSame('StatusNotification', $envelope->action);
     }
 
@@ -92,7 +92,7 @@ final class MessageBuilderTest extends TestCase
         $envelope = MessageBuilder::stationRequest('BootNotification')->build();
 
         self::assertSame(MessageType::REQUEST, $envelope->messageType);
-        self::assertSame('station', $envelope->source);
+        self::assertSame('Station', $envelope->source);
         self::assertSame('BootNotification', $envelope->action);
     }
 
@@ -114,7 +114,7 @@ final class MessageBuilderTest extends TestCase
         $envelope = MessageBuilder::stationEvent('StatusNotification')->build();
 
         self::assertSame(MessageType::EVENT, $envelope->messageType);
-        self::assertSame('station', $envelope->source);
+        self::assertSame('Station', $envelope->source);
         self::assertSame('StatusNotification', $envelope->action);
     }
 
@@ -146,7 +146,7 @@ final class MessageBuilderTest extends TestCase
     {
         $envelope = MessageBuilder::response('Heartbeat')->build();
 
-        self::assertSame('1.0.0', $envelope->protocolVersion->value);
+        self::assertSame('0.1.0', $envelope->protocolVersion->value);
     }
 
     #[Test]
@@ -332,7 +332,7 @@ final class MessageBuilderTest extends TestCase
             ->correlatedTo($request)
             ->build();
 
-        self::assertSame('server', $response->source);
+        self::assertSame('Server', $response->source);
         self::assertSame(MessageType::RESPONSE, $response->messageType);
         self::assertSame($payload, $response->payload);
     }
@@ -427,7 +427,7 @@ final class MessageBuilderTest extends TestCase
         self::assertSame(MessageType::REQUEST, $envelope->messageType);
         self::assertSame('StartService', $envelope->action);
         self::assertSame($timestamp, $envelope->timestamp);
-        self::assertSame('server', $envelope->source);
+        self::assertSame('Server', $envelope->source);
         self::assertTrue($version->equals($envelope->protocolVersion));
         self::assertSame($payload, $envelope->payload);
         self::assertSame('full-chain-mac', $envelope->mac);

@@ -61,7 +61,7 @@ final class SigningWorkflowTest extends TestCase
     #[Test]
     public function signing_mode_ALL_signs_every_action(): void
     {
-        self::assertCount(24, OsppAction::all());
+        self::assertCount(29, OsppAction::all());
 
         foreach (OsppAction::all() as $action) {
             self::assertTrue(

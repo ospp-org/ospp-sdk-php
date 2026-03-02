@@ -6,7 +6,7 @@ namespace Ospp\Protocol\Enums;
 
 enum MessageType: string
 {
-    case REQUEST = 'REQUEST';
-    case RESPONSE = 'RESPONSE';
-    case EVENT = 'EVENT';
+    case REQUEST = 'Request';
+    case RESPONSE = 'Response';
+    case EVENT = 'Event';
 }

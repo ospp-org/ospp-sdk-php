@@ -12,9 +12,9 @@ use PHPUnit\Framework\TestCase;
 final class OsppErrorCodeTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_eighty_cases(): void
+    public function it_has_exactly_102_cases(): void
     {
-        self::assertCount(80, OsppErrorCode::cases());
+        self::assertCount(102, OsppErrorCode::cases());
     }
 
     // =========================================================================
@@ -92,6 +92,7 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::RESERVATION_EXPIRED,
             OsppErrorCode::BAY_RESERVED,
             OsppErrorCode::PAYLOAD_INVALID,
+            OsppErrorCode::ACTIVE_SESSIONS_PRESENT,
         ];
 
         foreach ($sessionCodes as $code) {
@@ -112,6 +113,11 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::PAYMENT_TIMEOUT,
             OsppErrorCode::REFUND_FAILED,
             OsppErrorCode::WEBHOOK_SIGNATURE_INVALID,
+            OsppErrorCode::CSR_INVALID,
+            OsppErrorCode::CERTIFICATE_CHAIN_INVALID,
+            OsppErrorCode::CERTIFICATE_TYPE_MISMATCH,
+            OsppErrorCode::RENEWAL_DENIED,
+            OsppErrorCode::KEYPAIR_GENERATION_FAILED,
         ];
 
         foreach ($paymentCodes as $code) {
@@ -125,14 +131,25 @@ final class OsppErrorCodeTest extends TestCase
         $stationCodes = [
             OsppErrorCode::HARDWARE_GENERIC,
             OsppErrorCode::PUMP_SYSTEM,
-            OsppErrorCode::WATER_SYSTEM,
-            OsppErrorCode::CHEMICAL_SYSTEM,
+            OsppErrorCode::FLUID_SYSTEM,
+            OsppErrorCode::CONSUMABLE_SYSTEM,
             OsppErrorCode::ELECTRICAL_SYSTEM,
             OsppErrorCode::PAYMENT_HARDWARE,
             OsppErrorCode::HEATING_SYSTEM,
             OsppErrorCode::MECHANICAL_SYSTEM,
             OsppErrorCode::SENSOR_FAILURE,
             OsppErrorCode::EMERGENCY_STOP,
+            OsppErrorCode::DOWNLOAD_FAILED,
+            OsppErrorCode::CHECKSUM_MISMATCH,
+            OsppErrorCode::VERSION_ALREADY_INSTALLED,
+            OsppErrorCode::INSUFFICIENT_STORAGE,
+            OsppErrorCode::INSTALLATION_FAILED,
+            OsppErrorCode::UPLOAD_FAILED,
+            OsppErrorCode::INVALID_TIME_WINDOW,
+            OsppErrorCode::NO_DIAGNOSTICS_AVAILABLE,
+            OsppErrorCode::INVALID_CATALOG,
+            OsppErrorCode::UNSUPPORTED_SERVICE,
+            OsppErrorCode::CATALOG_TOO_LARGE,
             OsppErrorCode::SOFTWARE_GENERIC,
             OsppErrorCode::FIRMWARE_ERROR,
             OsppErrorCode::CONFIGURATION_ERROR,
@@ -141,6 +158,11 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::MEMORY_ERROR,
             OsppErrorCode::CLOCK_ERROR,
             OsppErrorCode::OPERATION_IN_PROGRESS,
+            OsppErrorCode::CONFIGURATION_KEY_READONLY,
+            OsppErrorCode::INVALID_CONFIGURATION_VALUE,
+            OsppErrorCode::RESET_FAILED,
+            OsppErrorCode::BUFFER_FULL,
+            OsppErrorCode::FIRMWARE_SIGNATURE_INVALID,
         ];
 
         foreach ($stationCodes as $code) {
@@ -200,6 +222,11 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::WATCHDOG_RESET,
             OsppErrorCode::MEMORY_ERROR,
             OsppErrorCode::WEBHOOK_SIGNATURE_INVALID,
+            OsppErrorCode::KEYPAIR_GENERATION_FAILED,
+            OsppErrorCode::INSTALLATION_FAILED,
+            OsppErrorCode::RESET_FAILED,
+            OsppErrorCode::BUFFER_FULL,
+            OsppErrorCode::FIRMWARE_SIGNATURE_INVALID,
         ];
 
         foreach ($criticalCodes as $code) {
@@ -252,11 +279,18 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::SERVER_INTERNAL_ERROR,
             OsppErrorCode::VALIDATION_ERROR,
             OsppErrorCode::SESSION_TOKEN_INVALID,
-            OsppErrorCode::COMMAND_NOT_SUPPORTED,
-            OsppErrorCode::SENSOR_FAILURE,
-            OsppErrorCode::PAYMENT_HARDWARE,
-            OsppErrorCode::MECHANICAL_SYSTEM,
             OsppErrorCode::URL_UNREACHABLE,
+            OsppErrorCode::CSR_INVALID,
+            OsppErrorCode::CERTIFICATE_CHAIN_INVALID,
+            OsppErrorCode::RENEWAL_DENIED,
+            OsppErrorCode::DOWNLOAD_FAILED,
+            OsppErrorCode::CHECKSUM_MISMATCH,
+            OsppErrorCode::INSUFFICIENT_STORAGE,
+            OsppErrorCode::UPLOAD_FAILED,
+            OsppErrorCode::INVALID_CATALOG,
+            OsppErrorCode::CATALOG_TOO_LARGE,
+            OsppErrorCode::CONFIGURATION_KEY_READONLY,
+            OsppErrorCode::INVALID_CONFIGURATION_VALUE,
         ];
 
         foreach ($errorCodes as $code) {
@@ -296,9 +330,19 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::OFFLINE_RATE_LIMITED,
             OsppErrorCode::PAYMENT_TIMEOUT,
             OsppErrorCode::HARDWARE_GENERIC,
-            OsppErrorCode::WATER_SYSTEM,
-            OsppErrorCode::CHEMICAL_SYSTEM,
+            OsppErrorCode::FLUID_SYSTEM,
+            OsppErrorCode::CONSUMABLE_SYSTEM,
             OsppErrorCode::HEATING_SYSTEM,
+            OsppErrorCode::COMMAND_NOT_SUPPORTED,
+            OsppErrorCode::SENSOR_FAILURE,
+            OsppErrorCode::PAYMENT_HARDWARE,
+            OsppErrorCode::MECHANICAL_SYSTEM,
+            OsppErrorCode::CERTIFICATE_TYPE_MISMATCH,
+            OsppErrorCode::ACTIVE_SESSIONS_PRESENT,
+            OsppErrorCode::VERSION_ALREADY_INSTALLED,
+            OsppErrorCode::INVALID_TIME_WINDOW,
+            OsppErrorCode::NO_DIAGNOSTICS_AVAILABLE,
+            OsppErrorCode::UNSUPPORTED_SERVICE,
             OsppErrorCode::CLOCK_ERROR,
             OsppErrorCode::OPERATION_IN_PROGRESS,
             OsppErrorCode::ACK_TIMEOUT,
@@ -369,6 +413,21 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::EMERGENCY_STOP,
             OsppErrorCode::FIRMWARE_ERROR,
             OsppErrorCode::VALIDATION_ERROR,
+            OsppErrorCode::RENEWAL_DENIED,
+            OsppErrorCode::KEYPAIR_GENERATION_FAILED,
+            OsppErrorCode::CHECKSUM_MISMATCH,
+            OsppErrorCode::VERSION_ALREADY_INSTALLED,
+            OsppErrorCode::INSUFFICIENT_STORAGE,
+            OsppErrorCode::INSTALLATION_FAILED,
+            OsppErrorCode::INVALID_TIME_WINDOW,
+            OsppErrorCode::NO_DIAGNOSTICS_AVAILABLE,
+            OsppErrorCode::INVALID_CATALOG,
+            OsppErrorCode::UNSUPPORTED_SERVICE,
+            OsppErrorCode::CATALOG_TOO_LARGE,
+            OsppErrorCode::CONFIGURATION_KEY_READONLY,
+            OsppErrorCode::INVALID_CONFIGURATION_VALUE,
+            OsppErrorCode::RESET_FAILED,
+            OsppErrorCode::FIRMWARE_SIGNATURE_INVALID,
         ];
 
         foreach ($nonRecoverable as $code) {
@@ -407,11 +466,18 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::PAYMENT_TIMEOUT,
             OsppErrorCode::REFUND_FAILED,
             OsppErrorCode::HARDWARE_GENERIC,
-            OsppErrorCode::WATER_SYSTEM,
-            OsppErrorCode::CHEMICAL_SYSTEM,
+            OsppErrorCode::FLUID_SYSTEM,
+            OsppErrorCode::CONSUMABLE_SYSTEM,
             OsppErrorCode::ELECTRICAL_SYSTEM,
             OsppErrorCode::HEATING_SYSTEM,
             OsppErrorCode::SENSOR_FAILURE,
+            OsppErrorCode::CSR_INVALID,
+            OsppErrorCode::CERTIFICATE_CHAIN_INVALID,
+            OsppErrorCode::CERTIFICATE_TYPE_MISMATCH,
+            OsppErrorCode::ACTIVE_SESSIONS_PRESENT,
+            OsppErrorCode::DOWNLOAD_FAILED,
+            OsppErrorCode::UPLOAD_FAILED,
+            OsppErrorCode::BUFFER_FULL,
             OsppErrorCode::SOFTWARE_GENERIC,
             OsppErrorCode::CONFIGURATION_ERROR,
             OsppErrorCode::STORAGE_ERROR,
@@ -585,14 +651,14 @@ final class OsppErrorCodeTest extends TestCase
     public function session_codes_are_in_3xxx_range(): void
     {
         self::assertSame(3000, OsppErrorCode::SESSION_GENERIC->value);
-        self::assertSame(3015, OsppErrorCode::PAYLOAD_INVALID->value);
+        self::assertSame(3016, OsppErrorCode::ACTIVE_SESSIONS_PRESENT->value);
     }
 
     #[Test]
     public function payment_codes_are_in_4xxx_range(): void
     {
         self::assertSame(4000, OsppErrorCode::PAYMENT_GENERIC->value);
-        self::assertSame(4008, OsppErrorCode::WEBHOOK_SIGNATURE_INVALID->value);
+        self::assertSame(4014, OsppErrorCode::KEYPAIR_GENERATION_FAILED->value);
     }
 
     #[Test]
@@ -601,7 +667,7 @@ final class OsppErrorCodeTest extends TestCase
         self::assertSame(5000, OsppErrorCode::HARDWARE_GENERIC->value);
         self::assertSame(5009, OsppErrorCode::EMERGENCY_STOP->value);
         self::assertSame(5100, OsppErrorCode::SOFTWARE_GENERIC->value);
-        self::assertSame(5107, OsppErrorCode::OPERATION_IN_PROGRESS->value);
+        self::assertSame(5112, OsppErrorCode::FIRMWARE_SIGNATURE_INVALID->value);
     }
 
     #[Test]
@@ -664,33 +730,33 @@ final class OsppErrorCodeTest extends TestCase
     }
 
     #[Test]
-    public function session_category_has_sixteen_codes(): void
+    public function session_category_has_seventeen_codes(): void
     {
         $count = count(array_filter(
             OsppErrorCode::cases(),
             static fn (OsppErrorCode $c): bool => $c->category() === 'session',
         ));
-        self::assertSame(16, $count);
+        self::assertSame(17, $count);
     }
 
     #[Test]
-    public function payment_category_has_nine_codes(): void
+    public function payment_category_has_fourteen_codes(): void
     {
         $count = count(array_filter(
             OsppErrorCode::cases(),
             static fn (OsppErrorCode $c): bool => $c->category() === 'payment',
         ));
-        self::assertSame(9, $count);
+        self::assertSame(14, $count);
     }
 
     #[Test]
-    public function station_category_has_eighteen_codes(): void
+    public function station_category_has_thirty_four_codes(): void
     {
         $count = count(array_filter(
             OsppErrorCode::cases(),
             static fn (OsppErrorCode $c): bool => $c->category() === 'station',
         ));
-        self::assertSame(18, $count);
+        self::assertSame(34, $count);
     }
 
     #[Test]

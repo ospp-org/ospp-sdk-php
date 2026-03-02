@@ -6,6 +6,6 @@ namespace Ospp\Protocol\Enums;
 
 enum SessionSource: string
 {
-    case MOBILE_APP = 'mobile_app';
-    case WEB_PAYMENT = 'web_payment';
+    case MOBILE_APP = 'MobileApp';
+    case WEB_PAYMENT = 'WebPayment';
 }

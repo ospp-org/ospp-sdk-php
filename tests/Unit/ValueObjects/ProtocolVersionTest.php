@@ -152,14 +152,14 @@ final class ProtocolVersionTest extends TestCase
     // ---------------------------------------------------------------
 
     #[Test]
-    public function defaultReturnsOneZeroZero(): void
+    public function defaultReturnsZeroOneZero(): void
     {
         $version = ProtocolVersion::default();
 
-        self::assertSame(1, $version->major);
-        self::assertSame(0, $version->minor);
+        self::assertSame(0, $version->major);
+        self::assertSame(1, $version->minor);
         self::assertSame(0, $version->patch);
-        self::assertSame('1.0.0', $version->value);
+        self::assertSame('0.1.0', $version->value);
     }
 
     #[Test]

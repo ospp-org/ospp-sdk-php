@@ -7,7 +7,7 @@ namespace Ospp\Protocol\ValueObjects;
 use InvalidArgumentException;
 
 /**
- * Semantic version for OSPP protocol (e.g., "1.0.0").
+ * Semantic version for OSPP protocol (e.g., "0.1.0").
  * Immutable. Supports major version compatibility checking.
  */
 final class ProtocolVersion implements \JsonSerializable, \Stringable
@@ -58,7 +58,7 @@ final class ProtocolVersion implements \JsonSerializable, \Stringable
     {
         $version = self::$defaultResolver !== null
             ? (self::$defaultResolver)()
-            : '1.0.0';
+            : '0.1.0';
 
         return self::fromString($version);
     }
