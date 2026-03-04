@@ -49,6 +49,9 @@
   │ Objects      │                                                                                                                │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ Actions      │ OsppAction — all 29 protocol actions (26 MQTT + 3 API-only) with validation                                   │
+  ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ JSON         │ 76 schema files (ble, common, mqtt) accessible via SchemaPath::directory()                                    │
+  │ Schemas      │                                                                                                                │
   └──────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
   Quick Start
@@ -81,6 +84,13 @@
 
   $status = BayStatus::fromOspp('Available'); // BayStatus::AVAILABLE
   $wire = BayStatus::OCCUPIED->toOspp();      // 'Occupied'
+
+  Access JSON Schemas
+
+  use Ospp\Protocol\SchemaPath;
+
+  $schemasDir = SchemaPath::directory();
+  $bootSchema = json_decode(file_get_contents($schemasDir . '/mqtt/boot-notification-request.schema.json'), true);
 
   Architecture
 
