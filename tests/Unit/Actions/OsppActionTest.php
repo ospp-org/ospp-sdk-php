@@ -15,11 +15,11 @@ final class OsppActionTest extends TestCase
     // ---------------------------------------------------------------
 
     #[Test]
-    public function allReturns29Actions(): void
+    public function allReturns30Actions(): void
     {
         $all = OsppAction::all();
 
-        self::assertCount(29, $all);
+        self::assertCount(30, $all);
     }
 
     #[Test]
@@ -58,11 +58,11 @@ final class OsppActionTest extends TestCase
     // ---------------------------------------------------------------
 
     #[Test]
-    public function mqttActionsReturns26(): void
+    public function mqttActionsReturns27(): void
     {
         $mqtt = OsppAction::mqttActions();
 
-        self::assertCount(26, $mqtt);
+        self::assertCount(27, $mqtt);
     }
 
     #[Test]
@@ -117,11 +117,11 @@ final class OsppActionTest extends TestCase
     // ---------------------------------------------------------------
 
     #[Test]
-    public function stationToServerReturns12Actions(): void
+    public function stationToServerReturns13Actions(): void
     {
         $s2s = OsppAction::stationToServer();
 
-        self::assertCount(12, $s2s);
+        self::assertCount(13, $s2s);
     }
 
     #[Test]
@@ -167,10 +167,11 @@ final class OsppActionTest extends TestCase
         self::assertContains('StatusNotification', $s2s);
         self::assertContains('ConnectionLost', $s2s);
         self::assertContains('MeterValues', $s2s);
+        self::assertContains('TransactionEvent', $s2s);
+        self::assertContains('SessionEnded', $s2s);
         self::assertContains('FirmwareStatusNotification', $s2s);
         self::assertContains('DiagnosticsNotification', $s2s);
         self::assertContains('AuthorizeOfflinePass', $s2s);
-        self::assertContains('TransactionEvent', $s2s);
         self::assertContains('SecurityEvent', $s2s);
         self::assertContains('SignCertificate', $s2s);
         self::assertContains('DataTransfer', $s2s);
@@ -203,11 +204,11 @@ final class OsppActionTest extends TestCase
     // ---------------------------------------------------------------
 
     #[Test]
-    public function eventsReturns6Actions(): void
+    public function eventsReturns7Actions(): void
     {
         $events = OsppAction::events();
 
-        self::assertCount(6, $events);
+        self::assertCount(7, $events);
     }
 
     #[Test]
@@ -218,6 +219,7 @@ final class OsppActionTest extends TestCase
         self::assertContains('StatusNotification', $events);
         self::assertContains('ConnectionLost', $events);
         self::assertContains('MeterValues', $events);
+        self::assertContains('SessionEnded', $events);
         self::assertContains('FirmwareStatusNotification', $events);
         self::assertContains('DiagnosticsNotification', $events);
         self::assertContains('SecurityEvent', $events);
@@ -380,6 +382,8 @@ final class OsppActionTest extends TestCase
         self::assertSame('Heartbeat', OsppAction::HEARTBEAT);
         self::assertSame('StatusNotification', OsppAction::STATUS_NOTIFICATION);
         self::assertSame('ConnectionLost', OsppAction::CONNECTION_LOST);
+        self::assertSame('DataTransfer', OsppAction::DATA_TRANSFER);
+        self::assertSame('TriggerMessage', OsppAction::TRIGGER_MESSAGE);
 
         // Transaction Profile
         self::assertSame('StartService', OsppAction::START_SERVICE);
@@ -387,6 +391,8 @@ final class OsppActionTest extends TestCase
         self::assertSame('ReserveBay', OsppAction::RESERVE_BAY);
         self::assertSame('CancelReservation', OsppAction::CANCEL_RESERVATION);
         self::assertSame('MeterValues', OsppAction::METER_VALUES);
+        self::assertSame('TransactionEvent', OsppAction::TRANSACTION_EVENT);
+        self::assertSame('SessionEnded', OsppAction::SESSION_ENDED);
 
         // Device Management Profile — Station Events
         self::assertSame('FirmwareStatusNotification', OsppAction::FIRMWARE_STATUS_NOTIFICATION);
@@ -401,19 +407,12 @@ final class OsppActionTest extends TestCase
         self::assertSame('SetMaintenanceMode', OsppAction::SET_MAINTENANCE_MODE);
         self::assertSame('UpdateServiceCatalog', OsppAction::UPDATE_SERVICE_CATALOG);
 
-        // Offline Profile
-        self::assertSame('AuthorizeOfflinePass', OsppAction::AUTHORIZE_OFFLINE_PASS);
-        self::assertSame('TransactionEvent', OsppAction::TRANSACTION_EVENT);
-
         // Security Profile
+        self::assertSame('AuthorizeOfflinePass', OsppAction::AUTHORIZE_OFFLINE_PASS);
         self::assertSame('SecurityEvent', OsppAction::SECURITY_EVENT);
         self::assertSame('SignCertificate', OsppAction::SIGN_CERTIFICATE);
         self::assertSame('CertificateInstall', OsppAction::CERTIFICATE_INSTALL);
         self::assertSame('TriggerCertificateRenewal', OsppAction::TRIGGER_CERTIFICATE_RENEWAL);
-
-        // General Profile
-        self::assertSame('DataTransfer', OsppAction::DATA_TRANSFER);
-        self::assertSame('TriggerMessage', OsppAction::TRIGGER_MESSAGE);
 
         // API-Only
         self::assertSame('IssueOfflinePass', OsppAction::ISSUE_OFFLINE_PASS);

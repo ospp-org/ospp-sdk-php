@@ -5,22 +5,26 @@ declare(strict_types=1);
 namespace Ospp\Protocol\Actions;
 
 /**
- * All 29 OSPP action constants (26 MQTT + 3 API-only).
+ * All 30 OSPP action constants (27 MQTT + 3 API-only).
  */
 final class OsppAction
 {
-    // Core Profile — MQTT (4)
+    // Core Profile — MQTT (6)
     public const BOOT_NOTIFICATION = 'BootNotification';
     public const HEARTBEAT = 'Heartbeat';
     public const STATUS_NOTIFICATION = 'StatusNotification';
     public const CONNECTION_LOST = 'ConnectionLost';
+    public const DATA_TRANSFER = 'DataTransfer';
+    public const TRIGGER_MESSAGE = 'TriggerMessage';
 
-    // Transaction Profile — MQTT (5)
+    // Transaction Profile — MQTT (7)
     public const START_SERVICE = 'StartService';
     public const STOP_SERVICE = 'StopService';
     public const RESERVE_BAY = 'ReserveBay';
     public const CANCEL_RESERVATION = 'CancelReservation';
     public const METER_VALUES = 'MeterValues';
+    public const TRANSACTION_EVENT = 'TransactionEvent';
+    public const SESSION_ENDED = 'SessionEnded';
 
     // Device Management Profile — Station Events — MQTT (2)
     public const FIRMWARE_STATUS_NOTIFICATION = 'FirmwareStatusNotification';
@@ -35,19 +39,12 @@ final class OsppAction
     public const SET_MAINTENANCE_MODE = 'SetMaintenanceMode';
     public const UPDATE_SERVICE_CATALOG = 'UpdateServiceCatalog';
 
-    // Offline Profile — MQTT (2)
+    // Security Profile — MQTT (5)
     public const AUTHORIZE_OFFLINE_PASS = 'AuthorizeOfflinePass';
-    public const TRANSACTION_EVENT = 'TransactionEvent';
-
-    // Security Profile — MQTT (4)
     public const SECURITY_EVENT = 'SecurityEvent';
     public const SIGN_CERTIFICATE = 'SignCertificate';
     public const CERTIFICATE_INSTALL = 'CertificateInstall';
     public const TRIGGER_CERTIFICATE_RENEWAL = 'TriggerCertificateRenewal';
-
-    // General Profile — MQTT (2)
-    public const DATA_TRANSFER = 'DataTransfer';
-    public const TRIGGER_MESSAGE = 'TriggerMessage';
 
     // API-Only Actions (3) — not transmitted via MQTT
     public const ISSUE_OFFLINE_PASS = 'IssueOfflinePass';
@@ -72,11 +69,15 @@ final class OsppAction
             self::HEARTBEAT,
             self::STATUS_NOTIFICATION,
             self::CONNECTION_LOST,
+            self::DATA_TRANSFER,
+            self::TRIGGER_MESSAGE,
             self::START_SERVICE,
             self::STOP_SERVICE,
             self::RESERVE_BAY,
             self::CANCEL_RESERVATION,
             self::METER_VALUES,
+            self::TRANSACTION_EVENT,
+            self::SESSION_ENDED,
             self::FIRMWARE_STATUS_NOTIFICATION,
             self::DIAGNOSTICS_NOTIFICATION,
             self::GET_CONFIGURATION,
@@ -87,13 +88,10 @@ final class OsppAction
             self::SET_MAINTENANCE_MODE,
             self::UPDATE_SERVICE_CATALOG,
             self::AUTHORIZE_OFFLINE_PASS,
-            self::TRANSACTION_EVENT,
             self::SECURITY_EVENT,
             self::SIGN_CERTIFICATE,
             self::CERTIFICATE_INSTALL,
             self::TRIGGER_CERTIFICATE_RENEWAL,
-            self::DATA_TRANSFER,
-            self::TRIGGER_MESSAGE,
         ];
     }
 
@@ -121,14 +119,15 @@ final class OsppAction
             self::HEARTBEAT,
             self::STATUS_NOTIFICATION,
             self::CONNECTION_LOST,
+            self::DATA_TRANSFER,
             self::METER_VALUES,
+            self::TRANSACTION_EVENT,
+            self::SESSION_ENDED,
             self::FIRMWARE_STATUS_NOTIFICATION,
             self::DIAGNOSTICS_NOTIFICATION,
             self::AUTHORIZE_OFFLINE_PASS,
-            self::TRANSACTION_EVENT,
             self::SECURITY_EVENT,
             self::SIGN_CERTIFICATE,
-            self::DATA_TRANSFER,
         ];
     }
 
@@ -169,6 +168,7 @@ final class OsppAction
             self::STATUS_NOTIFICATION,
             self::CONNECTION_LOST,
             self::METER_VALUES,
+            self::SESSION_ENDED,
             self::FIRMWARE_STATUS_NOTIFICATION,
             self::DIAGNOSTICS_NOTIFICATION,
             self::SECURITY_EVENT,

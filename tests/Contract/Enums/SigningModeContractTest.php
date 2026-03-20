@@ -77,10 +77,10 @@ final class SigningModeContractTest extends TestCase
     }
 
     #[Test]
-    public function shouldVerify_identical_to_shouldSign_for_all_modes_and_all_29_actions(): void
+    public function shouldVerify_identical_to_shouldSign_for_all_modes_and_all_30_actions(): void
     {
         $allActions = OsppAction::all();
-        self::assertCount(29, $allActions, 'Expected exactly 29 OSPP actions');
+        self::assertCount(30, $allActions, 'Expected exactly 30 OSPP actions');
 
         foreach (SigningMode::cases() as $mode) {
             foreach ($allActions as $action) {
