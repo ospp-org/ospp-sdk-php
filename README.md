@@ -35,7 +35,7 @@
   │              │ FirmwareUpdateStatus, DiagnosticsStatus, ReservationStatus, BootNotificationStatus, BootReason,               │
   │              │ NetworkConnectionType, TransactionEventStatus, ChangeConfigResultStatus, DataTransferStatus,                  │
   │              │ TriggerMessageStatus, CertificateType, ResetType, SecurityEventType, StationConnectivity,                    │
-  │              │ BleServiceStatus, PricingType, LogLevel, ConfigurationKey (41 keys with metadata)                            │
+  │              │ BleServiceStatus, PricingType, LogLevel, SessionEndReason, ConfigurationKey (41 keys with metadata)            │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ State        │ Transition tables for Bay (7 states), Session (6 states), Firmware (10 states), Diagnostics (5 states),        │
   │ Machines     │ Reservation (5 states)                                                                                         │
@@ -48,9 +48,9 @@
   │ Value        │ MessageId (UUID v4), ProtocolVersion (semver)                                                                  │
   │ Objects      │                                                                                                                │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ Actions      │ OsppAction — all 29 protocol actions (26 MQTT + 3 API-only) with validation                                   │
+  │ Actions      │ OsppAction — all 30 protocol actions (27 MQTT + 3 API-only) with validation                                   │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ JSON         │ 76 schema files (ble, common, mqtt) accessible via SchemaPath::directory()                                    │
+  │ JSON         │ 77 schema files (ble, common, mqtt) accessible via SchemaPath::directory()                                    │
   │ Schemas      │                                                                                                                │
   └──────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
@@ -105,7 +105,7 @@
   composer install
   vendor/bin/phpunit
 
-  642 tests across 4 test suites:
+  646 tests across 4 test suites:
 
   ┌─────────────┬───────┬───────────────────────────────────────┐
   │    Suite    │ Tests │                Purpose                │
