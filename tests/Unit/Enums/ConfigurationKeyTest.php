@@ -131,7 +131,7 @@ final class ConfigurationKeyTest extends TestCase
         self::assertSame(30, ConfigurationKey::HEARTBEAT_INTERVAL_SECONDS->defaultValue());
         self::assertSame(60, ConfigurationKey::CONNECTION_TIMEOUT->defaultValue());
         self::assertSame('UTC', ConfigurationKey::TIME_ZONE->defaultValue());
-        self::assertSame('0.1.0', ConfigurationKey::PROTOCOL_VERSION->defaultValue());
+        self::assertSame('0.2.1', ConfigurationKey::PROTOCOL_VERSION->defaultValue());
         self::assertSame('en-US', ConfigurationKey::LOCALE->defaultValue());
     }
 

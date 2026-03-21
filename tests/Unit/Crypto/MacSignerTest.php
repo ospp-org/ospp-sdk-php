@@ -104,7 +104,7 @@ final class MacSignerTest extends TestCase
         $knownKey = base64_encode(str_repeat("\xAB", 32));
 
         $payload = [
-            'protocolVersion' => '0.1.0',
+            'protocolVersion' => '0.2.1',
             'messageId' => 'msg-123',
             'action' => 'BootNotification',
             'payload' => [

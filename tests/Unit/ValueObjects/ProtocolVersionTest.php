@@ -157,9 +157,9 @@ final class ProtocolVersionTest extends TestCase
         $version = ProtocolVersion::default();
 
         self::assertSame(0, $version->major);
-        self::assertSame(1, $version->minor);
-        self::assertSame(0, $version->patch);
-        self::assertSame('0.1.0', $version->value);
+        self::assertSame(2, $version->minor);
+        self::assertSame(1, $version->patch);
+        self::assertSame('0.2.1', $version->value);
     }
 
     #[Test]

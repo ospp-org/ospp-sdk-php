@@ -146,7 +146,7 @@ final class MessageBuilderTest extends TestCase
     {
         $envelope = MessageBuilder::response('Heartbeat')->build();
 
-        self::assertSame('0.1.0', $envelope->protocolVersion->value);
+        self::assertSame('0.2.1', $envelope->protocolVersion->value);
     }
 
     #[Test]

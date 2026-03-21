@@ -58,7 +58,7 @@ final class ProtocolVersion implements \JsonSerializable, \Stringable
     {
         $version = self::$defaultResolver !== null
             ? (self::$defaultResolver)()
-            : '0.1.0';
+            : '0.2.1';
 
         return self::fromString($version);
     }

@@ -94,7 +94,7 @@ enum ConfigurationKey: string
             self::RECONNECT_BACKOFF_MAX => 30,
             self::STATION_NAME => '',
             self::TIME_ZONE => 'UTC',
-            self::PROTOCOL_VERSION => '0.1.0',
+            self::PROTOCOL_VERSION => '0.2.1',
             self::BOOT_RETRY_INTERVAL => 30,
             self::STATUS_NOTIFICATION_INTERVAL => 0,
             self::EVENT_THROTTLE_SECONDS => 0,

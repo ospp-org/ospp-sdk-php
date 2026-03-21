@@ -66,7 +66,7 @@ final class MessageBuilderContractTest extends TestCase
     {
         $envelope = MessageBuilder::request('TestAction')->build();
 
-        self::assertSame('0.1.0', $envelope->protocolVersion->value);
+        self::assertSame('0.2.1', $envelope->protocolVersion->value);
     }
 
     #[Test]

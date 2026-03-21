@@ -169,7 +169,7 @@ final class MessageEnvelopeContractTest extends TestCase
             action: 'TestAction',
             timestamp: new DateTimeImmutable('now', new DateTimeZone('UTC')),
             source: 'Server',
-            protocolVersion: ProtocolVersion::fromString('0.1.0'),
+            protocolVersion: ProtocolVersion::fromString('0.2.1'),
             payload: [],
         );
 
