@@ -22,9 +22,9 @@ final class SigningModeContractTest extends TestCase
     public function CRITICAL_mode_delegates_to_CriticalMessageRegistry(): void
     {
         $criticalActions = CriticalMessageRegistry::allCriticalActions();
-        self::assertCount(19, $criticalActions, 'Expected exactly 19 critical actions');
+        self::assertCount(20, $criticalActions, 'Expected exactly 20 critical actions');
 
-        // All 19 critical actions must return true
+        // All 20 critical actions must return true
         foreach ($criticalActions as $action) {
             self::assertTrue(
                 SigningMode::CRITICAL->shouldSign($action),

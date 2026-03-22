@@ -20,6 +20,7 @@ final class CriticalMessageRegistry
         'ReserveBay',
         'CancelReservation',
         'TransactionEvent',
+        'SessionEnded',
 
         // Security Profile
         'AuthorizeOfflinePass',

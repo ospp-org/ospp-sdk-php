@@ -14,8 +14,8 @@ final class CriticalMessageRegistryContractTest extends TestCase
     #[Test]
     public function exactly_19_critical_actions(): void
     {
-        self::assertSame(19, CriticalMessageRegistry::count());
-        self::assertCount(19, CriticalMessageRegistry::allCriticalActions());
+        self::assertSame(20, CriticalMessageRegistry::count());
+        self::assertCount(20, CriticalMessageRegistry::allCriticalActions());
     }
 
     #[Test]
@@ -31,6 +31,7 @@ final class CriticalMessageRegistryContractTest extends TestCase
             'ReserveBay',
             'Reset',
             'RevokeOfflinePass',
+            'SessionEnded',
             'SetMaintenanceMode',
             'SignCertificate',
             'StartService',
