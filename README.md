@@ -43,14 +43,14 @@
   │ Envelope     │ MessageEnvelope, MessageBuilder — wire-format message construction with correlation support                    │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ Crypto       │ HMAC-SHA256 message signing (MacSigner), ECDSA P-256 offline pass signing, canonical JSON serialization,       │
-  │              │ critical message registry (19 actions), SessionProofCalculator (BLE session proof)                            │
+  │              │ critical message registry (20 actions), SessionProofCalculator (BLE session proof)                            │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ Value        │ MessageId (UUID v4), ProtocolVersion (semver)                                                                  │
   │ Objects      │                                                                                                                │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ Actions      │ OsppAction — all 30 protocol actions (27 MQTT + 3 API-only) with validation                                   │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ JSON         │ 77 schema files (ble, common, mqtt) accessible via SchemaPath::directory()                                    │
+  │ JSON         │ 78 schema files (ble, common, mqtt) accessible via SchemaPath::directory()                                    │
   │ Schemas      │                                                                                                                │
   └──────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
@@ -105,16 +105,16 @@
   composer install
   vendor/bin/phpunit
 
-  646 tests across 4 test suites:
+  656 tests across 4 test suites:
 
   ┌─────────────┬───────┬───────────────────────────────────────┐
   │    Suite    │ Tests │                Purpose                │
   ├─────────────┼───────┼───────────────────────────────────────┤
-  │ Unit        │ 457   │ Individual class behavior             │
+  │ Unit        │ 466   │ Individual class behavior             │
   ├─────────────┼───────┼───────────────────────────────────────┤
   │ Regression  │ 10    │ Pins previously found bugs            │
   ├─────────────┼───────┼───────────────────────────────────────┤
-  │ Contract    │ 148   │ Behavioral alignment with CSMS server │
+  │ Contract    │ 153   │ Behavioral alignment with CSMS server │
   ├─────────────┼───────┼───────────────────────────────────────┤
   │ Integration │ 27    │ Cross-component workflows             │
   └─────────────┴───────┴───────────────────────────────────────┘
