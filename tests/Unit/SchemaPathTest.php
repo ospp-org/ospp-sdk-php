@@ -46,4 +46,16 @@ final class SchemaPathTest extends TestCase
         $content = json_decode((string) file_get_contents($file), true);
         $this->assertIsArray($content);
     }
+
+    #[Test]
+    public function provisioning_schema_exists_at_top_level(): void
+    {
+        $file = SchemaPath::directory() . '/provisioning-response.schema.json';
+
+        $this->assertFileExists($file);
+
+        $content = json_decode((string) file_get_contents($file), true);
+        $this->assertIsArray($content);
+        $this->assertStringEndsWith('provisioning-response.schema.json', $content['$id']);
+    }
 }
