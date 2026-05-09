@@ -54,6 +54,17 @@ final class ProtocolVersion implements \JsonSerializable, \Stringable
         self::$defaultResolver = $resolver;
     }
 
+    /**
+     * Returns the OSPP protocol wire version that envelopes will carry by default.
+     *
+     * The returned value is the spec-mandated wire `protocolVersion` field
+     * (per `spec/02-transport.md` and `spec/08-configuration.md` `ProtocolVersion`
+     * configuration-key default), NOT the SDK package version. Spec v0.4.0
+     * deliberately did not bump the wire field; future spec minor cycles
+     * will revisit per-message envelope version discrimination.
+     *
+     * Frameworks may override via {@see self::setDefaultResolver()}.
+     */
     public static function default(): self
     {
         $version = self::$defaultResolver !== null

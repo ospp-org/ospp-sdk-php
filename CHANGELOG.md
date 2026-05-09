@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.1] — 2026-05-09
+
+Documentation correction. The v0.4.0 CHANGELOG framed `ProtocolVersion::default()` returning `'0.2.1'` as a "deferred cascade" that needed bumping to `'0.4.0'`. That framing was incorrect.
+
+### Verified (no code changes)
+
+Spec v0.4.0 wire `protocolVersion` field deliberately remains `'0.2.1'` (verified empirically via `spec/02-transport.md`, `schemas/common/mqtt-envelope.schema.json` regex `^\d+\.\d+\.\d+$`, `spec/08-configuration.md` `ProtocolVersion` config-key default, and 174+ JSON examples across `spec/profiles/`). Spec v0.4.0 introduced feature additions (Item 3 `seqNo`/`finalSeqNo`, Item 8 `reason` vocabulary, Item 4 canonical-form consolidation) but did NOT bump the wire version field; the v0.4.0 spec bump commit (`d2d6c0c`) modified only chapter status headers.
+
+`ProtocolVersion::default()` returning `'0.2.1'` is therefore CORRECT — aligned with spec wire mandate, aligned with TS SDK (`@ospp/protocol@0.4.0` `OSPP_PROTOCOL_VERSION = '0.2.1'`), aligned with csms-server `VersionNegotiator` validation expectations.
+
+SDK package version `0.4.0` reflects spec FEATURE TARGETING (matching v0.4.0 features added in this SDK release), NOT wire VERSION. Package version and wire version are independently scoped per spec convention; future spec minor cycles will revisit wire-version discrimination strategy (per spec CHANGELOG [0.4.0] migration note: "per-message envelope `protocolVersion` discrimination, BootNotification capability negotiation").
+
+### Changed
+
+- `CHANGELOG.md` [0.4.0] section "Known mismatch (deferred)" subsection removed; framing was misleading.
+- `src/ValueObjects/ProtocolVersion.php` — doc-comment on `default()` clarifies that the returned value is the spec-mandated wire version, NOT the SDK package version.
+
+### Migration
+
+None. No code changes; `ProtocolVersion::default()` still returns `'0.2.1'` (now correctly framed as spec-aligned, not deferred).
+
+---
+
 ## [0.4.0] — 2026-05-09
 
 Aligns SDK with OSPP spec v0.4.0. Includes catch-up backport of the v0.2.5 provisioning schema and v0.3.0 `stationCaChain`/`brokerRootCa` additions that the v0.3.x SDK line skipped, plus the v0.4.0 Item 3 (`seqNo` / `finalSeqNo`) and Item 8 (`SessionEndReason` vocabulary) wire deltas. **Coordinated v0.3.x → v0.4.0 station/server upgrade required** — see Migration.
@@ -37,10 +60,6 @@ This release requires **coordinated v0.3.x → v0.4.0 stack upgrade**:
 - **SessionEndReason vocabulary (Item 8):** v0.3.x servers will reject SessionEnded payloads carrying `Local`, `LocalOutOfCredit`, or `Deauthorized` via JSON-schema validation. Stations using SDK v0.4.0 in v0.3.x server fleets MUST be configured to emit only legacy reasons (`TimerExpired`, `Fault`) until the server fleet is upgraded.
 
 Additive changes (Item 3 `seqNo`/`finalSeqNo`, provisioning schema backport) are backwards-compatible — all new schema fields are OPTIONAL; v0.3.x servers ignore unknown fields per spec `02-transport.md §10.1` forward-compatibility rule.
-
-### Known mismatch (deferred)
-
-`ProtocolVersion::default()` and `ConfigurationKey::PROTOCOL_VERSION` still return `'0.2.1'` — the v0.3.0 bump was never cascaded and remains un-cascaded in v0.4.0 by deliberate scope decision. SDK consumers calling `ProtocolVersion::default()` will receive `'0.2.1'` despite the SDK package version being `0.4.0`. Override via `ProtocolVersion::setDefaultResolver(fn () => '0.4.0')` if a wire-version match is required. Will be addressed in a follow-up brief.
 
 ---
 
