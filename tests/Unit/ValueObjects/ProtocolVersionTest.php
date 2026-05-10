@@ -121,13 +121,43 @@ final class ProtocolVersionTest extends TestCase
     #[Test]
     public function fromStringRejectsNonNumericParts(): void
     {
-        // "a.b.c" will parse as 0.0.0 via (int) cast, which is valid
-        // but let's verify it doesn't throw
-        $version = ProtocolVersion::fromString('a.b.c');
+        // Spec mqtt-envelope.schema.json constrains protocolVersion to
+        // pattern ^\d+\.\d+\.\d+$. Previously fromString silently coerced
+        // "a.b.c" to 0.0.0 via (int) cast — that was a bug.
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid protocol version format: "a.b.c"');
 
-        self::assertSame(0, $version->major);
-        self::assertSame(0, $version->minor);
-        self::assertSame(0, $version->patch);
+        ProtocolVersion::fromString('a.b.c');
+    }
+
+    #[Test]
+    public function fromStringRejectsTrailingSuffix(): void
+    {
+        // (int) "3-rc1" was silently truncating to 3.
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid protocol version format: "1.2.3-rc1"');
+
+        ProtocolVersion::fromString('1.2.3-rc1');
+    }
+
+    #[Test]
+    public function fromStringRejectsNegativeMajor(): void
+    {
+        // "-1.0.0" was passing the count check then constructor caught it;
+        // the regex now rejects it earlier with the format message.
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid protocol version format: "-1.0.0"');
+
+        ProtocolVersion::fromString('-1.0.0');
+    }
+
+    #[Test]
+    public function fromStringRejectsLeadingPlusSign(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid protocol version format: "+1.0.0"');
+
+        ProtocolVersion::fromString('+1.0.0');
     }
 
     #[Test]
@@ -145,6 +175,53 @@ final class ProtocolVersionTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         ProtocolVersion::fromString('');
+    }
+
+    #[Test]
+    public function fromStringRejectsOversizedInput(): void
+    {
+        // Spec mqtt-envelope.schema.json: maxLength: 32. 33 chars must reject.
+        $oversized = str_repeat('1', 11) . '.' . str_repeat('2', 11) . '.' . str_repeat('3', 11);
+        // 11 + 1 + 11 + 1 + 11 = 35 chars — well past the maxLength.
+        self::assertGreaterThan(32, mb_strlen($oversized));
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Protocol version too long (max 32 chars)');
+
+        ProtocolVersion::fromString($oversized);
+    }
+
+    #[Test]
+    public function fromStringAcceptsExactly32Chars(): void
+    {
+        // 9 + 1 + 10 + 1 + 10 = 31 chars (just under bound).
+        $value = str_repeat('1', 9) . '.' . str_repeat('2', 10) . '.' . str_repeat('3', 10);
+        self::assertSame(31, mb_strlen($value));
+
+        $version = ProtocolVersion::fromString($value);
+
+        self::assertSame((int) str_repeat('1', 9), $version->major);
+    }
+
+    #[Test]
+    public function fromStringAcceptsZeroVersion(): void
+    {
+        $version = ProtocolVersion::fromString('0.0.0');
+
+        self::assertSame(0, $version->major);
+        self::assertSame(0, $version->minor);
+        self::assertSame(0, $version->patch);
+    }
+
+    #[Test]
+    public function fromStringAcceptsLeadingZeros(): void
+    {
+        // \d+ regex matches leading zeros; (int) cast normalizes them.
+        $version = ProtocolVersion::fromString('01.02.03');
+
+        self::assertSame(1, $version->major);
+        self::assertSame(2, $version->minor);
+        self::assertSame(3, $version->patch);
     }
 
     // ---------------------------------------------------------------

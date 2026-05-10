@@ -28,18 +28,26 @@ final class ProtocolVersion implements \JsonSerializable, \Stringable
 
     public static function fromString(string $version): self
     {
-        $parts = explode('.', $version);
-
-        if (count($parts) !== 3) {
+        // Constraints from spec/schemas/common/mqtt-envelope.schema.json
+        // (protocolVersion field): pattern "^\d+\.\d+\.\d+$", maxLength 32.
+        if (mb_strlen($version) > 32) {
             throw new InvalidArgumentException(
-                sprintf('Invalid protocol version format: "%s". Expected "MAJOR.MINOR.PATCH".', $version),
+                sprintf('Protocol version too long (max 32 chars): "%s".', $version),
             );
         }
 
+        if (preg_match('/^\d+\.\d+\.\d+$/', $version) !== 1) {
+            throw new InvalidArgumentException(
+                sprintf('Invalid protocol version format: "%s". Expected "MAJOR.MINOR.PATCH" with non-negative integers.', $version),
+            );
+        }
+
+        [$major, $minor, $patch] = explode('.', $version);
+
         return new self(
-            major: (int) $parts[0],
-            minor: (int) $parts[1],
-            patch: (int) $parts[2],
+            major: (int) $major,
+            minor: (int) $minor,
+            patch: (int) $patch,
         );
     }
 
