@@ -117,32 +117,90 @@ final class MessageIdTest extends TestCase
     }
 
     // ---------------------------------------------------------------
-    // Constructor validation — invalid prefix
+    // Constructor validation — spec compliance
+    //
+    // Spec defines messageId as {type: string, minLength: 1, maxLength: 64}
+    // with no pattern. Prefixes (msg_/cmd_/err_/boot_/...) are a SHOULD-only
+    // convention per spec/spec/03-messages.md and MUST NOT be relied on for
+    // routing. The constructor accepts any non-empty string up to 64 chars.
     // ---------------------------------------------------------------
 
     #[Test]
-    public function constructorRejectsInvalidPrefix(): void
+    public function constructorAcceptsRawUuid(): void
     {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('MessageId must start with one of [msg_, cmd_, err_]');
+        $value = '550e8400-e29b-41d4-a716-446655440000';
+        $id = new MessageId($value);
 
-        new MessageId('xyz_550e8400-e29b-41d4-a716-446655440000');
+        self::assertSame($value, $id->value);
     }
 
     #[Test]
-    public function constructorRejectsPrefixWithoutUnderscore(): void
+    public function constructorAcceptsArbitraryNonEmptyString(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $id = new MessageId('hello-world');
 
-        new MessageId('msg550e8400');
+        self::assertSame('hello-world', $id->value);
     }
 
     #[Test]
-    public function constructorRejectsRandomString(): void
+    public function constructorAcceptsSpecPrefixes(): void
+    {
+        // Prefixes from spec/spec/03-messages.md table; constructor must
+        // accept all of them (and any other non-empty ≤64-char string).
+        foreach (['boot_x', 'hb_x', 'evt_x', 'sec_x', 'tx_x', 'auth_x', 'cmd_x', 'lwt-x'] as $value) {
+            self::assertSame($value, (new MessageId($value))->value);
+        }
+    }
+
+    #[Test]
+    public function constructorAcceptsPrefixWithoutUnderscore(): void
+    {
+        // Previously rejected; spec has no such constraint.
+        $id = new MessageId('msg550e8400');
+
+        self::assertSame('msg550e8400', $id->value);
+    }
+
+    // ---------------------------------------------------------------
+    // Constructor validation — length boundaries (spec maxLength: 64)
+    // ---------------------------------------------------------------
+
+    #[Test]
+    public function constructorAcceptsExactly64Chars(): void
+    {
+        $value = str_repeat('a', 64);
+        $id = new MessageId($value);
+
+        self::assertSame($value, $id->value);
+    }
+
+    #[Test]
+    public function constructorAcceptsSingleChar(): void
+    {
+        $id = new MessageId('x');
+
+        self::assertSame('x', $id->value);
+    }
+
+    #[Test]
+    public function constructorRejectsExactly65Chars(): void
     {
         $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('MessageId must be at most 64 characters');
 
-        new MessageId('hello-world');
+        new MessageId(str_repeat('a', 65));
+    }
+
+    #[Test]
+    public function constructorRejectsMultibyteOverflow(): void
+    {
+        // 33 emoji × 1 codepoint each = 33 chars (mb_strlen) but ≥132 bytes.
+        // mb_strlen path enforces 64 *characters*, not bytes.
+        // Use a value that is mb_strlen > 64 but still printable.
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('MessageId must be at most 64 characters');
+
+        new MessageId(str_repeat('é', 65));
     }
 
     // ---------------------------------------------------------------

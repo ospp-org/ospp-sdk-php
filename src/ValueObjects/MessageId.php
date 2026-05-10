@@ -8,8 +8,6 @@ use InvalidArgumentException;
 
 final readonly class MessageId implements \JsonSerializable, \Stringable
 {
-    private const VALID_PREFIXES = ['msg_', 'cmd_', 'err_'];
-
     public function __construct(
         public string $value,
     ) {
@@ -17,21 +15,9 @@ final readonly class MessageId implements \JsonSerializable, \Stringable
             throw new InvalidArgumentException('MessageId cannot be empty.');
         }
 
-        $hasValidPrefix = false;
-        foreach (self::VALID_PREFIXES as $prefix) {
-            if (str_starts_with($value, $prefix)) {
-                $hasValidPrefix = true;
-                break;
-            }
-        }
-
-        if (! $hasValidPrefix) {
+        if (mb_strlen($value) > 64) {
             throw new InvalidArgumentException(
-                sprintf(
-                    'MessageId must start with one of [%s], got: "%s".',
-                    implode(', ', self::VALID_PREFIXES),
-                    $value,
-                ),
+                sprintf('MessageId must be at most 64 characters, got %d.', mb_strlen($value)),
             );
         }
     }
@@ -44,7 +30,12 @@ final readonly class MessageId implements \JsonSerializable, \Stringable
     /**
      * Generate a new unique MessageId with the given prefix.
      *
-     * @param  string  $prefix  One of 'msg_', 'cmd_', 'err_' (default: 'msg_')
+     * The prefix is a SHOULD-only convention per spec/spec/03-messages.md
+     * (§ messageId prefixes table). Implementations MUST NOT rely on the
+     * prefix for routing — use the `action` field. Prefix is preserved here
+     * for human readability and log filtering only.
+     *
+     * @param  string  $prefix  Conventional prefix (e.g., 'msg_', 'cmd_'); default 'msg_'
      */
     public static function generate(string $prefix = 'msg_'): self
     {
