@@ -105,12 +105,12 @@
   composer install
   vendor/bin/phpunit
 
-  656 tests across 4 test suites:
+  668 tests across 4 test suites:
 
   ┌─────────────┬───────┬───────────────────────────────────────┐
   │    Suite    │ Tests │                Purpose                │
   ├─────────────┼───────┼───────────────────────────────────────┤
-  │ Unit        │ 466   │ Individual class behavior             │
+  │ Unit        │ 478   │ Individual class behavior             │
   ├─────────────┼───────┼───────────────────────────────────────┤
   │ Regression  │ 10    │ Pins previously found bugs            │
   ├─────────────┼───────┼───────────────────────────────────────┤

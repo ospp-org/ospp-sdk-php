@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.2] — 2026-05-10
+
+Spec-alignment correctness release. Two value objects had drifted from the
+canonical mqtt-envelope schema; both now enforce exactly the schema's
+constraints (no more, no less). Surfaced via DLQ inspection of the csms-server
+UAT environment, where every inbound message from non-PHP clients was being
+rejected with `INVALID_MESSAGE_FORMAT (1005)` at SDK construction time.
+
+### Fixed
+
+- `MessageId` constructor no longer enforces `msg_`/`cmd_`/`err_` prefix
+  whitelist. Spec defines `messageId` as `{type: string, minLength: 1,
+  maxLength: 64}` with no pattern, and `spec/spec/03-messages.md:2957-2972`
+  normatively states prefixes are a SHOULD convention that implementations
+  MUST NOT rely on for routing. The previous whitelist was both over-strict
+  and divergent from the spec's own prefix table (`boot_`/`hb_`/`evt_`/`sec_`/
+  `tx_`/`auth_`/`cmd_`/`lwt-`): two of the three enforced prefixes don't
+  appear in the recommendation. Spec-compliant raw-UUID inbound (e.g., from
+  the TS station-simulator emitting via `crypto.randomUUID()`) was previously
+  rejected at construction; now accepted.
+- `ProtocolVersion::fromString` validates input against the schema regex
+  `^\d+\.\d+\.\d+$` and enforces `maxLength: 32` before parsing. Previously
+  silently coerced non-numeric components via `(int)` cast (`"abc.def.ghi"`
+  became `0.0.0`; `"1.2.3-rc1"` became `1.2.3`). Now rejects with a clear
+  format-error message at the boundary.
+
+### Migration
+
+None required for emit-side or correctly-formed inputs. If a consumer
+deliberately fed `ProtocolVersion::fromString` a string that was being
+silently coerced, it now throws — but such inputs were never spec-valid.
+
+`MessageId::generate()` emit-side behavior unchanged — still produces
+`msg_<uuid>` (or `cmd_<uuid>` for REQUEST messages built via `MessageBuilder`).
+Existing prefixed values continue to construct successfully.
+
+### Spec source-of-truth
+
+- `spec/schemas/common/mqtt-envelope.schema.json` (`messageId`, `protocolVersion`)
+- `spec/spec/03-messages.md:2957-2972` (prefix SHOULD-only language)
+
+### Tests
+
+- 668 tests, 4157 assertions, all green (was 661 in v0.4.1; +7 new boundary
+  and spec-compliance tests).
+
+---
+
 ## [0.4.1] — 2026-05-09
 
 Documentation correction. The v0.4.0 CHANGELOG framed `ProtocolVersion::default()` returning `'0.2.1'` as a "deferred cascade" that needed bumping to `'0.4.0'`. That framing was incorrect.
