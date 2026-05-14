@@ -114,7 +114,7 @@ enum OsppErrorCode: int
     case BUFFER_FULL = 5111;
     case FIRMWARE_SIGNATURE_INVALID = 5112;
 
-    // 6xxx - Server Errors (8 codes)
+    // 6xxx - Server Errors (9 codes)
     case SERVER_GENERIC = 6000;
     case SERVER_INTERNAL_ERROR = 6001;
     case ACK_TIMEOUT = 6002;
@@ -123,6 +123,7 @@ enum OsppErrorCode: int
     case SESSION_ALREADY_ACTIVE = 6005;
     case RATE_LIMIT_EXCEEDED = 6006;
     case SERVICE_DEGRADED = 6007;
+    case CAPABILITY_NOT_SUPPORTED = 6008;
 
     public function category(): string
     {
@@ -231,6 +232,7 @@ enum OsppErrorCode: int
             self::OFFLINE_COUNTER_REPLAY,
             self::OFFLINE_STATION_MISMATCH,
             self::COMMAND_NOT_SUPPORTED,
+            self::CAPABILITY_NOT_SUPPORTED,
             self::ACTION_NOT_PERMITTED,
             self::JWT_INVALID,
             self::SESSION_TOKEN_INVALID,
@@ -286,8 +288,11 @@ enum OsppErrorCode: int
             self::SESSION_TOKEN_EXPIRED, self::SESSION_TOKEN_INVALID => 401,
             self::INSUFFICIENT_BALANCE => 402,
             self::BAY_NOT_FOUND, self::SESSION_NOT_FOUND, self::RESERVATION_NOT_FOUND => 404,
-            self::BAY_BUSY, self::BAY_RESERVED, self::SESSION_ALREADY_ACTIVE => 409,
-            self::DURATION_INVALID, self::MAX_DURATION_EXCEEDED, self::INVALID_SERVICE => 422,
+            self::BAY_BUSY, self::BAY_RESERVED, self::SESSION_ALREADY_ACTIVE,
+            self::OPERATION_IN_PROGRESS => 409,
+            self::DURATION_INVALID, self::MAX_DURATION_EXCEEDED, self::INVALID_SERVICE,
+            self::STATION_NOT_REGISTERED, self::CAPABILITY_NOT_SUPPORTED,
+            self::INVALID_TIME_WINDOW => 422,
             self::RATE_LIMIT_EXCEEDED => 429,
             self::STATION_OFFLINE => 502,
             self::ACK_TIMEOUT => 504,

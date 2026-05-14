@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.3] — 2026-05-14
+
+HTTP status mapping coherence for the four station/server error codes that
+were silently falling through to `default => 500`, defeating proper REST
+error semantics for callers that surface OsppException via the HTTP layer.
+Surfaced via csms-server Brief K1.5 Drift 7-A — `RequestDiagnosticsAction`'s
+six pre-flight throws still produced HTTP 500 even after migrating from
+`\RuntimeException` to `OsppException`, because four of the chosen error
+codes were not enumerated in `OsppErrorCode::httpStatus()`.
+
+### Added
+
+- `OsppErrorCode::CAPABILITY_NOT_SUPPORTED = 6008`. Server-class code for
+  station-capability gaps surfaced at admin-action pre-flight time (e.g.,
+  diagnostic upload requested against a station whose BootNotification
+  capabilities did not advertise `deviceManagementSupported`). Semantically
+  distinct from `SERVER_INTERNAL_ERROR` (which remains for genuine server
+  faults). Severity: `WARNING`. `isRecoverable`: `false` (the gap cannot
+  be retried; it requires station firmware/hardware change).
+
+### Changed
+
+- `OsppErrorCode::httpStatus()` now maps four previously-defaulting codes
+  to their proper REST status:
+  - `STATION_NOT_REGISTERED` → 422 (was 500). The caller supplied an
+    identifier that does not resolve to a registered station —
+    Unprocessable Entity matches the cause better than Internal Server
+    Error.
+  - `CAPABILITY_NOT_SUPPORTED` → 422 (new code; see Added).
+  - `INVALID_TIME_WINDOW` → 422 (was 500). Aligns with the other
+    validation-class codes (`DURATION_INVALID`, `MAX_DURATION_EXCEEDED`,
+    `INVALID_SERVICE`) already mapped to 422.
+  - `OPERATION_IN_PROGRESS` → 409 (was 500). Conflict with existing
+    in-flight operation matches HTTP 409 Conflict semantics, alongside
+    `BAY_BUSY`, `BAY_RESERVED`, `SESSION_ALREADY_ACTIVE`.
+
+  No code's mapping was *removed* or *changed* away from a non-500 value;
+  the four codes above only had `default => 500` before this release.
+  `SERVER_INTERNAL_ERROR` deliberately still maps to 500 (semantic match).
+
+### Contract test pin updates
+
+- Total code count contract: 102 → 103.
+- Server category count contract: 8 → 9.
+- httpStatus 422 and 409 cohorts expanded with the four newly-mapped codes.
+
+No breaking changes. Additive only.
+
+---
+
 ## [0.4.2] — 2026-05-10
 
 Spec-alignment correctness release. Two value objects had drifted from the

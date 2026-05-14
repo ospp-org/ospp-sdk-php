@@ -14,7 +14,7 @@ final class OsppErrorCodeTest extends TestCase
     #[Test]
     public function it_has_exactly_102_cases(): void
     {
-        self::assertCount(102, OsppErrorCode::cases());
+        self::assertCount(103, OsppErrorCode::cases());
     }
 
     // =========================================================================
@@ -182,6 +182,7 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::SESSION_ALREADY_ACTIVE,
             OsppErrorCode::RATE_LIMIT_EXCEEDED,
             OsppErrorCode::SERVICE_DEGRADED,
+            OsppErrorCode::CAPABILITY_NOT_SUPPORTED,
         ];
 
         foreach ($serverCodes as $code) {
@@ -334,6 +335,7 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::CONSUMABLE_SYSTEM,
             OsppErrorCode::HEATING_SYSTEM,
             OsppErrorCode::COMMAND_NOT_SUPPORTED,
+            OsppErrorCode::CAPABILITY_NOT_SUPPORTED,
             OsppErrorCode::SENSOR_FAILURE,
             OsppErrorCode::PAYMENT_HARDWARE,
             OsppErrorCode::MECHANICAL_SYSTEM,
@@ -574,6 +576,7 @@ final class OsppErrorCodeTest extends TestCase
         self::assertSame(409, OsppErrorCode::BAY_BUSY->httpStatus());
         self::assertSame(409, OsppErrorCode::BAY_RESERVED->httpStatus());
         self::assertSame(409, OsppErrorCode::SESSION_ALREADY_ACTIVE->httpStatus());
+        self::assertSame(409, OsppErrorCode::OPERATION_IN_PROGRESS->httpStatus());
     }
 
     #[Test]
@@ -582,6 +585,9 @@ final class OsppErrorCodeTest extends TestCase
         self::assertSame(422, OsppErrorCode::DURATION_INVALID->httpStatus());
         self::assertSame(422, OsppErrorCode::MAX_DURATION_EXCEEDED->httpStatus());
         self::assertSame(422, OsppErrorCode::INVALID_SERVICE->httpStatus());
+        self::assertSame(422, OsppErrorCode::STATION_NOT_REGISTERED->httpStatus());
+        self::assertSame(422, OsppErrorCode::CAPABILITY_NOT_SUPPORTED->httpStatus());
+        self::assertSame(422, OsppErrorCode::INVALID_TIME_WINDOW->httpStatus());
     }
 
     #[Test]
@@ -760,12 +766,12 @@ final class OsppErrorCodeTest extends TestCase
     }
 
     #[Test]
-    public function server_category_has_eight_codes(): void
+    public function server_category_has_nine_codes(): void
     {
         $count = count(array_filter(
             OsppErrorCode::cases(),
             static fn (OsppErrorCode $c): bool => $c->category() === 'server',
         ));
-        self::assertSame(8, $count);
+        self::assertSame(9, $count);
     }
 }
