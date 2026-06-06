@@ -7,6 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] — 2026-06-06
+
+Lockstep re-synchronization release with `spec` and `sdk-ts`. See
+[`spec/adr/ADR-001`](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)
+for the convention going forward.
+
+The SDK change in this release is small: `TransactionEventStatus` gains
+its 5th case (`DEFERRED`) and the vendored MQTT response schema admits
+the new wire value. csms-server already emitted `Deferred` on the wire
+on the §4.2:52 gap-defer path; spec 0.5.0 closes the corresponding
+schema gap and this release brings the SDK enum to parity.
+
+### Added
+
+- `TransactionEventStatus::DEFERRED = 'Deferred'`. Mirrors the spec
+  0.5.0 `transaction-event-response.schema.json` enum addition. Distinct
+  from `RETRY_LATER` in station-side semantics: `RetryLater` directs the
+  station to back off and resend; `Deferred` directs the station that
+  the transaction is held server-side pending operator-manual unblock
+  OR arrival of the missing in-sequence transactions, and the station
+  MUST NOT auto-resend. Distinct enum cases prevent a consumer from
+  conflating the two.
+- `schemas/mqtt/transaction-event-response.schema.json` synced
+  byte-identically with the spec 0.5.0 source — `Deferred` is now an
+  admitted `status` value with the same conditional-`reason`-required
+  rule the other three non-`Accepted` values carry.
+
+### Changed
+
+- No changes to existing public APIs. This is a pure-additive enum
+  extension.
+
+### Migration
+
+- Consumers that exhaustively `match` on `TransactionEventStatus`
+  cases (without a default arm) MUST add a `DEFERRED` arm or rely on a
+  `default` branch. The SDK itself does not `match`-exhaustively on
+  this enum; csms-server's wire handler reads the wire string directly
+  and is unaffected.
+
+### Carry-over from orphaned v0.4.3
+
+This SDK shipped a `v0.4.3` (2026-05-14) for an unrelated change —
+`CAPABILITY_NOT_SUPPORTED = 6008` + four `httpStatus()` mappings
+(`STATION_NOT_REGISTERED → 422`, `STATION_OFFLINE → 503`,
+`AMBIGUOUS_REQUEST → 409`, `CAPABILITY_NOT_SUPPORTED → 422`). That
+release was never represented in `spec` or `sdk-ts` and would have
+collided with `0.4.3` on spec for the present Deferred-enum change.
+The `v0.4.3` changes remain in this release — they are not reverted,
+only re-anchored under the `0.5.0` lockstep version per ADR-001. See
+the [v0.4.3 entry](#043--2026-05-14) below for the full content of
+that change.
+
+### Verification
+
+- `paratest -p 28`: OK (669 tests, 4181 assertions).
+- `paratest --filter TransactionEventStatusTest`: OK (6 tests,
+  17 assertions). RED-first: the new test expectations
+  (assertCount(5), `from('Deferred')`, `DEFERRED` constant references,
+  `deferred_is_distinct_from_retry_later`) were run against the 4-case
+  enum first and produced 1 failure + 3 undefined-constant errors
+  before the `DEFERRED` case was added.
+
+### Coordinated with
+
+- `spec v0.5.0` — `TransactionEventResponse` schema `status` enum gains
+  `Deferred` + `reconciliation.md §4.1`/`§4.2` document the wire shape
+  + `§6.3`/`§6.5` gate-emit-before-INSERT ordering fix.
+- `sdk-ts v0.5.0` — `TransactionEventResponse` discriminated union
+  gains a `Deferred` variant.
+
+---
+
 ## [0.4.3] — 2026-05-14
 
 HTTP status mapping coherence for the four station/server error codes that
