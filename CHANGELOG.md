@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.1] — 2026-06-07
+
+Schema-vendoring sync release. Coordinated with `sdk-ts v0.5.1`. No
+protocol change. `spec` is **NOT** bumped — its schemas were already
+correct as of `v0.5.0`; the drift was in the SDKs' vendored copies.
+
+### Fixed
+
+- `schemas/ble/receipt.schema.json` — re-vendored byte-identically from
+  spec `v0.5.0` source. Adds the v0.4.2-era outer wrapper fields
+  `offlinePassId`, `userId`, `deviceId` per `06-security.md §6.2`
+  receipt_fields expansion. Prior SDK shape (since `v0.4.2`) was the
+  pre-v0.4.2 9-field shape — the SDK simply missed re-vendoring at the
+  spec `v0.4.2` release.
+- `schemas/common/receipt.schema.json` — re-vendored byte-identically.
+  Description-level update aligning with the spec `v0.4.2` `§4.8`
+  canonical-form / `§6.2` v0.4.2 anchors. No wire shape change.
+- `schemas/common/receipt-data.schema.json` (NEW) — re-vendored
+  byte-identically. The canonical `ReceiptData` body that gets
+  serialized via OSPP Canonical Form (`spec/06-security.md §4.8`) and
+  base64-encoded into `receipt.data` for ECDSA P-256 signing. Was
+  introduced by spec `v0.4.2` but had been missing from the SDK
+  entirely.
+
+### Why this is a v0.5.1 and not v0.5.0 amendment
+
+The `v0.5.0` tag (commit `95b1452`) stays valid — it correctly added the
+`TransactionEventStatus::DEFERRED` enum case (the actual protocol
+change of the lockstep release). The drift on receipt-related schemas
+was a separate, pre-existing carry-over from the `v0.4.2` spec release
+that was caught by `csms-server`'s post-`composer update` byte-identity
+check on `2026-06-06`. v0.5.1 closes the drift additively — no force-push
+or tag rewrite.
+
+### Verification
+
+- `diff -rq --exclude=README.md /spec/schemas /ospp-sdk-php/schemas` =
+  clean (byte-identical).
+- `paratest -p 28`: `OK (669 tests, 4181 assertions)`.
+
+### Coordinated with
+
+- `sdk-ts v0.5.1` — parallel schema-sync release on the TS SDK (where
+  the drift was broader: missing the `ble/` directory entirely, missing
+  `provisioning-response.schema.json`, plus the same `common/receipt`
+  divergence).
+
+### Phase B audit pointer
+
+This release closes Phase B audit finding `(a) drift clear` #7 +
+inherited drift in `csms-server` vendor. The companion mechanism — a
+CI byte-identity gate that prevents recurrence — is tracked separately;
+see Phase B audit recommendation #1.
+
+---
+
 ## [0.5.0] — 2026-06-06
 
 Lockstep re-synchronization release with `spec` and `sdk-ts`. See
