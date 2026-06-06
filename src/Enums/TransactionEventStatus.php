@@ -10,4 +10,5 @@ enum TransactionEventStatus: string
     case DUPLICATE = 'Duplicate';
     case REJECTED = 'Rejected';
     case RETRY_LATER = 'RetryLater';
+    case DEFERRED = 'Deferred';
 }

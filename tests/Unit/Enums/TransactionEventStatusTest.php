@@ -11,9 +11,9 @@ use PHPUnit\Framework\TestCase;
 final class TransactionEventStatusTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_four_cases(): void
+    public function it_has_exactly_five_cases(): void
     {
-        self::assertCount(4, TransactionEventStatus::cases());
+        self::assertCount(5, TransactionEventStatus::cases());
     }
 
     #[Test]
@@ -23,6 +23,7 @@ final class TransactionEventStatusTest extends TestCase
         self::assertSame('Duplicate', TransactionEventStatus::DUPLICATE->value);
         self::assertSame('Rejected', TransactionEventStatus::REJECTED->value);
         self::assertSame('RetryLater', TransactionEventStatus::RETRY_LATER->value);
+        self::assertSame('Deferred', TransactionEventStatus::DEFERRED->value);
     }
 
     #[Test]
@@ -32,6 +33,19 @@ final class TransactionEventStatusTest extends TestCase
         self::assertSame(TransactionEventStatus::DUPLICATE, TransactionEventStatus::from('Duplicate'));
         self::assertSame(TransactionEventStatus::REJECTED, TransactionEventStatus::from('Rejected'));
         self::assertSame(TransactionEventStatus::RETRY_LATER, TransactionEventStatus::from('RetryLater'));
+        self::assertSame(TransactionEventStatus::DEFERRED, TransactionEventStatus::from('Deferred'));
+    }
+
+    #[Test]
+    public function deferred_is_distinct_from_retry_later(): void
+    {
+        // OSPP v0.5.0 reconciliation.md §4.2 step 4: Deferred and RetryLater are
+        // distinct station behaviors. RetryLater = back-off-and-resend (transient
+        // server condition); Deferred = held server-side, NO auto-resend, awaits
+        // operator-manual unblock OR arrival of the missing in-sequence transactions.
+        // Distinct enum cases enforce that a consumer cannot conflate the two.
+        self::assertNotSame(TransactionEventStatus::DEFERRED, TransactionEventStatus::RETRY_LATER);
+        self::assertNotSame('RetryLater', TransactionEventStatus::DEFERRED->value);
     }
 
     #[Test]
