@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.2] — 2026-06-07
+
+Enum-drift sync release. Coordinated with `sdk-ts v0.5.2`. `spec` is
+**NOT** bumped — codes 2014-2017 have been in `07-errors.md §3.2` since
+the `v0.4.2` spec release; the SDK enums simply missed sync. Same
+historical-drift pattern as the `v0.5.1` schema sync release.
+
+### Added
+
+- `OsppErrorCode::OFFLINE_PASS_REVOKED = 2014` (`Error`, non-recoverable).
+  Individual pass revocation, distinct from `2004 OFFLINE_EPOCH_REVOKED`
+  (batch revocation by epoch bump).
+- `OsppErrorCode::OFFLINE_ORG_MISMATCH = 2015` (`Error`, non-recoverable).
+  Pass `organization_id` ≠ reporting station's `organization_id`.
+  Distinct from `2006 OFFLINE_STATION_MISMATCH` (which scopes to
+  `allowed_station_ids` membership within the same organization).
+- `OsppErrorCode::OFFLINE_USER_MISMATCH = 2016` (`Error`, non-recoverable).
+  Pass `user_id` ≠ envelope `userId`.
+- `OsppErrorCode::OFFLINE_RECEIPT_MISMATCH = 2017` (`Critical`,
+  non-recoverable). Signed receipt field disagrees with cross-check
+  target (envelope or pass record). The `details.field` discriminator
+  identifies which of `offlineTxId / offlinePassId / userId / deviceId`
+  mismatched. Severity elevated to `Critical` per spec — receipt-body
+  tampering is a stronger integrity violation than the other gate
+  failures (signature itself verified; the signed payload disagrees
+  with the envelope's claim or the pass's device binding).
+
+### Updated
+
+- `severity()` match arms — 2014/2015/2016 added to the `Error` list,
+  2017 added to the `Critical` list, matching the spec metadata column.
+- `isRecoverable()` match arms — all 4 codes added to the `false` list.
+- `category()` automatically resolves to `'auth'` via the existing
+  `intdiv($value, 1000)` mapping; no change required.
+
+### Verification
+
+- `paratest -p 28`: `OK (674 tests, 4261 assertions)`.
+- `--filter OsppErrorCode`: `OK (65 tests, 1925 assertions)`.
+- RED-first: prior to the enum addition, the six new test cases
+  produced 4 undefined-constant errors + 7 count-failure assertions —
+  see commit `5c5f71e` for the captured RED log.
+
+### Migration
+
+- Consumers reading explicit error code constants can replace local
+  `const ERR_OFFLINE_PASS_REVOKED = 2014` declarations and `TEXT_*`
+  string-name duplicates with `OsppErrorCode::OFFLINE_PASS_REVOKED`
+  (case access) and `->errorText()` (PHP enum `$this->name` reflection).
+  csms-server's `RevalidationGate` consumes this in its v0.5.2 follow-
+  up commit.
+
+### Coordinated with
+
+- `sdk-ts v0.5.2` — parallel addition of the same 4 codes + metadata
+  in `OSPP_ERROR_REGISTRY`. Counts: 102 → 106 on the standard surface;
+  auth category 14 → 18.
+
+### Known follow-up
+
+- `CAPABILITY_NOT_SUPPORTED = 6008` (SDK PHP-only since `v0.4.3`)
+  has no `sdk-ts` mirror. That's a separate SDK-asymmetry-Phase-B
+  finding, not addressed in this release.
+
+---
+
 ## [0.5.1] — 2026-06-07
 
 Schema-vendoring sync release. Coordinated with `sdk-ts v0.5.1`. No
