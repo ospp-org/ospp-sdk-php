@@ -12,9 +12,60 @@ use PHPUnit\Framework\TestCase;
 final class OsppErrorCodeTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_102_cases(): void
+    public function it_has_exactly_107_cases(): void
     {
-        self::assertCount(103, OsppErrorCode::cases());
+        // v0.5.2: 4 new auth codes (2014-2017) from spec v0.4.2 07-errors.md §3.2.
+        // 103 pre-v0.5.2 (102 standard + CAPABILITY_NOT_SUPPORTED 6008 from v0.4.3) + 4 = 107.
+        self::assertCount(107, OsppErrorCode::cases());
+    }
+
+    #[Test]
+    public function v0_5_2_codes_are_present_with_correct_values(): void
+    {
+        self::assertSame(2014, OsppErrorCode::OFFLINE_PASS_REVOKED->value);
+        self::assertSame(2015, OsppErrorCode::OFFLINE_ORG_MISMATCH->value);
+        self::assertSame(2016, OsppErrorCode::OFFLINE_USER_MISMATCH->value);
+        self::assertSame(2017, OsppErrorCode::OFFLINE_RECEIPT_MISMATCH->value);
+    }
+
+    #[Test]
+    public function v0_5_2_codes_have_spec_severity(): void
+    {
+        // spec 07-errors.md §3.2: 2014/2015/2016 = Error; 2017 = Critical.
+        self::assertSame(Severity::ERROR, OsppErrorCode::OFFLINE_PASS_REVOKED->severity());
+        self::assertSame(Severity::ERROR, OsppErrorCode::OFFLINE_ORG_MISMATCH->severity());
+        self::assertSame(Severity::ERROR, OsppErrorCode::OFFLINE_USER_MISMATCH->severity());
+        self::assertSame(Severity::CRITICAL, OsppErrorCode::OFFLINE_RECEIPT_MISMATCH->severity());
+    }
+
+    #[Test]
+    public function v0_5_2_codes_are_not_recoverable(): void
+    {
+        // spec 07-errors.md §3.2: all 4 codes have recoverable=false.
+        self::assertFalse(OsppErrorCode::OFFLINE_PASS_REVOKED->isRecoverable());
+        self::assertFalse(OsppErrorCode::OFFLINE_ORG_MISMATCH->isRecoverable());
+        self::assertFalse(OsppErrorCode::OFFLINE_USER_MISMATCH->isRecoverable());
+        self::assertFalse(OsppErrorCode::OFFLINE_RECEIPT_MISMATCH->isRecoverable());
+    }
+
+    #[Test]
+    public function v0_5_2_codes_use_auth_category(): void
+    {
+        self::assertSame('auth', OsppErrorCode::OFFLINE_PASS_REVOKED->category());
+        self::assertSame('auth', OsppErrorCode::OFFLINE_ORG_MISMATCH->category());
+        self::assertSame('auth', OsppErrorCode::OFFLINE_USER_MISMATCH->category());
+        self::assertSame('auth', OsppErrorCode::OFFLINE_RECEIPT_MISMATCH->category());
+    }
+
+    #[Test]
+    public function v0_5_2_codes_use_errorText_name_convention(): void
+    {
+        // errorText() returns the enum case name verbatim — eliminates the
+        // TEXT_* duplicate const layer csms-server's RevalidationGate has.
+        self::assertSame('OFFLINE_PASS_REVOKED', OsppErrorCode::OFFLINE_PASS_REVOKED->errorText());
+        self::assertSame('OFFLINE_ORG_MISMATCH', OsppErrorCode::OFFLINE_ORG_MISMATCH->errorText());
+        self::assertSame('OFFLINE_USER_MISMATCH', OsppErrorCode::OFFLINE_USER_MISMATCH->errorText());
+        self::assertSame('OFFLINE_RECEIPT_MISMATCH', OsppErrorCode::OFFLINE_RECEIPT_MISMATCH->errorText());
     }
 
     // =========================================================================
@@ -65,6 +116,11 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::SESSION_TOKEN_EXPIRED,
             OsppErrorCode::SESSION_TOKEN_INVALID,
             OsppErrorCode::BLE_AUTH_FAILED,
+            // v0.5.2 spec v0.4.2 additions
+            OsppErrorCode::OFFLINE_PASS_REVOKED,
+            OsppErrorCode::OFFLINE_ORG_MISMATCH,
+            OsppErrorCode::OFFLINE_USER_MISMATCH,
+            OsppErrorCode::OFFLINE_RECEIPT_MISMATCH,
         ];
 
         foreach ($authCodes as $code) {
@@ -726,13 +782,14 @@ final class OsppErrorCodeTest extends TestCase
     }
 
     #[Test]
-    public function auth_category_has_fourteen_codes(): void
+    public function auth_category_has_eighteen_codes(): void
     {
+        // v0.5.2: 14 + 4 (2014/2015/2016/2017 spec v0.4.2 additions) = 18.
         $count = count(array_filter(
             OsppErrorCode::cases(),
             static fn (OsppErrorCode $c): bool => $c->category() === 'auth',
         ));
-        self::assertSame(14, $count);
+        self::assertSame(18, $count);
     }
 
     #[Test]

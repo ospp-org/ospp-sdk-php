@@ -6,7 +6,10 @@ namespace Ospp\Protocol\Enums;
 
 /**
  * Complete OSPP Error Code registry.
- * 102 error codes across 6 categories.
+ *
+ * 106 standard error codes across 6 categories (spec 07-errors.md §1.1, v0.4.2:
+ * 102 → 106 with the 2014-2017 additions), plus the SDK-specific extension
+ * CAPABILITY_NOT_SUPPORTED (6008) from v0.4.3 = 107 cases total.
  */
 enum OsppErrorCode: int
 {
@@ -27,7 +30,7 @@ enum OsppErrorCode: int
     case MAC_MISSING = 1013;
     case MESSAGE_TOO_LARGE = 1014;
 
-    // 2xxx - Authentication & Authorization Errors (14 codes)
+    // 2xxx - Authentication & Authorization Errors (18 codes — v0.5.2 added 2014-2017)
     case AUTH_GENERIC = 2000;
     case STATION_NOT_REGISTERED = 2001;
     case OFFLINE_PASS_INVALID = 2002;
@@ -42,6 +45,11 @@ enum OsppErrorCode: int
     case SESSION_TOKEN_EXPIRED = 2011;
     case SESSION_TOKEN_INVALID = 2012;
     case BLE_AUTH_FAILED = 2013;
+    // spec v0.4.2 07-errors.md §3.2 additions — reconciliation gate hard-rejects
+    case OFFLINE_PASS_REVOKED = 2014;
+    case OFFLINE_ORG_MISMATCH = 2015;
+    case OFFLINE_USER_MISMATCH = 2016;
+    case OFFLINE_RECEIPT_MISMATCH = 2017;
 
     // 3xxx - Session & Bay Errors (17 codes)
     case SESSION_GENERIC = 3000;
@@ -145,6 +153,7 @@ enum OsppErrorCode: int
             self::CERTIFICATE_ERROR,
             self::MAC_VERIFICATION_FAILED,
             self::OFFLINE_COUNTER_REPLAY,
+            self::OFFLINE_RECEIPT_MISMATCH,
             self::PUMP_SYSTEM,
             self::ELECTRICAL_SYSTEM,
             self::EMERGENCY_STOP,
@@ -171,6 +180,9 @@ enum OsppErrorCode: int
             self::OFFLINE_PASS_INVALID,
             self::OFFLINE_EPOCH_REVOKED,
             self::OFFLINE_STATION_MISMATCH,
+            self::OFFLINE_PASS_REVOKED,
+            self::OFFLINE_ORG_MISMATCH,
+            self::OFFLINE_USER_MISMATCH,
             self::ACTION_NOT_PERMITTED,
             self::JWT_INVALID,
             self::BLE_AUTH_FAILED,
@@ -231,6 +243,10 @@ enum OsppErrorCode: int
             self::OFFLINE_EPOCH_REVOKED,
             self::OFFLINE_COUNTER_REPLAY,
             self::OFFLINE_STATION_MISMATCH,
+            self::OFFLINE_PASS_REVOKED,
+            self::OFFLINE_ORG_MISMATCH,
+            self::OFFLINE_USER_MISMATCH,
+            self::OFFLINE_RECEIPT_MISMATCH,
             self::COMMAND_NOT_SUPPORTED,
             self::CAPABILITY_NOT_SUPPORTED,
             self::ACTION_NOT_PERMITTED,
