@@ -68,6 +68,38 @@ final class OsppErrorCodeTest extends TestCase
         self::assertSame('OFFLINE_RECEIPT_MISMATCH', OsppErrorCode::OFFLINE_RECEIPT_MISMATCH->errorText());
     }
 
+    #[Test]
+    public function v0_5_2_codes_have_semantically_confirmed_httpStatus_aligned_cross_SDK(): void
+    {
+        // Semantic mapping confirmed per-code (NOT inherited from sdk-ts).
+        // Spec §2.4 does not normatively specify httpStatus for these 4
+        // codes; this SDK + sdk-ts converge on the same values for v0.5.2,
+        // chosen by RFC 9110 semantics:
+        //
+        //   2014 OFFLINE_PASS_REVOKED      → 401  (pass = credential;
+        //         is_revoked=true ≡ credential no longer valid; 401
+        //         "credential invalid")
+        //   2015 OFFLINE_ORG_MISMATCH      → 403  (pass valid but used
+        //         cross-org; 403 "authenticated, not permitted for this
+        //         resource")
+        //   2016 OFFLINE_USER_MISMATCH     → 403  (pass valid but bound
+        //         to different user than the envelope claims; 403 —
+        //         pass is fine, just not for this user, same shape as
+        //         2006 STATION_MISMATCH)
+        //   2017 OFFLINE_RECEIPT_MISMATCH  → 422  (signature itself
+        //         verified per spec §3.2 — NOT 401; the cross-check
+        //         failure is "syntax correct, instructions inconsistent"
+        //         = RFC 9110 422 Unprocessable Entity)
+        self::assertSame(401, OsppErrorCode::OFFLINE_PASS_REVOKED->httpStatus(),
+            'Revoked credential → 401');
+        self::assertSame(403, OsppErrorCode::OFFLINE_ORG_MISMATCH->httpStatus(),
+            'Cross-org use → 403');
+        self::assertSame(403, OsppErrorCode::OFFLINE_USER_MISMATCH->httpStatus(),
+            'Pass not for this user → 403');
+        self::assertSame(422, OsppErrorCode::OFFLINE_RECEIPT_MISMATCH->httpStatus(),
+            'Signed-body cross-check failure → 422 (signature verified, values inconsistent)');
+    }
+
     // =========================================================================
     // category()
     // =========================================================================
@@ -680,7 +712,8 @@ final class OsppErrorCodeTest extends TestCase
     #[Test]
     public function http_status_returns_valid_http_code_for_all_cases(): void
     {
-        $validHttpCodes = [400, 401, 402, 404, 409, 422, 429, 500, 502, 504];
+        // v0.5.2: 403 added for 2015 OFFLINE_ORG_MISMATCH + 2016 OFFLINE_USER_MISMATCH.
+        $validHttpCodes = [400, 401, 402, 403, 404, 409, 422, 429, 500, 502, 504];
 
         foreach (OsppErrorCode::cases() as $code) {
             self::assertContains(

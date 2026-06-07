@@ -300,12 +300,25 @@ enum OsppErrorCode: int
     {
         return match ($this) {
             self::INVALID_MESSAGE_FORMAT, self::PAYLOAD_INVALID, self::VALIDATION_ERROR => 400,
+            // v0.5.2: 2014 OFFLINE_PASS_REVOKED aligned cross-SDK to 401 (revoked
+            // credential ≡ credential no longer valid; RFC 9110 401 "credential invalid").
+            self::OFFLINE_PASS_REVOKED,
             self::JWT_EXPIRED, self::JWT_INVALID, self::ACTION_NOT_PERMITTED,
             self::SESSION_TOKEN_EXPIRED, self::SESSION_TOKEN_INVALID => 401,
             self::INSUFFICIENT_BALANCE => 402,
+            // v0.5.2: 2015 OFFLINE_ORG_MISMATCH + 2016 OFFLINE_USER_MISMATCH aligned
+            // cross-SDK to 403 — pass is cryptographically valid but used in a
+            // context it wasn't issued for (cross-org / wrong user); RFC 9110 403
+            // "authenticated, not permitted for this resource".
+            self::OFFLINE_ORG_MISMATCH, self::OFFLINE_USER_MISMATCH => 403,
             self::BAY_NOT_FOUND, self::SESSION_NOT_FOUND, self::RESERVATION_NOT_FOUND => 404,
             self::BAY_BUSY, self::BAY_RESERVED, self::SESSION_ALREADY_ACTIVE,
             self::OPERATION_IN_PROGRESS => 409,
+            // v0.5.2: 2017 OFFLINE_RECEIPT_MISMATCH aligned cross-SDK to 422 —
+            // signature itself verified per spec §3.2; the cross-check failure
+            // is "syntax correct, instructions inconsistent" ≡ RFC 9110 422
+            // Unprocessable Entity (NOT 401 — auth succeeded).
+            self::OFFLINE_RECEIPT_MISMATCH,
             self::DURATION_INVALID, self::MAX_DURATION_EXCEEDED, self::INVALID_SERVICE,
             self::STATION_NOT_REGISTERED, self::CAPABILITY_NOT_SUPPORTED,
             self::INVALID_TIME_WINDOW => 422,

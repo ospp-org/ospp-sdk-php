@@ -41,14 +41,33 @@ historical-drift pattern as the `v0.5.1` schema sync release.
 - `isRecoverable()` match arms — all 4 codes added to the `false` list.
 - `category()` automatically resolves to `'auth'` via the existing
   `intdiv($value, 1000)` mapping; no change required.
+- `httpStatus()` — explicit cases added for all 4 new codes,
+  semantically aligned cross-SDK with `sdk-ts v0.5.2`. Spec §2.4 does
+  not normatively specify httpStatus for these codes; both SDKs
+  converge on values chosen by RFC 9110 semantics:
+  - `2014 OFFLINE_PASS_REVOKED → 401` — revoked credential ≡ credential
+    no longer valid; RFC 9110 401 "credential invalid".
+  - `2015 OFFLINE_ORG_MISMATCH → 403` — pass valid but used cross-org;
+    RFC 9110 403 "authenticated, not permitted for this resource".
+  - `2016 OFFLINE_USER_MISMATCH → 403` — pass valid but bound to a
+    different user than the envelope claims (same shape as
+    `2006 OFFLINE_STATION_MISMATCH`).
+  - `2017 OFFLINE_RECEIPT_MISMATCH → 422` — signature itself verified
+    per spec §3.2; cross-check failure is "syntax correct, instructions
+    inconsistent" ≡ RFC 9110 422 Unprocessable Entity (NOT 401 — auth
+    itself succeeded).
 
 ### Verification
 
-- `paratest -p 28`: `OK (674 tests, 4261 assertions)`.
-- `--filter OsppErrorCode`: `OK (65 tests, 1925 assertions)`.
-- RED-first: prior to the enum addition, the six new test cases
-  produced 4 undefined-constant errors + 7 count-failure assertions —
-  see commit `5c5f71e` for the captured RED log.
+- `paratest -p 28`: `OK (675 tests, 4265 assertions)`.
+- `--filter OsppErrorCode`: `OK (66 tests, 1953 assertions)`.
+- RED-first on enum addition: prior to the enum addition, the six new
+  test cases produced 4 undefined-constant errors + 7 count-failure
+  assertions — see commit `5c5f71e` for the captured RED log.
+- RED-first on httpStatus alignment: prior to the explicit cases, the
+  cross-SDK parity test failed with `500 → 401` (default arm fell
+  through to 500) — confirms the 4 new codes were diverging from
+  sdk-ts before alignment.
 
 ### Migration
 
@@ -68,8 +87,32 @@ historical-drift pattern as the `v0.5.1` schema sync release.
 ### Known follow-up
 
 - `CAPABILITY_NOT_SUPPORTED = 6008` (SDK PHP-only since `v0.4.3`)
-  has no `sdk-ts` mirror. That's a separate SDK-asymmetry-Phase-B
+  has no `sdk-ts` mirror. That's a separate SDK-asymmetry Phase B
   finding, not addressed in this release.
+- **`httpStatus` cross-SDK drift on pre-existing 2xxx auth codes.**
+  10 of 14 existing 2xxx codes diverge between this SDK and
+  `sdk-ts` v0.5.x on `httpStatus`:
+  - `2000 AUTH_GENERIC`, `2002 OFFLINE_PASS_INVALID`,
+    `2003 OFFLINE_PASS_EXPIRED`, `2004 OFFLINE_EPOCH_REVOKED`,
+    `2005 OFFLINE_COUNTER_REPLAY`, `2006 OFFLINE_STATION_MISMATCH`,
+    `2007 COMMAND_NOT_SUPPORTED`, `2013 BLE_AUTH_FAILED` — this SDK
+    falls through to `500` via the `match` default arm; `sdk-ts`
+    explicitly maps these to `401` / `403` / `501`.
+  - `2001 STATION_NOT_REGISTERED` — this SDK maps to `422`; `sdk-ts`
+    maps to `401`.
+  - `2008 ACTION_NOT_PERMITTED` — this SDK maps to `401`; `sdk-ts`
+    maps to `403`. (Spec §2.4 lists 2008 under both 401 and 403,
+    so this divergence has a spec-level ambiguity behind it.)
+  Only 4 of 14 agree (`2009 JWT_EXPIRED`, `2010 JWT_INVALID`,
+  `2011 SESSION_TOKEN_EXPIRED`, `2012 SESSION_TOKEN_INVALID` — all
+  401). Scope of this drift extends beyond 2xxx (cross-SDK
+  `httpStatus` parity has not been audited for 3xxx/4xxx/5xxx/6xxx
+  ranges). Closing this drift requires a dedicated SDK-metadata
+  parity sprint that: (i) audits cross-SDK on the entire enum;
+  (ii) chooses the canonical value per code (spec doesn't specify
+  for most); (iii) potentially upgrades `07-errors.md §2.4` from
+  an indicative "Typical Error Codes" table to a normative
+  exhaustive mapping. Tracked separately; NOT in scope for v0.5.2.
 
 ---
 
