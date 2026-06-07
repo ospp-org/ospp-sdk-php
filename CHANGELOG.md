@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.3] — 2026-06-07
+
+UserSub derivation lift. Coordinated with `sdk-ts v0.5.3`. `spec` is
+**NOT** bumped — the derivation rule (`sub` = `sub_` + UUID with
+hyphens stripped) is implicitly normative via the existing
+`^sub_[a-zA-Z0-9]+$` regex on the OfflinePass `sub` field
+(`schemas/common/offline-pass.schema.json`); the spec prose does not
+call it out but the schema regex forces it. No wire change.
+
+### Why
+
+The derivation rule lived only in csms-server
+(`App\Shared\ValueObjects\UserSub`) prior to v0.5.3 — a latent drift
+risk if a firmware or alternative pass issuer ever derives a `sub_*`
+independently. Lifting into the SDK makes it the cross-ecosystem
+source of truth so PHP and TS implementations cannot drift.
+
+### Added
+
+- `Ospp\Protocol\ValueObjects\UserSubject` — final class with static
+  `fromUserId(string $userId): string` returning
+  `'sub_' . str_replace('-', '', $userId)`. Static-helper form (not a
+  wrapped value object) because the spec, MQTT envelopes, and pass
+  bodies all treat the value as a plain string; a wrapped VO would
+  only add unwrapping noise at call sites. Byte-identical with the
+  TS SDK counterpart (`@ospp/protocol` `UserSubject.fromUserId`).
+
+### Verification
+
+- 8 PHPUnit tests in `tests/Unit/ValueObjects/UserSubjectTest.php`
+  covering canonical csms-server vectors plus cross-language
+  byte-equality vectors (empty, single hyphen, multi-hyphen, UTF-8
+  multibyte).
+- Cross-language proof: identical UTF-8 hex output on all 8 vectors
+  vs `sdk-ts v0.5.3` `UserSubject.fromUserId`. The unicode vector
+  `user-é-moji🎉` → `sub_userémoji🎉` produces the same byte
+  sequence `7375625f75736572c3a96d6f6a69f09f8e89` in both SDKs,
+  pinning the byte-level UTF-8 invariant (PHP `str_replace` on bytes
+  vs JS `replaceAll` on UTF-16 code units agree because `-` is ASCII
+  and UTF-8 continuation bytes never contain 0x2D).
+- Full suite: 683/683 paratest passing (no regressions).
+
+### Migration
+
+csms-server callers can delegate `App\Shared\ValueObjects\UserSub::
+fromUserId` to `Ospp\Protocol\ValueObjects\UserSubject::fromUserId`
+(byte-identical return). Wire `sub` field unchanged.
+
+---
+
 ## [0.5.2] — 2026-06-07
 
 Enum-drift sync release. Coordinated with `sdk-ts v0.5.2`. `spec` is
