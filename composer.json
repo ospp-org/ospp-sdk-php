@@ -5,8 +5,10 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "ext-gmp": "*",
         "ext-json": "*",
-        "ext-openssl": "*"
+        "ext-openssl": "*",
+        "paragonie/ecc": "^2.5"
     },
     "require-dev": {
         "brianium/paratest": "^7.8",

@@ -115,13 +115,44 @@ final class EcdsaServiceTest extends TestCase
         $sig1 = $this->ecdsa->signOfflinePass($passData, $keyPair['privateKey']);
         $sig2 = $this->ecdsa->signOfflinePass($passDataWithout, $keyPair['privateKey']);
 
-        // Both should sign the same canonical data, but ECDSA is non-deterministic
-        // so we verify both signatures against the stripped data instead
+        // Both inputs canonicalise to the same body (signature/signatureAlgorithm
+        // stripped), and signing is RFC 6979 deterministic per spec §4.3 / §6.2 —
+        // so the signatures MUST be byte-identical and verify the canonical body.
         $serializer = new CanonicalJsonSerializer();
         $canonical = $serializer->serialize($passDataWithout);
 
+        self::assertSame($sig1, $sig2, 'Signatures over identical canonical body MUST be byte-identical (RFC 6979)');
         self::assertTrue($this->ecdsa->verify($canonical, $sig1, $keyPair['publicKey']));
         self::assertTrue($this->ecdsa->verify($canonical, $sig2, $keyPair['publicKey']));
+    }
+
+    #[Test]
+    public function signProducesByteIdenticalSignaturesOnRepeatedCallsRfc6979(): void
+    {
+        $keyPair = $this->requireKeyPair();
+
+        $data = '{"sessionId":"sess_a1b2c3d4","credits":50,"txCounter":1}';
+
+        $sig1 = $this->ecdsa->sign($data, $keyPair['privateKey']);
+        $sig2 = $this->ecdsa->sign($data, $keyPair['privateKey']);
+
+        self::assertSame($sig1, $sig2, 'RFC 6979 deterministic nonce: same (key, message) MUST produce byte-identical signatures');
+        self::assertTrue($this->ecdsa->verify($data, $sig1, $keyPair['publicKey']));
+        self::assertTrue($this->ecdsa->verify($data, $sig2, $keyPair['publicKey']));
+    }
+
+    #[Test]
+    public function signRemainsByteIdenticalAcrossManyInvocationsRfc6979(): void
+    {
+        $keyPair = $this->requireKeyPair();
+
+        $data = '{"sessionId":"sess_a1b2c3d4","credits":50,"txCounter":1}';
+
+        $first = $this->ecdsa->sign($data, $keyPair['privateKey']);
+
+        for ($i = 0; $i < 10; $i++) {
+            self::assertSame($first, $this->ecdsa->sign($data, $keyPair['privateKey']));
+        }
     }
 
     #[Test]

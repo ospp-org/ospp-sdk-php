@@ -84,9 +84,11 @@ final class EcdsaServiceContractTest extends TestCase
         $sig1 = $this->service->signOfflinePass($passDataWithSig, $keyPair['privateKey']);
         $sig2 = $this->service->signOfflinePass($passDataWithoutSig, $keyPair['privateKey']);
 
-        // Both should produce the same signature since signature/signatureAlgorithm are stripped
-        // Note: ECDSA is non-deterministic, so we verify that both sign the same canonical data
-        // by checking that each signature verifies the same content
+        // Both produce the SAME signature: signature/signatureAlgorithm are stripped,
+        // both inputs canonicalise to the same body, and OSPP signing is RFC 6979
+        // deterministic per spec §4.3 / §6.2.
+        self::assertSame($sig1, $sig2, 'Signatures over identical canonical body MUST be byte-identical (RFC 6979)');
+
         self::assertTrue(
             $this->service->verify(
                 (new CanonicalJsonSerializer())->serialize($passDataWithoutSig),
@@ -94,15 +96,6 @@ final class EcdsaServiceContractTest extends TestCase
                 $keyPair['publicKey'],
             ),
             'Signature from pass with signature fields should verify against stripped data',
-        );
-
-        self::assertTrue(
-            $this->service->verify(
-                (new CanonicalJsonSerializer())->serialize($passDataWithoutSig),
-                $sig2,
-                $keyPair['publicKey'],
-            ),
-            'Signature from pass without signature fields should verify against stripped data',
         );
     }
 

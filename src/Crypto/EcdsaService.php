@@ -4,14 +4,29 @@ declare(strict_types=1);
 
 namespace Ospp\Protocol\Crypto;
 
+use Mdanter\Ecc\Crypto\Key\PrivateKey;
+use Mdanter\Ecc\Crypto\Signature\Signature;
+use Mdanter\Ecc\Crypto\Signature\Signer;
+use Mdanter\Ecc\EccFactory;
+use Mdanter\Ecc\Random\RandomGeneratorFactory;
+use Mdanter\Ecc\Serializer\Signature\DerSignatureSerializer;
 use Ospp\Protocol\Crypto\Contracts\EcdsaServiceInterface;
 use RuntimeException;
 
 /**
- * ECDSA P-256 signing service for offline pass operations.
+ * ECDSA P-256 signing and verification for OSPP.
  *
- * Uses OpenSSL with the prime256v1 (P-256) curve and SHA-256 digest.
- * All signatures are DER-encoded and returned as Base64 strings.
+ * Source: spec/06-security.md §4.1 (algorithm inventory), §4.3 + §6.2
+ * (RFC 6979 deterministic nonces are normative MUST for all software-based
+ * ECDSA signing — hardware secure elements with internal RNG are exempt).
+ *
+ * Signing uses paragonie/ecc (RFC 6979 via HMAC-DRBG nonce derivation).
+ * The prior implementation used openssl_sign, which generates a random nonce
+ * per signature — non-compliant with the spec and non-reproducible across
+ * runs. Verification continues to use openssl_verify since verify is
+ * nonce-agnostic and accepts any DER ECDSA-P256-SHA256 signature.
+ *
+ * Requires ext-gmp for the underlying big-integer arithmetic.
  */
 final class EcdsaService implements EcdsaServiceInterface
 {
@@ -21,13 +36,13 @@ final class EcdsaService implements EcdsaServiceInterface
 
     public function sign(string $data, string $privateKeyPem): string
     {
-        $privateKey = openssl_pkey_get_private($privateKeyPem);
+        $opensslKey = openssl_pkey_get_private($privateKeyPem);
 
-        if ($privateKey === false) {
+        if ($opensslKey === false) {
             throw new RuntimeException('Failed to load ECDSA private key: ' . openssl_error_string());
         }
 
-        $details = openssl_pkey_get_details($privateKey);
+        $details = openssl_pkey_get_details($opensslKey);
 
         if ($details === false) {
             throw new RuntimeException('Failed to get private key details: ' . openssl_error_string());
@@ -37,14 +52,58 @@ final class EcdsaService implements EcdsaServiceInterface
             throw new RuntimeException('Expected an EC private key, got type: ' . ($details['type'] ?? 'unknown'));
         }
 
-        $signature = '';
-        $result = openssl_sign($data, $signature, $privateKey, OPENSSL_ALGO_SHA256);
+        $curveName = $details['ec']['curve_name'] ?? null;
+        $scalarBytes = $details['ec']['d'] ?? null;
 
-        if ($result === false) {
-            throw new RuntimeException('ECDSA signing failed: ' . openssl_error_string());
+        if ($curveName !== 'prime256v1' || ! is_string($scalarBytes) || strlen($scalarBytes) !== 32) {
+            throw new RuntimeException(
+                'Expected an EC P-256 (prime256v1) private key with a 32-byte scalar',
+            );
         }
 
-        return base64_encode($signature);
+        // openssl_pkey_get_details() returns the EC private scalar `d` as raw
+        // big-endian bytes; gmp_import converts that to the GMP integer
+        // paragonie/ecc expects for PrivateKey construction.
+        $scalar = gmp_import($scalarBytes);
+        $adapter = EccFactory::getAdapter();
+        $generator = EccFactory::getNistCurves()->generator256();
+        $privateKey = new PrivateKey($adapter, $generator, $scalar);
+
+        // SHA-256 the message ourselves and hand the hash (as GMP int) to
+        // the signer. paragonie/ecc Signer::sign expects an already-digested
+        // value; double-hashing would produce signatures that do not verify
+        // against openssl_verify (which hashes the message once internally).
+        $hash = gmp_import(hash('sha256', $data, true));
+
+        // RFC 6979 deterministic nonce: HMAC-DRBG seeded from (privateKey, hash).
+        // The factory's signature is fixed; passing the same inputs across runs
+        // produces the same k, hence the same (r, s) and the same DER bytes.
+        $hmacRng = RandomGeneratorFactory::getHmacRandomGenerator($privateKey, $hash, 'sha256');
+        $k = $hmacRng->generate($generator->getOrder());
+
+        $signer = new Signer($adapter);
+        $signature = $signer->sign($privateKey, $hash, $k);
+
+        // Low-s normalization (anti-malleability). RFC 6979 alone leaves `s`
+        // in either half of the order; the industry convention — followed by
+        // BIP-66 in Bitcoin, @noble/curves p256 by default, OpenSSL ≥ 1.1,
+        // and the OSPP cross-language test corpus — is to canonicalise to the
+        // lower half so two compliant implementations produce byte-identical
+        // signatures over the same (key, message). Without this step, PHP and
+        // sdk-ts produce the same `r` but a complemented `s` whenever raw `s`
+        // exceeds n/2 (verifies on both sides, but breaks byte-equality and
+        // the byte-reproducibility guarantee published examples rely on).
+        $order = $generator->getOrder();
+        $halfOrder = gmp_div($order, 2);
+        $s = $signature->getS();
+
+        if (gmp_cmp($s, $halfOrder) > 0) {
+            $signature = new Signature($signature->getR(), gmp_sub($order, $s));
+        }
+
+        $derSerializer = new DerSignatureSerializer();
+
+        return base64_encode($derSerializer->serialize($signature));
     }
 
     public function verify(string $data, string $signatureBase64, string $publicKeyPem): bool
