@@ -59,11 +59,20 @@ final class SigningWorkflowTest extends TestCase
     }
 
     #[Test]
-    public function signing_mode_ALL_signs_every_action(): void
+    public function signing_mode_ALL_signs_every_action_except_always_exempt(): void
     {
         self::assertCount(30, OsppAction::all());
 
         foreach (OsppAction::all() as $action) {
+            if (CriticalMessageRegistry::isAlwaysExempt($action)) {
+                self::assertFalse(
+                    SigningMode::ALL->shouldSign($action),
+                    "SigningMode::ALL should NOT sign always-exempt action '{$action}'",
+                );
+
+                continue;
+            }
+
             self::assertTrue(
                 SigningMode::ALL->shouldSign($action),
                 "SigningMode::ALL should sign action '{$action}'",

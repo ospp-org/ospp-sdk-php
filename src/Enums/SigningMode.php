@@ -14,6 +14,12 @@ enum SigningMode: string
 
     public function shouldSign(string $action): bool
     {
+        // Always-exempt actions are never signed in any mode — their MAC
+        // would be cryptographically void.
+        if (CriticalMessageRegistry::isAlwaysExempt($action)) {
+            return false;
+        }
+
         return match ($this) {
             self::ALL => true,
             self::CRITICAL => CriticalMessageRegistry::isCritical($action),

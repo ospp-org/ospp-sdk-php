@@ -19,6 +19,18 @@ final class CriticalMessageRegistryContractTest extends TestCase
     }
 
     #[Test]
+    public function always_exempt_actions_contract(): void
+    {
+        self::assertSame(['ConnectionLost'], CriticalMessageRegistry::allAlwaysExemptActions());
+        self::assertTrue(CriticalMessageRegistry::isAlwaysExempt('ConnectionLost'));
+
+        // A critical action is never simultaneously always-exempt.
+        self::assertFalse(CriticalMessageRegistry::isAlwaysExempt('StartService'));
+        // An action that is merely exempt-in-Critical is not always-exempt.
+        self::assertFalse(CriticalMessageRegistry::isAlwaysExempt('Heartbeat'));
+    }
+
+    #[Test]
     public function exact_sorted_list_pinned(): void
     {
         $expected = [

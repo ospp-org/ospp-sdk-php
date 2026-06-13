@@ -49,6 +49,32 @@ final class CriticalMessageRegistry
         'WebPaymentAuthorization',
     ];
 
+    /**
+     * Actions exempt from HMAC in EVERY MessageSigningMode (including
+     * `All`) — their MAC would be cryptographically void:
+     *
+     * - ConnectionLost: broker-generated Last Will; the station cannot
+     *   pre-sign it.
+     *
+     * @var list<string>
+     */
+    private const ALWAYS_EXEMPT_ACTIONS = [
+        'ConnectionLost',
+    ];
+
+    public static function isAlwaysExempt(string $action): bool
+    {
+        return in_array($action, self::ALWAYS_EXEMPT_ACTIONS, true);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function allAlwaysExemptActions(): array
+    {
+        return self::ALWAYS_EXEMPT_ACTIONS;
+    }
+
     public static function isCritical(string $action): bool
     {
         return in_array($action, self::CRITICAL_ACTIONS, true);

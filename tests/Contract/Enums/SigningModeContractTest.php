@@ -47,18 +47,36 @@ final class SigningModeContractTest extends TestCase
     }
 
     #[Test]
-    public function ALL_mode_signs_everything(): void
+    public function ALL_mode_signs_everything_except_always_exempt(): void
     {
-        // All known actions
+        // Every known action EXCEPT always-exempt ones is signed in ALL mode.
         foreach (OsppAction::all() as $action) {
+            if (CriticalMessageRegistry::isAlwaysExempt($action)) {
+                self::assertFalse(
+                    SigningMode::ALL->shouldSign($action),
+                    "ALL->shouldSign('{$action}') should be false (always-exempt)",
+                );
+
+                continue;
+            }
+
             self::assertTrue(
                 SigningMode::ALL->shouldSign($action),
                 "ALL->shouldSign('{$action}') should be true",
             );
         }
 
-        // Even completely unknown actions
+        // Even completely unknown actions are signed in ALL mode.
         self::assertTrue(SigningMode::ALL->shouldSign('FooBarUnknown'));
+    }
+
+    #[Test]
+    public function ALL_mode_exempts_always_exempt_actions(): void
+    {
+        // ConnectionLost (broker-generated LWT) is always exempt — the
+        // station cannot pre-sign the broker's Last Will, in any mode.
+        self::assertFalse(SigningMode::ALL->shouldSign('ConnectionLost'));
+        self::assertFalse(SigningMode::ALL->shouldVerify('ConnectionLost'));
     }
 
     #[Test]
