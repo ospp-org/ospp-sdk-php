@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.5] — 2026-06-13
+
+BootNotification HMAC exemption + always-exempt registry. Coordinated
+with `sdk-ts v0.5.5` (lockstep, ADR-011) and `spec` §5.6. `spec` is
+**NOT** bumped (classification correction, no schema change). No wire
+change — `mac` is already optional in the envelope schema.
+
+### Changed
+
+- `BootNotification` is now exempt from HMAC in **both directions, in
+  every `MessageSigningMode`** (whole-action always-exempt). The REQUEST
+  has no session key yet; the RESPONSE delivers the key that would verify
+  it, so its MAC is cryptographically void (mTLS protects delivery, not
+  HMAC). Critical actions drop 20 → 19.
+
+### Added
+
+- Always-exempt registry: `CriticalMessageRegistry::isAlwaysExempt()` +
+  `allAlwaysExemptActions()` + `ALWAYS_EXEMPT_ACTIONS`, consulted by
+  `SigningMode::shouldSign()` before the mode match. Always-exempt actions
+  are never signed or verified in any mode, including `All`. This also
+  closes a pre-existing gap where `SigningMode::ALL` signed `ConnectionLost`
+  (the broker LWT), contradicting spec §5.6.
+
+### Verification
+
+- Full suite 689 green; phpstan clean. RED-first tests pin
+  `isCritical('BootNotification') === false`,
+  `isAlwaysExempt('BootNotification') === true`, and exemption across all
+  three signing modes.
+
+---
+
 ## [0.5.4] — 2026-06-11
 
 ECDSA deterministic-nonce hardening. Coordinated with `sdk-ts v0.5.4`

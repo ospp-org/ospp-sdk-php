@@ -31,7 +31,6 @@ final class SigningModeTest extends TestCase
     {
         self::assertTrue(SigningMode::ALL->shouldSign('StartService'));
         self::assertTrue(SigningMode::ALL->shouldSign('StopService'));
-        self::assertTrue(SigningMode::ALL->shouldSign('BootNotification'));
     }
 
     #[Test]
@@ -41,6 +40,13 @@ final class SigningModeTest extends TestCase
         self::assertTrue(SigningMode::ALL->shouldSign('StatusNotification'));
         self::assertTrue(SigningMode::ALL->shouldSign('MeterValues'));
         self::assertTrue(SigningMode::ALL->shouldSign('SomeArbitraryAction'));
+    }
+
+    #[Test]
+    public function all_mode_exempts_boot_notification(): void
+    {
+        // BootNotification is always-exempt (whole-action) — never signed.
+        self::assertFalse(SigningMode::ALL->shouldSign('BootNotification'));
     }
 
     // --- shouldSign in CRITICAL mode ---
@@ -63,7 +69,6 @@ final class SigningModeTest extends TestCase
             'UpdateFirmware',
             'SetMaintenanceMode',
             'UpdateServiceCatalog',
-            'BootNotification',
             'TriggerMessage',
             'IssueOfflinePass',
             'RevokeOfflinePass',
@@ -104,7 +109,7 @@ final class SigningModeTest extends TestCase
     public function none_mode_does_not_sign_critical_actions(): void
     {
         self::assertFalse(SigningMode::NONE->shouldSign('StartService'));
-        self::assertFalse(SigningMode::NONE->shouldSign('BootNotification'));
+        self::assertFalse(SigningMode::NONE->shouldSign('TransactionEvent'));
         self::assertFalse(SigningMode::NONE->shouldSign('SignCertificate'));
     }
 

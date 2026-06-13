@@ -35,9 +35,6 @@ final class CriticalMessageRegistry
         'SetMaintenanceMode',
         'UpdateServiceCatalog',
 
-        // Core Profile — critical response
-        'BootNotification',
-
         // General Profile
         'TriggerMessage',
 
@@ -53,12 +50,16 @@ final class CriticalMessageRegistry
      * Actions exempt from HMAC in EVERY MessageSigningMode (including
      * `All`) — their MAC would be cryptographically void:
      *
+     * - BootNotification: the REQUEST has no session key yet; the RESPONSE
+     *   delivers the key that would verify it, so its MAC is meaningless.
+     *   Delivery integrity is provided by mTLS, not HMAC.
      * - ConnectionLost: broker-generated Last Will; the station cannot
      *   pre-sign it.
      *
      * @var list<string>
      */
     private const ALWAYS_EXEMPT_ACTIONS = [
+        'BootNotification',
         'ConnectionLost',
     ];
 

@@ -14,14 +14,15 @@ final class CriticalMessageRegistryContractTest extends TestCase
     #[Test]
     public function exactly_19_critical_actions(): void
     {
-        self::assertSame(20, CriticalMessageRegistry::count());
-        self::assertCount(20, CriticalMessageRegistry::allCriticalActions());
+        self::assertSame(19, CriticalMessageRegistry::count());
+        self::assertCount(19, CriticalMessageRegistry::allCriticalActions());
     }
 
     #[Test]
     public function always_exempt_actions_contract(): void
     {
-        self::assertSame(['ConnectionLost'], CriticalMessageRegistry::allAlwaysExemptActions());
+        self::assertSame(['BootNotification', 'ConnectionLost'], CriticalMessageRegistry::allAlwaysExemptActions());
+        self::assertTrue(CriticalMessageRegistry::isAlwaysExempt('BootNotification'));
         self::assertTrue(CriticalMessageRegistry::isAlwaysExempt('ConnectionLost'));
 
         // A critical action is never simultaneously always-exempt.
@@ -35,7 +36,6 @@ final class CriticalMessageRegistryContractTest extends TestCase
     {
         $expected = [
             'AuthorizeOfflinePass',
-            'BootNotification',
             'CancelReservation',
             'CertificateInstall',
             'ChangeConfiguration',

@@ -13,7 +13,7 @@ final class CriticalMessageRegistryTest extends TestCase
     #[Test]
     public function countReturnsNineteen(): void
     {
-        self::assertSame(20, CriticalMessageRegistry::count());
+        self::assertSame(19, CriticalMessageRegistry::count());
     }
 
     #[Test]
@@ -21,7 +21,7 @@ final class CriticalMessageRegistryTest extends TestCase
     {
         $actions = CriticalMessageRegistry::allCriticalActions();
 
-        self::assertCount(20, $actions);
+        self::assertCount(19, $actions);
 
         foreach ($actions as $action) {
             self::assertIsString($action);
@@ -48,7 +48,6 @@ final class CriticalMessageRegistryTest extends TestCase
             'UpdateFirmware',
             'SetMaintenanceMode',
             'UpdateServiceCatalog',
-            'BootNotification',
             'TriggerMessage',
             'IssueOfflinePass',
             'RevokeOfflinePass',
@@ -73,5 +72,12 @@ final class CriticalMessageRegistryTest extends TestCase
         self::assertFalse(CriticalMessageRegistry::isCritical('DataTransfer'));
         self::assertFalse(CriticalMessageRegistry::isCritical(''));
         self::assertFalse(CriticalMessageRegistry::isCritical('NonExistentAction'));
+    }
+
+    #[Test]
+    public function boot_notification_reclassified_to_always_exempt(): void
+    {
+        self::assertFalse(CriticalMessageRegistry::isCritical('BootNotification'));
+        self::assertTrue(CriticalMessageRegistry::isAlwaysExempt('BootNotification'));
     }
 }
