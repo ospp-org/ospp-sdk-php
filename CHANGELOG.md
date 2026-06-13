@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.4] — 2026-06-11
+
+ECDSA deterministic-nonce hardening. Coordinated with `sdk-ts v0.5.4`
+(lockstep — matching RFC 6979 + low-s policy). `spec` is **NOT** bumped:
+RFC 6979 is already mandated by §4.3/§6.2; this brings the implementation
+into compliance. No wire change — the DER signature encoding is unchanged.
+
+### Fixed
+
+- ECDSA signing replaced `openssl_sign`'s random-nonce ECDSA (a spec-MUST
+  violation, and non-reproducible across runs) with `paragonie/ecc`
+  RFC 6979 HMAC-DRBG nonce derivation + low-s normalization
+  (anti-malleability), matching `@noble/curves` p256 in `sdk-ts`.
+  `openssl_pkey_get_details` extracts the 32-byte `d` scalar; raw `s` is
+  normalised to the lower half of the curve order before DER serialization.
+  Verify is unchanged (nonce-agnostic; backward-compatible with
+  random-nonce signatures issued before 0.5.4).
+- Declared `ext-gmp` explicitly (transitive `paragonie/ecc` requirement).
+
+### Verification
+
+- Cross-language byte-identity with `sdk-ts v0.5.4` proven empirically:
+  PHP-sign/TS-verify and TS-sign/PHP-verify both interop, and the raw
+  signature bytes are identical (`PHP sig === TS sig`). New unit + contract
+  tests assert byte-identical signatures across repeated invocations.
+- Full suite: 685/685 paratest passing.
+
+---
+
 ## [0.5.3] — 2026-06-07
 
 UserSub derivation lift. Coordinated with `sdk-ts v0.5.3`. `spec` is
