@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.6] — 2026-06-15
+
+Removed the SDK-only orphan `CAPABILITY_NOT_SUPPORTED = 6008`. Coordinated
+with `sdk-ts v0.5.6` (lockstep, ADR-011). `spec` is **NOT** bumped — 6008 was
+never in the spec. No wire change: 6008 was an internal HTTP-mapping code,
+never emitted on the MQTT wire.
+
+### Removed
+
+- `OsppErrorCode::CAPABILITY_NOT_SUPPORTED` (6008) — a PHP-SDK-only extension
+  added at `v0.4.3`, never present in the `spec` or `sdk-ts`. It is now
+  dead-code: csms-server migrated its firmware/diagnostics capability-unsupported
+  pre-flight reject to the spec-canonical `COMMAND_NOT_SUPPORTED` (2007,
+  blanket-implicit for all Server→Station per spec 07-errors.md §1). Removing it
+  converges PHP with TS (which never had it): the enum drops 107 → 106 cases and
+  the 6xxx range closes at 6007 (8 codes), fully spec-aligned. Its `isRecoverable()`
+  (false) and `httpStatus()` (422) mappings are removed with it.
+
+### Verification
+
+- Full suite 689 green. RED-first: the enum count test was pinned to 106
+  (107 → 106) before the case was deleted; category/severity/recoverable count
+  contracts updated (server category 9 → 8). Zero residual references to 6008.
+
+---
+
 ## [0.5.5] — 2026-06-13
 
 BootNotification HMAC exemption + always-exempt registry. Coordinated

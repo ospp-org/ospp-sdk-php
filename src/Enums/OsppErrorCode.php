@@ -8,8 +8,7 @@ namespace Ospp\Protocol\Enums;
  * Complete OSPP Error Code registry.
  *
  * 106 standard error codes across 6 categories (spec 07-errors.md §1.1, v0.4.2:
- * 102 → 106 with the 2014-2017 additions), plus the SDK-specific extension
- * CAPABILITY_NOT_SUPPORTED (6008) from v0.4.3 = 107 cases total.
+ * 102 → 106 with the 2014-2017 additions). Fully spec-aligned with sdk-ts.
  */
 enum OsppErrorCode: int
 {
@@ -122,7 +121,7 @@ enum OsppErrorCode: int
     case BUFFER_FULL = 5111;
     case FIRMWARE_SIGNATURE_INVALID = 5112;
 
-    // 6xxx - Server Errors (9 codes)
+    // 6xxx - Server Errors (8 codes)
     case SERVER_GENERIC = 6000;
     case SERVER_INTERNAL_ERROR = 6001;
     case ACK_TIMEOUT = 6002;
@@ -131,7 +130,6 @@ enum OsppErrorCode: int
     case SESSION_ALREADY_ACTIVE = 6005;
     case RATE_LIMIT_EXCEEDED = 6006;
     case SERVICE_DEGRADED = 6007;
-    case CAPABILITY_NOT_SUPPORTED = 6008;
 
     public function category(): string
     {
@@ -248,7 +246,6 @@ enum OsppErrorCode: int
             self::OFFLINE_USER_MISMATCH,
             self::OFFLINE_RECEIPT_MISMATCH,
             self::COMMAND_NOT_SUPPORTED,
-            self::CAPABILITY_NOT_SUPPORTED,
             self::ACTION_NOT_PERMITTED,
             self::JWT_INVALID,
             self::SESSION_TOKEN_INVALID,
@@ -320,7 +317,7 @@ enum OsppErrorCode: int
             // Unprocessable Entity (NOT 401 — auth succeeded).
             self::OFFLINE_RECEIPT_MISMATCH,
             self::DURATION_INVALID, self::MAX_DURATION_EXCEEDED, self::INVALID_SERVICE,
-            self::STATION_NOT_REGISTERED, self::CAPABILITY_NOT_SUPPORTED,
+            self::STATION_NOT_REGISTERED,
             self::INVALID_TIME_WINDOW => 422,
             self::RATE_LIMIT_EXCEEDED => 429,
             self::STATION_OFFLINE => 502,

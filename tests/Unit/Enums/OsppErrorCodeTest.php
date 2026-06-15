@@ -12,11 +12,10 @@ use PHPUnit\Framework\TestCase;
 final class OsppErrorCodeTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_107_cases(): void
+    public function it_has_exactly_106_cases(): void
     {
-        // v0.5.2: 4 new auth codes (2014-2017) from spec v0.4.2 07-errors.md §3.2.
-        // 103 pre-v0.5.2 (102 standard + CAPABILITY_NOT_SUPPORTED 6008 from v0.4.3) + 4 = 107.
-        self::assertCount(107, OsppErrorCode::cases());
+        // 102 standard + 4 v0.5.2 auth codes (2014-2017, spec v0.4.2 07-errors.md §3.2) = 106.
+        self::assertCount(106, OsppErrorCode::cases());
     }
 
     #[Test]
@@ -270,7 +269,6 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::SESSION_ALREADY_ACTIVE,
             OsppErrorCode::RATE_LIMIT_EXCEEDED,
             OsppErrorCode::SERVICE_DEGRADED,
-            OsppErrorCode::CAPABILITY_NOT_SUPPORTED,
         ];
 
         foreach ($serverCodes as $code) {
@@ -423,7 +421,6 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::CONSUMABLE_SYSTEM,
             OsppErrorCode::HEATING_SYSTEM,
             OsppErrorCode::COMMAND_NOT_SUPPORTED,
-            OsppErrorCode::CAPABILITY_NOT_SUPPORTED,
             OsppErrorCode::SENSOR_FAILURE,
             OsppErrorCode::PAYMENT_HARDWARE,
             OsppErrorCode::MECHANICAL_SYSTEM,
@@ -674,7 +671,6 @@ final class OsppErrorCodeTest extends TestCase
         self::assertSame(422, OsppErrorCode::MAX_DURATION_EXCEEDED->httpStatus());
         self::assertSame(422, OsppErrorCode::INVALID_SERVICE->httpStatus());
         self::assertSame(422, OsppErrorCode::STATION_NOT_REGISTERED->httpStatus());
-        self::assertSame(422, OsppErrorCode::CAPABILITY_NOT_SUPPORTED->httpStatus());
         self::assertSame(422, OsppErrorCode::INVALID_TIME_WINDOW->httpStatus());
     }
 
@@ -856,12 +852,12 @@ final class OsppErrorCodeTest extends TestCase
     }
 
     #[Test]
-    public function server_category_has_nine_codes(): void
+    public function server_category_has_eight_codes(): void
     {
         $count = count(array_filter(
             OsppErrorCode::cases(),
             static fn (OsppErrorCode $c): bool => $c->category() === 'server',
         ));
-        self::assertSame(9, $count);
+        self::assertSame(8, $count);
     }
 }
