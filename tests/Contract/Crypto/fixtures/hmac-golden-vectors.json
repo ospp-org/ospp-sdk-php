@@ -1,0 +1,125 @@
+{
+  "_comment": "OSPP cross-language HMAC golden vectors. MUST stay BYTE-IDENTICAL with the sibling copy in the other SDK repo (ospp-sdk-php: tests/Contract/Crypto/fixtures/hmac-golden-vectors.json ; sdk-ts: tests/crypto/fixtures/hmac-golden-vectors.json). Safety net for live HMAC signing: if either SDK's canonical form or HMAC diverges, its golden test goes RED against these externally-computed values. Reproducible without either SDK: expectedCanonicalJson = the OSPP Canonical Form of the message (spec §4.8: strip top-level 'mac', recursive lexicographic key sort, compact JSON, UTF-8); expectedMac = openssl dgst -sha256 -mac HMAC -macopt hexkey:<hex(base64_decode(sessionKeyBase64))> -binary | base64, over UTF8(expectedCanonicalJson).",
+  "specRef": "v0.5.0",
+  "specSection": "06-security.md §4.8 (OSPP Canonical Form) + §5.3-§5.5 (HMAC)",
+  "algorithm": "expectedMac = base64(HMAC-SHA256(base64_decode(sessionKeyBase64), UTF8(expectedCanonicalJson)))",
+  "canonicalForm": "strip top-level 'mac' -> recursive lexicographic (UTF-8 byte) key sort, arrays preserved -> compact JSON (',' ':' separators, no whitespace) -> UTF-8 bytes",
+  "sessionKeyDerivation": "sessionKeyBase64 = base64(SHA-256('OSPP_TEST_SESSION_KEY_V1')) — matches spec conformance/test-keys/session-test-key.bin",
+  "sessionKeyBase64": "DqfuZ1/ifr6MNimF64sZ1o2E42GQmvx0Hql83vZh4NM=",
+  "vectors": [
+    {
+      "name": "start-service-request",
+      "description": "StartService Request (Server->Station). Nested params object; integer durationSeconds; key-sort at depth.",
+      "payloadSource": "examples/payloads/mqtt/start-service.request.json",
+      "message": {
+        "messageId": "msg_ss_0001",
+        "messageType": "Request",
+        "action": "StartService",
+        "timestamp": "2026-02-13T09:52:00.000Z",
+        "source": "Server",
+        "protocolVersion": "1.0.0",
+        "payload": {
+          "sessionId": "sess_f7e8d9c0",
+          "bayId": "bay_a1b2c3d4",
+          "serviceId": "svc_eco",
+          "durationSeconds": 300,
+          "sessionSource": "MobileApp",
+          "reservationId": "rsv_e5f6a7b8",
+          "params": {
+            "temperature": 35,
+            "pressure": 80
+          }
+        }
+      },
+      "expectedCanonicalJson": "{\"action\":\"StartService\",\"messageId\":\"msg_ss_0001\",\"messageType\":\"Request\",\"payload\":{\"bayId\":\"bay_a1b2c3d4\",\"durationSeconds\":300,\"params\":{\"pressure\":80,\"temperature\":35},\"reservationId\":\"rsv_e5f6a7b8\",\"serviceId\":\"svc_eco\",\"sessionId\":\"sess_f7e8d9c0\",\"sessionSource\":\"MobileApp\"},\"protocolVersion\":\"1.0.0\",\"source\":\"Server\",\"timestamp\":\"2026-02-13T09:52:00.000Z\"}",
+      "expectedMac": "vVNQdFwHtwtZLiN3p4Yvl3QaQGnx26HhEHLWDNLIrOo="
+    },
+    {
+      "name": "transaction-event-request",
+      "description": "TransactionEvent Request (Station->Server). Deep nesting (receipt, meterValues); integer creditsCharged (money, atomic units); base64 strings containing '/' and '+' probe slash-escaping parity.",
+      "payloadSource": "examples/payloads/mqtt/transaction-event.request.json",
+      "message": {
+        "messageId": "msg_tx_0002",
+        "messageType": "Request",
+        "action": "TransactionEvent",
+        "timestamp": "2026-02-13T09:56:45.000Z",
+        "source": "Station",
+        "protocolVersion": "1.0.0",
+        "payload": {
+          "offlineTxId": "otx_d4e5f6a7",
+          "offlinePassId": "opass_a8b9c0d1e2f3",
+          "userId": "sub_9a8b7c6d",
+          "bayId": "bay_a1b2c3d4",
+          "serviceId": "svc_eco",
+          "startedAt": "2026-02-13T09:52:00.000Z",
+          "endedAt": "2026-02-13T09:56:45.000Z",
+          "durationSeconds": 285,
+          "creditsCharged": 48,
+          "receipt": {
+            "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNCIsImNyZWRpdHNDaGFyZ2VkIjo0OCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI4NSwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMDk6NTY6NDUuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6NDcwLCJlbmVyZ3lXaCI6MTM4LCJsaXF1aWRNbCI6NDI4MDB9LCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfYThiOWMwZDFlMmYzIiwib2ZmbGluZVR4SWQiOiJvdHhfZDRlNWY2YTciLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QwOTo1MjowMC4wMDBaIiwidHhDb3VudGVyIjo1LCJ1c2VySWQiOiJzdWJfOWE4YjdjNmQifQ==",
+            "signature": "MEUCIQCpl62Tv5tdn1Zs2kKEFJ5o3SUlEjHdWlQBgcTxGXMS5gIgVu3ua5oaGZVuZS+RbQkvEGjDD7cq2O+DkF/IIdlPgUg=",
+            "signatureAlgorithm": "ECDSA-P256-SHA256"
+          },
+          "txCounter": 5,
+          "meterValues": {
+            "liquidMl": 42800,
+            "consumableMl": 470,
+            "energyWh": 138
+          }
+        }
+      },
+      "expectedCanonicalJson": "{\"action\":\"TransactionEvent\",\"messageId\":\"msg_tx_0002\",\"messageType\":\"Request\",\"payload\":{\"bayId\":\"bay_a1b2c3d4\",\"creditsCharged\":48,\"durationSeconds\":285,\"endedAt\":\"2026-02-13T09:56:45.000Z\",\"meterValues\":{\"consumableMl\":470,\"energyWh\":138,\"liquidMl\":42800},\"offlinePassId\":\"opass_a8b9c0d1e2f3\",\"offlineTxId\":\"otx_d4e5f6a7\",\"receipt\":{\"data\":\"eyJiYXlJZCI6ImJheV9hMWIyYzNkNCIsImNyZWRpdHNDaGFyZ2VkIjo0OCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI4NSwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMDk6NTY6NDUuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6NDcwLCJlbmVyZ3lXaCI6MTM4LCJsaXF1aWRNbCI6NDI4MDB9LCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfYThiOWMwZDFlMmYzIiwib2ZmbGluZVR4SWQiOiJvdHhfZDRlNWY2YTciLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QwOTo1MjowMC4wMDBaIiwidHhDb3VudGVyIjo1LCJ1c2VySWQiOiJzdWJfOWE4YjdjNmQifQ==\",\"signature\":\"MEUCIQCpl62Tv5tdn1Zs2kKEFJ5o3SUlEjHdWlQBgcTxGXMS5gIgVu3ua5oaGZVuZS+RbQkvEGjDD7cq2O+DkF/IIdlPgUg=\",\"signatureAlgorithm\":\"ECDSA-P256-SHA256\"},\"serviceId\":\"svc_eco\",\"startedAt\":\"2026-02-13T09:52:00.000Z\",\"txCounter\":5,\"userId\":\"sub_9a8b7c6d\"},\"protocolVersion\":\"1.0.0\",\"source\":\"Station\",\"timestamp\":\"2026-02-13T09:56:45.000Z\"}",
+      "expectedMac": "0RuaKXnHYIWoxxH5miLk9LcW8zvq5fij9nuwyDImnd0="
+    },
+    {
+      "name": "session-ended-event",
+      "description": "SessionEnded Event (Station->Server). messageType=Event; integer creditsCharged (sole online-billing source) + integer meterValues.",
+      "payloadSource": "conformance/test-vectors/valid/transaction/session-ended-event-timer-expired.json",
+      "message": {
+        "messageId": "msg_se_0003",
+        "messageType": "Event",
+        "action": "SessionEnded",
+        "timestamp": "2026-02-13T09:56:46.000Z",
+        "source": "Station",
+        "protocolVersion": "1.0.0",
+        "payload": {
+          "sessionId": "sess_a1b2c3d4e5f6",
+          "bayId": "bay_c1d2e3f4a5b6",
+          "reason": "TimerExpired",
+          "actualDurationSeconds": 300,
+          "creditsCharged": 50,
+          "meterValues": {
+            "liquidMl": 45200,
+            "consumableMl": 500,
+            "energyWh": 150
+          }
+        }
+      },
+      "expectedCanonicalJson": "{\"action\":\"SessionEnded\",\"messageId\":\"msg_se_0003\",\"messageType\":\"Event\",\"payload\":{\"actualDurationSeconds\":300,\"bayId\":\"bay_c1d2e3f4a5b6\",\"creditsCharged\":50,\"meterValues\":{\"consumableMl\":500,\"energyWh\":150,\"liquidMl\":45200},\"reason\":\"TimerExpired\",\"sessionId\":\"sess_a1b2c3d4e5f6\"},\"protocolVersion\":\"1.0.0\",\"source\":\"Station\",\"timestamp\":\"2026-02-13T09:56:46.000Z\"}",
+      "expectedMac": "vlMQ2itkkAYg761Hex770/Cua82Z1+VLuzgiAvaNwxk="
+    },
+    {
+      "name": "mac-strip",
+      "description": "StartService Request (minimal) with a bogus top-level 'mac' present in the INPUT. The mac field MUST be stripped before signing; expectedCanonicalJson has no mac and expectedMac is computed over the stripped form.",
+      "payloadSource": "conformance/test-vectors/valid/transaction/start-service-request-minimal.json",
+      "message": {
+        "messageId": "msg_strip_0004",
+        "messageType": "Request",
+        "action": "StartService",
+        "timestamp": "2026-02-13T09:52:00.000Z",
+        "source": "Server",
+        "protocolVersion": "1.0.0",
+        "payload": {
+          "sessionId": "sess_f7e8d9c0a1b23456",
+          "bayId": "bay_a1b2c3d4e5f67890",
+          "serviceId": "svc_eco",
+          "durationSeconds": 300,
+          "sessionSource": "MobileApp"
+        },
+        "mac": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      },
+      "expectedCanonicalJson": "{\"action\":\"StartService\",\"messageId\":\"msg_strip_0004\",\"messageType\":\"Request\",\"payload\":{\"bayId\":\"bay_a1b2c3d4e5f67890\",\"durationSeconds\":300,\"serviceId\":\"svc_eco\",\"sessionId\":\"sess_f7e8d9c0a1b23456\",\"sessionSource\":\"MobileApp\"},\"protocolVersion\":\"1.0.0\",\"source\":\"Server\",\"timestamp\":\"2026-02-13T09:52:00.000Z\"}",
+      "expectedMac": "1YiuuaxqbIPPT47D70YHrege7U2voOmUHU+EV6KVaBw="
+    }
+  ]
+}

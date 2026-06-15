@@ -1,0 +1,150 @@
+{
+  "_comment": "OSPP §5.6 message-signing classification, as machine-readable data. MUST stay BYTE-IDENTICAL with the sibling copy in the other SDK repo (ospp-sdk-php: tests/Contract/Crypto/fixtures/signing-classification.json ; sdk-ts: tests/crypto/fixtures/signing-classification.json). Cross-language parity safety net for live HMAC signing: sdk-ts asserts its (action,messageType) registry equals criticalInCriticalMode + alwaysExempt; ospp-sdk-php (which keys by action only) asserts its critical set MINUS phpApiOnlySuperset collapses to the 16 distinct critical actions here, and runs a no-split guard proving that action-only collapse stays sound. Source of truth: spec/06-security.md §5.6 (Critical mode: 31 of 47 signed, 16 exempt, 3 always-exempt).",
+  "specRef": "v0.5.0",
+  "specSection": "06-security.md §5.6",
+  "criticalInCriticalMode": [
+    {
+      "action": "AuthorizeOfflinePass",
+      "messageType": "Request"
+    },
+    {
+      "action": "AuthorizeOfflinePass",
+      "messageType": "Response"
+    },
+    {
+      "action": "ReserveBay",
+      "messageType": "Request"
+    },
+    {
+      "action": "ReserveBay",
+      "messageType": "Response"
+    },
+    {
+      "action": "CancelReservation",
+      "messageType": "Request"
+    },
+    {
+      "action": "CancelReservation",
+      "messageType": "Response"
+    },
+    {
+      "action": "StartService",
+      "messageType": "Request"
+    },
+    {
+      "action": "StartService",
+      "messageType": "Response"
+    },
+    {
+      "action": "StopService",
+      "messageType": "Request"
+    },
+    {
+      "action": "StopService",
+      "messageType": "Response"
+    },
+    {
+      "action": "TransactionEvent",
+      "messageType": "Request"
+    },
+    {
+      "action": "TransactionEvent",
+      "messageType": "Response"
+    },
+    {
+      "action": "SessionEnded",
+      "messageType": "Event"
+    },
+    {
+      "action": "ChangeConfiguration",
+      "messageType": "Request"
+    },
+    {
+      "action": "ChangeConfiguration",
+      "messageType": "Response"
+    },
+    {
+      "action": "Reset",
+      "messageType": "Request"
+    },
+    {
+      "action": "Reset",
+      "messageType": "Response"
+    },
+    {
+      "action": "UpdateFirmware",
+      "messageType": "Request"
+    },
+    {
+      "action": "UpdateFirmware",
+      "messageType": "Response"
+    },
+    {
+      "action": "SetMaintenanceMode",
+      "messageType": "Request"
+    },
+    {
+      "action": "SetMaintenanceMode",
+      "messageType": "Response"
+    },
+    {
+      "action": "UpdateServiceCatalog",
+      "messageType": "Request"
+    },
+    {
+      "action": "UpdateServiceCatalog",
+      "messageType": "Response"
+    },
+    {
+      "action": "SignCertificate",
+      "messageType": "Request"
+    },
+    {
+      "action": "SignCertificate",
+      "messageType": "Response"
+    },
+    {
+      "action": "CertificateInstall",
+      "messageType": "Request"
+    },
+    {
+      "action": "CertificateInstall",
+      "messageType": "Response"
+    },
+    {
+      "action": "TriggerCertificateRenewal",
+      "messageType": "Request"
+    },
+    {
+      "action": "TriggerCertificateRenewal",
+      "messageType": "Response"
+    },
+    {
+      "action": "TriggerMessage",
+      "messageType": "Request"
+    },
+    {
+      "action": "TriggerMessage",
+      "messageType": "Response"
+    }
+  ],
+  "alwaysExempt": [
+    {
+      "action": "BootNotification",
+      "messageType": "Request"
+    },
+    {
+      "action": "BootNotification",
+      "messageType": "Response"
+    },
+    {
+      "action": "ConnectionLost",
+      "messageType": "Event"
+    }
+  ],
+  "phpApiOnlySuperset": [
+    "IssueOfflinePass",
+    "RevokeOfflinePass",
+    "WebPaymentAuthorization"
+  ]
+}
