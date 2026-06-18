@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.7] — 2026-06-18
+
+Left-pad the P-256 private scalar to 32 bytes at key-loading, killing the
+recurring ~1/256 keygen flake. Coordinated with `sdk-ts v0.5.7` (lockstep,
+ADR-011). `spec` is **NOT** bumped — the spec already mandates DER signatures
+and 32-byte scalars; this is an internal key-loading robustness fix with no
+wire change (signatures are byte-identical for all keys).
+
+### Fixed
+
+- `EcdsaService::sign()` rejected ~1/256 of valid P-256 keys with "Expected an
+  EC P-256 (prime256v1) private key with a 32-byte scalar". OpenSSL's
+  `openssl_pkey_get_details()` returns the private scalar `d` big-endian with
+  leading zero bytes stripped, so a key whose `d` has a high zero byte comes
+  back as 31 (or fewer) bytes and trips the exact-32-byte guard. `d` is now
+  left-padded with `str_pad($d, 32, "\x00", STR_PAD_LEFT)` before the guard:
+  `gmp_import` yields the identical big-endian integer, so the produced
+  signature is byte-identical for normal keys; a >32-byte scalar is still
+  rejected (str_pad never truncates). This was the recurring
+  `SimulatorWireFormatGateScenariosTest` flake. `sdk-ts` is unaffected — Node's
+  JWK export pads `d` to the fixed 32-byte field width (empirically confirmed
+  on the same key), so its v0.5.7 is an empty version-alignment bump.
+
+### Verification
+
+- RED-first: a captured 31-byte-scalar key threw pre-fix, signs+verifies
+  post-fix. Golden 32-byte-key signature byte-identical pre/post (zero output
+  change). 600 keygens → 6 short scalars, 0 throws. Full suite 708 green.
+
 ## [0.5.6] — 2026-06-15
 
 Removed the SDK-only orphan `CAPABILITY_NOT_SUPPORTED = 6008`. Coordinated
