@@ -55,6 +55,18 @@ final class EcdsaService implements EcdsaServiceInterface
         $curveName = $details['ec']['curve_name'] ?? null;
         $scalarBytes = $details['ec']['d'] ?? null;
 
+        // openssl_pkey_get_details() returns the EC private scalar `d` big-endian
+        // with leading zero bytes stripped, so a scalar with a high zero byte
+        // (~1/256 of generated P-256 keys) comes back as 31 (or fewer) bytes.
+        // Left-pad to the fixed 32-byte width: the big-endian integer value is
+        // unchanged (gmp_import below yields the identical scalar, hence a
+        // byte-identical signature), while the fixed-width invariant the guard
+        // and downstream code assume now holds. A scalar longer than 32 bytes is
+        // left untouched and still rejected below (str_pad never truncates).
+        if (is_string($scalarBytes) && strlen($scalarBytes) < 32) {
+            $scalarBytes = str_pad($scalarBytes, 32, "\x00", STR_PAD_LEFT);
+        }
+
         if ($curveName !== 'prime256v1' || ! is_string($scalarBytes) || strlen($scalarBytes) !== 32) {
             throw new RuntimeException(
                 'Expected an EC P-256 (prime256v1) private key with a 32-byte scalar',
