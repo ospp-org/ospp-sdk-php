@@ -184,4 +184,34 @@ final class SessionCryptoTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         SessionCrypto::leftPad32(hex2bin(str_repeat('ab', 33)));
     }
+
+    // ───────────────────────── Function 3: transcriptHash + lp (Pin 4 / §6.5) ─────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     * @param  array<string, mixed>  $keys
+     */
+    #[Test]
+    #[DataProvider('scenarioProvider')]
+    public function transcript_hash_reproduces_vector_from_raw_wire_octets(array $scenario, array $keys): void
+    {
+        // Pin 4: hash the RAW reassembled wire bytes (wireBase64) — NOT a re-serialised JSON form.
+        $hello = base64_decode($scenario['hello']['wireBase64'], true);
+        $challenge = base64_decode($scenario['challenge']['wireBase64'], true);
+        self::assertSame(
+            $scenario['transcript']['transcriptHashHex'],
+            bin2hex(SessionCrypto::transcriptHash($hello, $challenge)),
+        );
+    }
+
+    #[Test]
+    public function transcript_hash_bite_byte_flip_changes_the_hash(): void
+    {
+        $full = self::vector()['scenarios'][0];
+        $hello = base64_decode($full['hello']['wireBase64'], true);
+        $challenge = base64_decode($full['challenge']['wireBase64'], true);
+        self::assertSame($full['transcript']['transcriptHashHex'], bin2hex(SessionCrypto::transcriptHash($hello, $challenge))); // sanity
+        $hello[0] = chr(ord($hello[0]) ^ 0x01);
+        self::assertNotSame($full['transcript']['transcriptHashHex'], bin2hex(SessionCrypto::transcriptHash($hello, $challenge)));
+    }
 }

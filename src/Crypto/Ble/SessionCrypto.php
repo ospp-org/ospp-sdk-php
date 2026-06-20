@@ -84,6 +84,33 @@ final class SessionCrypto
     }
 
     /**
+     * LP(x) = U16BE(byteLength(x)) ‖ x — the single length-prefix used by the HKDF
+     * `info` (Pin 3), the handshake transcript (Pin 4), and the sessionProof
+     * (§6.5.1). Length-prefixing makes concatenations injective (closes finding
+     * N23). Mirrors ble-crypto.mjs lp; pack('n', ...) is U16BE.
+     */
+    public static function lp(string $x): string
+    {
+        if (strlen($x) > 0xffff) {
+            throw new InvalidArgumentException('lp: value exceeds the U16 length prefix');
+        }
+
+        return pack('n', strlen($x)).$x;
+    }
+
+    /**
+     * Pin 4 / §6.5 — handshake transcript hash.
+     *   transcriptHash = SHA-256( LP16(helloBytes) ‖ LP16(challengeBytes) )
+     * Over the RAW, fully-reassembled wire octets exactly as transmitted/received —
+     * MUST NOT parse the JSON and re-serialise / canonicalise it (the deliberate
+     * opposite of Pin 8). Mirrors ble-crypto.mjs.
+     */
+    public static function transcriptHash(string $helloBytes, string $challengeBytes): string
+    {
+        return hash('sha256', self::lp($helloBytes).self::lp($challengeBytes), true);
+    }
+
+    /**
      * Build a P-256 SubjectPublicKeyInfo PEM from raw SEC1 point bytes (compressed
      * or uncompressed). OpenSSL validates the point (on-curve, decompresses
      * compressed form) when the key is loaded.
