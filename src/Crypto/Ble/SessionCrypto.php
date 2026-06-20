@@ -189,6 +189,31 @@ final class SessionCrypto
         return "\x00\x00\x00\x00".pack('J', $counter);
     }
 
+    /**
+     * Pin 6+7 / §6.5.3 — seal a BLE AEAD frame. ChaCha20-Poly1305 IETF (RFC 8439,
+     * 12-byte nonce, Pin 6) via ext-sodium; nonce = nonce96(counter) (Pin 5),
+     * AAD = transcriptHash (Pin 7, binds the frame to the handshake). Returns
+     * ciphertext ‖ 16-byte Poly1305 tag (the on-wire frame `ct`, Base64 at the
+     * message layer). Mirrors ble-crypto.mjs chachaPolySeal.
+     */
+    public static function sealFrame(string $key, int $counter, string $plaintext, string $aad): string
+    {
+        return sodium_crypto_aead_chacha20poly1305_ietf_encrypt($plaintext, $aad, self::nonce96($counter), $key);
+    }
+
+    /**
+     * Pin 6+7 / §6.5.3 — open a BLE AEAD frame. Inverse of sealFrame; verifies the
+     * Poly1305 tag against (key, nonce96(counter), aad=transcriptHash) and returns
+     * FALSE on any authentication failure — a tampered ciphertext/tag or a wrong
+     * transcriptHash (Pin 7). Never returns unauthenticated plaintext. (The TS SDK
+     * throws on failure; PHP follows the ext-sodium idiom of returning false — both
+     * refuse to surface unauthenticated data.) Mirrors ble-crypto.mjs chachaPolyOpen.
+     */
+    public static function openFrame(string $key, int $counter, string $sealed, string $aad): string|false
+    {
+        return sodium_crypto_aead_chacha20poly1305_ietf_decrypt($sealed, $aad, self::nonce96($counter), $key);
+    }
+
     /** HKDF-Expand of a PRK for a single 32-byte block: T(1) = HMAC-SHA256(prk, info ‖ 0x01). */
     private static function hkdfExpand32(string $prk, string $info): string
     {

@@ -322,4 +322,51 @@ final class SessionCryptoTest extends TestCase
         self::assertSame(12, strlen(SessionCrypto::nonce96(0)));
         self::assertNotSame(bin2hex(SessionCrypto::nonce96(5)), bin2hex(SessionCrypto::nonce96(6)));
     }
+
+    // ───────────────────────── Function 7: sealFrame / openFrame (Pin 6+7 / §6.5.3) ─────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     * @param  array<string, mixed>  $keys
+     */
+    #[Test]
+    #[DataProvider('scenarioProvider')]
+    public function seal_frame_reproduces_vector_ct_and_round_trips(array $scenario, array $keys): void
+    {
+        $aad = hex2bin($scenario['transcript']['transcriptHashHex']); // Pin 7: AAD = transcriptHash
+        $ks = $scenario['keySchedule'];
+        foreach ($scenario['aeadFrames'] as $frame) {
+            $key = hex2bin($frame['keyRef'] === 'kAppToStation' ? $ks['kAppToStationHex'] : $ks['kStationToAppHex']);
+            $sealed = SessionCrypto::sealFrame($key, $frame['counter'], $frame['plaintextUtf8'], $aad);
+            self::assertSame($frame['frame']['ct'], base64_encode($sealed), "ct {$frame['direction']}");
+            self::assertSame($frame['plaintextUtf8'], SessionCrypto::openFrame($key, $frame['counter'], $sealed, $aad), "round-trip {$frame['direction']}");
+        }
+    }
+
+    #[Test]
+    public function open_frame_rejects_wrong_aad_and_tampered_tag(): void
+    {
+        $full = self::vector()['scenarios'][0];
+        $frame = $full['aeadFrames'][0];
+        $key = hex2bin($full['keySchedule']['kAppToStationHex']);
+        $aad = hex2bin($full['transcript']['transcriptHashHex']);
+        $sealed = SessionCrypto::sealFrame($key, $frame['counter'], $frame['plaintextUtf8'], $aad);
+        // wrong AAD binds the frame to the handshake (Pin 7) -> open must fail
+        self::assertFalse(SessionCrypto::openFrame($key, $frame['counter'], $sealed, str_repeat("\x00", 32)));
+        // tampered tag -> open must fail (AEAD integrity)
+        $tampered = $sealed;
+        $tampered[strlen($tampered) - 1] = chr(ord($tampered[strlen($tampered) - 1]) ^ 0x01);
+        self::assertFalse(SessionCrypto::openFrame($key, $frame['counter'], $tampered, $aad));
+    }
+
+    #[Test]
+    public function seal_frame_bite_mutated_plaintext_diverges(): void
+    {
+        $full = self::vector()['scenarios'][0];
+        $frame = $full['aeadFrames'][0];
+        $key = hex2bin($full['keySchedule']['kAppToStationHex']);
+        $aad = hex2bin($full['transcript']['transcriptHashHex']);
+        self::assertSame($frame['frame']['ct'], base64_encode(SessionCrypto::sealFrame($key, $frame['counter'], $frame['plaintextUtf8'], $aad))); // sanity
+        self::assertNotSame($frame['frame']['ct'], base64_encode(SessionCrypto::sealFrame($key, $frame['counter'], $frame['plaintextUtf8'].'x', $aad)));
+    }
 }
