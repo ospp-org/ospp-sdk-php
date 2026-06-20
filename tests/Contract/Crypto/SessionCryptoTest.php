@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Ospp\Protocol\Tests\Contract\Crypto;
 
+use DateTimeImmutable;
 use InvalidArgumentException;
 use Ospp\Protocol\Crypto\Ble\SessionCrypto;
+use Ospp\Protocol\Crypto\Ble\StationIdentityException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -368,5 +370,132 @@ final class SessionCryptoTest extends TestCase
         $aad = hex2bin($full['transcript']['transcriptHashHex']);
         self::assertSame($frame['frame']['ct'], base64_encode(SessionCrypto::sealFrame($key, $frame['counter'], $frame['plaintextUtf8'], $aad))); // sanity
         self::assertNotSame($frame['frame']['ct'], base64_encode(SessionCrypto::sealFrame($key, $frame['counter'], $frame['plaintextUtf8'].'x', $aad)));
+    }
+
+    // ───────────────────────── Function 8: verifyStationIdentity (§6.5.2 / Pin 8) ─────────────────────────
+
+    /** @return array<string, mixed> */
+    private static function validCert(): array
+    {
+        return self::vector()['stationIdentity']['cert'];
+    }
+
+    private static function serverPubPem(): string
+    {
+        $pem = file_get_contents(__DIR__.'/fixtures/server-test-pub.pem');
+        self::assertNotFalse($pem);
+
+        return $pem;
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private static function certWith(array $overrides): array
+    {
+        return array_merge(self::validCert(), $overrides);
+    }
+
+    #[Test]
+    public function verify_station_identity_accepts_valid_cert(): void
+    {
+        $cert = SessionCrypto::verifyStationIdentity(self::validCert(), self::serverPubPem());
+        self::assertSame(self::validCert()['stationId'], $cert['stationId']);
+    }
+
+    #[Test]
+    public function verify_station_identity_accepts_matching_station_id(): void
+    {
+        $cert = self::validCert();
+        $r = SessionCrypto::verifyStationIdentity($cert, self::serverPubPem(), $cert['stationId']);
+        self::assertSame($cert['stationId'], $r['stationId']);
+    }
+
+    #[Test]
+    public function verify_station_identity_rejects_wrong_public_key(): void
+    {
+        $wrong = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => 'prime256v1']);
+        self::assertNotFalse($wrong);
+        $wrongPem = openssl_pkey_get_details($wrong)['key'];
+        $this->expectException(StationIdentityException::class);
+        SessionCrypto::verifyStationIdentity(self::validCert(), $wrongPem);
+    }
+
+    #[Test]
+    public function verify_station_identity_rejects_wrong_algorithm(): void
+    {
+        $this->expectException(StationIdentityException::class);
+        SessionCrypto::verifyStationIdentity(self::certWith(['signatureAlgorithm' => 'ECDSA-P384-SHA384']), self::serverPubPem());
+    }
+
+    #[Test]
+    public function verify_station_identity_rejects_malformed_pubkey(): void
+    {
+        $this->expectException(StationIdentityException::class);
+        SessionCrypto::verifyStationIdentity(self::certWith(['stationPubKey' => 'too-short']), self::serverPubPem());
+    }
+
+    #[Test]
+    public function verify_station_identity_rejects_invalid_validity_window(): void
+    {
+        $cert = self::validCert();
+        $this->expectException(StationIdentityException::class);
+        SessionCrypto::verifyStationIdentity(self::certWith(['expiresAt' => $cert['issuedAt']]), self::serverPubPem());
+    }
+
+    #[Test]
+    public function verify_station_identity_rejects_tampered_signature(): void
+    {
+        $cert = self::validCert();
+        $sig = base64_decode($cert['signature'], true);
+        $sig[strlen($sig) - 1] = chr(ord($sig[strlen($sig) - 1]) ^ 0x01);
+        $this->expectException(StationIdentityException::class);
+        SessionCrypto::verifyStationIdentity(self::certWith(['signature' => base64_encode($sig)]), self::serverPubPem());
+    }
+
+    #[Test]
+    public function verify_station_identity_rejects_station_id_mismatch(): void
+    {
+        $this->expectException(StationIdentityException::class);
+        SessionCrypto::verifyStationIdentity(self::validCert(), self::serverPubPem(), 'stn_wrong');
+    }
+
+    #[Test]
+    public function verify_station_identity_freshness_is_runtime_gated(): void
+    {
+        // The vector cert is timeless; absolute freshness (now < expiresAt) is a RUNTIME gate
+        // exercised only when a clock is supplied — real freshness lands at B5.
+        $cert = self::validCert();
+        $expires = (new DateTimeImmutable($cert['expiresAt']))->getTimestamp();
+        $issued = (new DateTimeImmutable($cert['issuedAt']))->getTimestamp();
+        $threw = false;
+        try {
+            SessionCrypto::verifyStationIdentity($cert, self::serverPubPem(), null, $expires + 1);
+        } catch (StationIdentityException) {
+            $threw = true;
+        }
+        self::assertTrue($threw, 'expected expiry rejection when now >= expiresAt');
+        $ok = SessionCrypto::verifyStationIdentity($cert, self::serverPubPem(), null, $issued + 1000);
+        self::assertSame($cert['stationId'], $ok['stationId']);
+    }
+
+    #[Test]
+    public function verify_station_identity_throws_2013_on_failure(): void
+    {
+        try {
+            SessionCrypto::verifyStationIdentity(self::certWith(['signatureAlgorithm' => 'X']), self::serverPubPem());
+            self::fail('expected StationIdentityException');
+        } catch (StationIdentityException $e) {
+            self::assertSame(2013, $e->getCode());
+        }
+    }
+
+    #[Test]
+    public function verify_station_identity_bite_tampered_body_fails(): void
+    {
+        $cert = self::validCert();
+        $this->expectException(StationIdentityException::class);
+        SessionCrypto::verifyStationIdentity(self::certWith(['stationId' => $cert['stationId'].'x']), self::serverPubPem());
     }
 }

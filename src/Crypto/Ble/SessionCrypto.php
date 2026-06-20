@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Ospp\Protocol\Crypto\Ble;
 
+use DateTimeImmutable;
 use InvalidArgumentException;
+use Ospp\Protocol\Crypto\CanonicalJsonSerializer;
 
 /**
  * BLE SessionCrypto — the §6.5 handshake cryptographic pipeline (ECDH P-256 key
@@ -27,6 +29,7 @@ final class SessionCrypto
     private const KDF_LABEL_S2A = 'OSPP-BLE-v0.6.0-key-station-to-app';
     private const SESSION_CONFIRM_LABEL = 'AuthResponse_OK';
     private const SESSION_PROOF_TYPE = 'OfflineAuthRequest';
+    private const CERT_SIGNATURE_ALGORITHM = 'ECDSA-P256-SHA256';
 
     /**
      * Pin 2 / §6.5.2 — public-key validation (Normative).
@@ -212,6 +215,85 @@ final class SessionCrypto
     public static function openFrame(string $key, int $counter, string $sealed, string $aad): string|false
     {
         return sodium_crypto_aead_chacha20poly1305_ietf_decrypt($sealed, $aad, self::nonce96($counter), $key);
+    }
+
+    /**
+     * §6.5.2 / Pin 8 — verify a StationIdentity certificate. All failures throw
+     * StationIdentityException (2013 BLE_AUTH_FAILED).
+     *   1. signatureAlgorithm === "ECDSA-P256-SHA256"
+     *   2. stationPubKey is a 44-char compressed-SEC1 Base64 key (Pin 2) AND a valid P-256 point
+     *   3. structural validity window: issuedAt < expiresAt
+     *   4. ($now) absolute freshness now < expiresAt — a RUNTIME gate; production callers
+     *      MUST pass a clock (a timeless conformance vector cannot prove it)
+     *   5. ($expectedStationId) stationId binds to the out-of-band station id
+     *   6. ECDSA-P256-SHA256 signature verifies under $serverPublicKeyPem over the OSPP
+     *      Canonical Form (§4.8 / Pin 8) of body = cert MINUS {signature, signatureAlgorithm}
+     *
+     * Reuses CanonicalJsonSerializer (Pin 8) + openssl_verify (the ECDSA primitive
+     * EcdsaService wraps). Mirrors TS verify-ble-crypto.mjs.
+     *
+     * @param  array<string, mixed>  $cert  decoded StationIdentity certificate
+     * @param  string  $serverPublicKeyPem  trusted server signing public key (PEM)
+     * @return array<string, mixed> the verified certificate
+     */
+    public static function verifyStationIdentity(
+        array $cert,
+        string $serverPublicKeyPem,
+        ?string $expectedStationId = null,
+        ?int $now = null,
+    ): array {
+        if (($cert['signatureAlgorithm'] ?? null) !== self::CERT_SIGNATURE_ALGORITHM) {
+            throw new StationIdentityException('unexpected signatureAlgorithm');
+        }
+
+        $stationPubKey = $cert['stationPubKey'] ?? null;
+        if (! is_string($stationPubKey) || preg_match('#^[A-Za-z0-9+/]{44}$#', $stationPubKey) !== 1) {
+            throw new StationIdentityException('stationPubKey is not a 44-char compressed-SEC1 Base64 key (Pin 2)');
+        }
+        $decodedPub = base64_decode($stationPubKey, true);
+        if ($decodedPub === false) {
+            throw new StationIdentityException('stationPubKey is not valid Base64');
+        }
+        try {
+            self::validatePublicKey($decodedPub);
+        } catch (InvalidArgumentException) {
+            throw new StationIdentityException('stationPubKey is not a valid P-256 curve point');
+        }
+
+        $issuedAt = $cert['issuedAt'] ?? null;
+        $expiresAt = $cert['expiresAt'] ?? null;
+        if (! is_string($issuedAt) || ! is_string($expiresAt)) {
+            throw new StationIdentityException('issuedAt/expiresAt must be ISO 8601 strings');
+        }
+        try {
+            $issued = (new DateTimeImmutable($issuedAt))->getTimestamp();
+            $expires = (new DateTimeImmutable($expiresAt))->getTimestamp();
+        } catch (\Exception) {
+            throw new StationIdentityException('issuedAt/expiresAt is not a valid timestamp');
+        }
+        if (! ($issued < $expires)) {
+            throw new StationIdentityException('issuedAt is not strictly before expiresAt');
+        }
+        if ($now !== null && ! ($now < $expires)) {
+            throw new StationIdentityException('certificate has expired (now >= expiresAt)');
+        }
+        if ($expectedStationId !== null && ($cert['stationId'] ?? null) !== $expectedStationId) {
+            throw new StationIdentityException('stationId does not match the expected station id');
+        }
+
+        $body = $cert;
+        unset($body['signature'], $body['signatureAlgorithm']);
+        $canonical = (new CanonicalJsonSerializer())->serialize($body);
+        $signatureB64 = $cert['signature'] ?? null;
+        if (! is_string($signatureB64)) {
+            throw new StationIdentityException('signature must be a Base64 string');
+        }
+        $signature = base64_decode($signatureB64, true);
+        if ($signature === false || openssl_verify($canonical, $signature, $serverPublicKeyPem, OPENSSL_ALGO_SHA256) !== 1) {
+            throw new StationIdentityException('ECDSA-P256-SHA256 signature does not verify under the server public key');
+        }
+
+        return $cert;
     }
 
     /** HKDF-Expand of a PRK for a single 32-byte block: T(1) = HMAC-SHA256(prk, info ‖ 0x01). */
