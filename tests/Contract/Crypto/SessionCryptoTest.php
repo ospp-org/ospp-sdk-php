@@ -267,4 +267,32 @@ final class SessionCryptoTest extends TestCase
         $r2 = SessionCrypto::deriveSessionKeys($p['es'], $p['ee'], $p['appNonce'], $p['stationNonce'], $p['deviceId'].'x', $p['transcriptHash']);
         self::assertNotSame($full['keySchedule']['sessionKeyHex'], bin2hex($r2['sessionKey']));
     }
+
+    // ───────────────────────── Function 5: sessionProof (§6.5.1 / ble-handshake §4.1) ─────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     * @param  array<string, mixed>  $keys
+     */
+    #[Test]
+    #[DataProvider('scenarioProvider')]
+    public function session_proof_reproduces_vector(array $scenario, array $keys): void
+    {
+        // The NEW §4.1 form (LP / 3-input / decimal-counter / Base64) — replacing the retired
+        // §6.5.1 hex/4-input shape. Reproduction proves decimal(counter)=String(counter), not U64BE.
+        $sp = $scenario['sessionProof'];
+        $sk = hex2bin($scenario['keySchedule']['sessionKeyHex']);
+        self::assertSame($sp['sessionProofBase64'], base64_encode(SessionCrypto::sessionProof($sk, $sp['passId'], $sp['counter'])));
+    }
+
+    #[Test]
+    public function session_proof_bite_counter_and_passId(): void
+    {
+        $full = self::vector()['scenarios'][0];
+        $sp = $full['sessionProof'];
+        $sk = hex2bin($full['keySchedule']['sessionKeyHex']);
+        self::assertSame($sp['sessionProofBase64'], base64_encode(SessionCrypto::sessionProof($sk, $sp['passId'], $sp['counter']))); // sanity
+        self::assertNotSame($sp['sessionProofBase64'], base64_encode(SessionCrypto::sessionProof($sk, $sp['passId'], $sp['counter'] + 1)));
+        self::assertNotSame($sp['sessionProofBase64'], base64_encode(SessionCrypto::sessionProof($sk, $sp['passId'].'x', $sp['counter'])));
+    }
 }

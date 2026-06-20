@@ -26,6 +26,7 @@ final class SessionCrypto
     private const KDF_LABEL_A2S = 'OSPP-BLE-v0.6.0-key-app-to-station';
     private const KDF_LABEL_S2A = 'OSPP-BLE-v0.6.0-key-station-to-app';
     private const SESSION_CONFIRM_LABEL = 'AuthResponse_OK';
+    private const SESSION_PROOF_TYPE = 'OfflineAuthRequest';
 
     /**
      * Pin 2 / §6.5.2 — public-key validation (Normative).
@@ -158,6 +159,22 @@ final class SessionCrypto
             'kStationToApp' => self::hkdfExpand32($sessionKey, self::KDF_LABEL_S2A),
             'sessionKeyConfirmation' => hash_hmac('sha256', self::SESSION_CONFIRM_LABEL, $sessionKey, true),
         ];
+    }
+
+    /**
+     * §6.5.1 / ble-handshake.md §4.1 — sessionProof (Normative).
+     *   sessionProof = HMAC-SHA256(SessionKey, LP("OfflineAuthRequest") ‖ LP(passId) ‖ LP(decimal(counter)))
+     * `decimal(counter)` is the counter as its shortest base-10 ASCII string — NOT a
+     * U64BE binary (that is the Pin 5 nonce). The LP length-prefix makes (type, passId,
+     * counter) injective (closes finding N1's empty-concatenation ambiguity). Returns
+     * the raw 32-byte HMAC (Base64 at the message layer). Mirrors generate-ble-vectors.mjs.
+     * This is the NEW form that REPLACES the retired §6.5.1 hex/4-input shape.
+     */
+    public static function sessionProof(string $sessionKey, string $passId, int $counter): string
+    {
+        $message = self::lp(self::SESSION_PROOF_TYPE).self::lp($passId).self::lp((string) $counter);
+
+        return hash_hmac('sha256', $message, $sessionKey, true);
     }
 
     /** HKDF-Expand of a PRK for a single 32-byte block: T(1) = HMAC-SHA256(prk, info ‖ 0x01). */
