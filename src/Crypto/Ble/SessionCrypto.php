@@ -20,6 +20,13 @@ use InvalidArgumentException;
  */
 final class SessionCrypto
 {
+    // Pin 3 key-schedule constants — VERBATIM from spec generate-ble-vectors.mjs /
+    // 06-security.md §6.5. Do NOT alter — cross-language byte-identity depends on them.
+    private const SALT_V2 = 'OSPP_BLE_SESSION_V2';
+    private const KDF_LABEL_A2S = 'OSPP-BLE-v0.6.0-key-app-to-station';
+    private const KDF_LABEL_S2A = 'OSPP-BLE-v0.6.0-key-station-to-app';
+    private const SESSION_CONFIRM_LABEL = 'AuthResponse_OK';
+
     /**
      * Pin 2 / §6.5.2 — public-key validation (Normative).
      *
@@ -108,6 +115,55 @@ final class SessionCrypto
     public static function transcriptHash(string $helloBytes, string $challengeBytes): string
     {
         return hash('sha256', self::lp($helloBytes).self::lp($challengeBytes), true);
+    }
+
+    /**
+     * Pin 3 / §6.5 — BLE session key schedule, directional sub-keys, and key
+     * confirmation. Constants verbatim (mirrors generate-ble-vectors.mjs):
+     *
+     *   IKM        = es ‖ ee ‖ appNonce ‖ stationNonce          (4 × 32 = 128 bytes)
+     *   SessionKey = HKDF-SHA256(IKM, salt=OSPP_BLE_SESSION_V2, info=LP(deviceId)‖LP(transcriptHash), 32)
+     *   k_app→stn  = HKDF-Expand(SessionKey, "OSPP-BLE-v0.6.0-key-app-to-station", 32)
+     *   k_stn→app  = HKDF-Expand(SessionKey, "OSPP-BLE-v0.6.0-key-station-to-app", 32)
+     *   confirm    = HMAC-SHA256(SessionKey, "AuthResponse_OK")
+     *
+     * `hash_hkdf(algo, ikm, length, info, salt)` does the full Extract+Expand for
+     * SessionKey; the directional keys are HKDF-Expand-ONLY of SessionKey, computed
+     * manually as a single 32-byte block T(1) = HMAC-SHA256(SessionKey, label ‖ 0x01).
+     * The 256-bit inputs (es/ee, both nonces, transcriptHash) MUST be exactly 32 bytes.
+     *
+     * @return array{sessionKey: string, kAppToStation: string, kStationToApp: string, sessionKeyConfirmation: string} raw bytes (Base64 at the message layer)
+     */
+    public static function deriveSessionKeys(
+        string $es,
+        string $ee,
+        string $appNonce,
+        string $stationNonce,
+        string $deviceId,
+        string $transcriptHash,
+    ): array {
+        foreach (['es' => $es, 'ee' => $ee, 'appNonce' => $appNonce, 'stationNonce' => $stationNonce, 'transcriptHash' => $transcriptHash] as $name => $value) {
+            if (strlen($value) !== 32) {
+                throw new InvalidArgumentException("deriveSessionKeys: {$name} must be 32 bytes (got ".strlen($value).')');
+            }
+        }
+
+        $ikm = $es.$ee.$appNonce.$stationNonce;
+        $info = self::lp($deviceId).self::lp($transcriptHash);
+        $sessionKey = hash_hkdf('sha256', $ikm, 32, $info, self::SALT_V2);
+
+        return [
+            'sessionKey' => $sessionKey,
+            'kAppToStation' => self::hkdfExpand32($sessionKey, self::KDF_LABEL_A2S),
+            'kStationToApp' => self::hkdfExpand32($sessionKey, self::KDF_LABEL_S2A),
+            'sessionKeyConfirmation' => hash_hmac('sha256', self::SESSION_CONFIRM_LABEL, $sessionKey, true),
+        ];
+    }
+
+    /** HKDF-Expand of a PRK for a single 32-byte block: T(1) = HMAC-SHA256(prk, info ‖ 0x01). */
+    private static function hkdfExpand32(string $prk, string $info): string
+    {
+        return hash_hmac('sha256', $info."\x01", $prk, true);
     }
 
     /**

@@ -214,4 +214,57 @@ final class SessionCryptoTest extends TestCase
         $hello[0] = chr(ord($hello[0]) ^ 0x01);
         self::assertNotSame($full['transcript']['transcriptHashHex'], bin2hex(SessionCrypto::transcriptHash($hello, $challenge)));
     }
+
+    // ───────────────────────── Function 4: deriveSessionKeys (Pin 3 / §6.5) ─────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     * @return array{es: string, ee: string, appNonce: string, stationNonce: string, deviceId: string, transcriptHash: string}
+     */
+    private static function deriveParams(array $scenario): array
+    {
+        return [
+            'es' => hex2bin($scenario['ecdh']['esHex']),
+            'ee' => hex2bin($scenario['ecdh']['eeHex']),
+            'appNonce' => base64_decode($scenario['hello']['message']['appNonce'], true),
+            'stationNonce' => base64_decode($scenario['challenge']['message']['stationNonce'], true),
+            'deviceId' => $scenario['hello']['message']['deviceId'],
+            'transcriptHash' => hex2bin($scenario['transcript']['transcriptHashHex']),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     * @param  array<string, mixed>  $keys
+     */
+    #[Test]
+    #[DataProvider('scenarioProvider')]
+    public function derive_session_keys_reproduces_all_outputs(array $scenario, array $keys): void
+    {
+        $p = self::deriveParams($scenario);
+        $r = SessionCrypto::deriveSessionKeys($p['es'], $p['ee'], $p['appNonce'], $p['stationNonce'], $p['deviceId'], $p['transcriptHash']);
+        $ks = $scenario['keySchedule'];
+        self::assertSame($ks['sessionKeyHex'], bin2hex($r['sessionKey']), 'SessionKey');
+        self::assertSame($ks['kAppToStationHex'], bin2hex($r['kAppToStation']), 'k_app_to_station');
+        self::assertSame($ks['kStationToAppHex'], bin2hex($r['kStationToApp']), 'k_station_to_app');
+        self::assertSame($ks['sessionKeyConfirmationBase64'], base64_encode($r['sessionKeyConfirmation']), 'sessionKeyConfirmation');
+    }
+
+    #[Test]
+    public function derive_session_keys_bite_mutated_es_and_deviceId_diverge(): void
+    {
+        $full = self::vector()['scenarios'][0];
+        $p = self::deriveParams($full);
+        $base = SessionCrypto::deriveSessionKeys($p['es'], $p['ee'], $p['appNonce'], $p['stationNonce'], $p['deviceId'], $p['transcriptHash']);
+        self::assertSame($full['keySchedule']['sessionKeyHex'], bin2hex($base['sessionKey'])); // sanity
+        // mutate es -> different SessionKey AND directional keys
+        $mes = $p['es'];
+        $mes[0] = chr(ord($mes[0]) ^ 0x01);
+        $r1 = SessionCrypto::deriveSessionKeys($mes, $p['ee'], $p['appNonce'], $p['stationNonce'], $p['deviceId'], $p['transcriptHash']);
+        self::assertNotSame($full['keySchedule']['sessionKeyHex'], bin2hex($r1['sessionKey']));
+        self::assertNotSame($full['keySchedule']['kAppToStationHex'], bin2hex($r1['kAppToStation']));
+        // mutate deviceId (Pin 3 info binding, injective LP) -> different SessionKey
+        $r2 = SessionCrypto::deriveSessionKeys($p['es'], $p['ee'], $p['appNonce'], $p['stationNonce'], $p['deviceId'].'x', $p['transcriptHash']);
+        self::assertNotSame($full['keySchedule']['sessionKeyHex'], bin2hex($r2['sessionKey']));
+    }
 }
