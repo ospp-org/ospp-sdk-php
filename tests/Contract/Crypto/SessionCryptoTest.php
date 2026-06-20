@@ -295,4 +295,31 @@ final class SessionCryptoTest extends TestCase
         self::assertNotSame($sp['sessionProofBase64'], base64_encode(SessionCrypto::sessionProof($sk, $sp['passId'], $sp['counter'] + 1)));
         self::assertNotSame($sp['sessionProofBase64'], base64_encode(SessionCrypto::sessionProof($sk, $sp['passId'].'x', $sp['counter'])));
     }
+
+    // ───────────────────────── Function 6: nonce96 (Pin 5 / §6.5.3) ─────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     * @param  array<string, mixed>  $keys
+     */
+    #[Test]
+    #[DataProvider('scenarioProvider')]
+    public function nonce96_reproduces_vector(array $scenario, array $keys): void
+    {
+        $count = 0;
+        foreach ($scenario['aeadFrames'] as $frame) {
+            self::assertSame($frame['nonce96Hex'], bin2hex(SessionCrypto::nonce96($frame['counter'])));
+            $count++;
+        }
+        self::assertGreaterThan(0, $count);
+    }
+
+    #[Test]
+    public function nonce96_structure_and_bite(): void
+    {
+        self::assertSame('000000000000000000000001', bin2hex(SessionCrypto::nonce96(1)));
+        self::assertSame('000000000000000000000102', bin2hex(SessionCrypto::nonce96(258))); // 0x102
+        self::assertSame(12, strlen(SessionCrypto::nonce96(0)));
+        self::assertNotSame(bin2hex(SessionCrypto::nonce96(5)), bin2hex(SessionCrypto::nonce96(6)));
+    }
 }

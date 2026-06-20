@@ -177,6 +177,18 @@ final class SessionCrypto
         return hash_hmac('sha256', $message, $sessionKey, true);
     }
 
+    /**
+     * Pin 5 / §6.5.3 — AEAD frame nonce.
+     *   nonce96(counter) = 0x00000000 ‖ U64BE(counter)        // 12 bytes
+     * Per-direction 64-bit frame counter from 0. (Distinct from the sessionProof
+     * counter, which is decimal ASCII.) pack('J', ...) is U64 big-endian. Mirrors
+     * ble-crypto.mjs.
+     */
+    public static function nonce96(int $counter): string
+    {
+        return "\x00\x00\x00\x00".pack('J', $counter);
+    }
+
     /** HKDF-Expand of a PRK for a single 32-byte block: T(1) = HMAC-SHA256(prk, info ‖ 0x01). */
     private static function hkdfExpand32(string $prk, string $info): string
     {
