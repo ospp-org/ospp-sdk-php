@@ -26,6 +26,23 @@ final class SessionCryptoTest extends TestCase
         'appEphemeralMinimal', 'stationEphemeralMinimal',
     ];
 
+    private const SCENARIO_KEYS = [
+        'full' => ['appEph' => 'appEphemeralFull', 'stationEph' => 'stationEphemeralFull'],
+        'minimal' => ['appEph' => 'appEphemeralMinimal', 'stationEph' => 'stationEphemeralMinimal'],
+    ];
+
+    /** @return array<string, array{0: array<string, mixed>, 1: array<string, mixed>}> */
+    public static function scenarioProvider(): array
+    {
+        $v = self::vector();
+        $cases = [];
+        foreach ($v['scenarios'] as $s) {
+            $cases[$s['scenario']] = [$s, $v['keys']];
+        }
+
+        return $cases;
+    }
+
     /** @return array<string, mixed> */
     private static function vector(): array
     {
@@ -85,5 +102,86 @@ final class SessionCryptoTest extends TestCase
             }
         }
         self::assertGreaterThan(0, $rejected, 'the curve/field check must catch mutations (a no-op validator rejects 0)');
+    }
+
+    // ───────────────────────── Function 2: ecdhSharedX + leftPad32 (Pin 1 / §6.5) ─────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     * @param  array<string, mixed>  $keys
+     */
+    #[Test]
+    #[DataProvider('scenarioProvider')]
+    public function ecdh_es_reproduces_vector_both_directions(array $scenario, array $keys): void
+    {
+        $map = self::SCENARIO_KEYS[$scenario['scenario']];
+        $appPriv = hex2bin($keys[$map['appEph']]['privateKeyHex']);
+        $appPub = base64_decode($keys[$map['appEph']]['publicKeyCompressedBase64'], true);
+        $statPriv = hex2bin($keys['stationStatic']['privateKeyHex']);
+        $statPub = base64_decode($keys['stationStatic']['publicKeyCompressedBase64'], true);
+        // es = ECDH(appEphemeralPriv, stationStaticPub) — app side == station side (interop crux == TS)
+        self::assertSame($scenario['ecdh']['esHex'], bin2hex(SessionCrypto::ecdhSharedX($appPriv, $statPub)));
+        self::assertSame($scenario['ecdh']['esHex'], bin2hex(SessionCrypto::ecdhSharedX($statPriv, $appPub)));
+    }
+
+    /**
+     * @param  array<string, mixed>  $scenario
+     * @param  array<string, mixed>  $keys
+     */
+    #[Test]
+    #[DataProvider('scenarioProvider')]
+    public function ecdh_ee_reproduces_vector_both_directions(array $scenario, array $keys): void
+    {
+        $map = self::SCENARIO_KEYS[$scenario['scenario']];
+        $appPriv = hex2bin($keys[$map['appEph']]['privateKeyHex']);
+        $appPub = base64_decode($keys[$map['appEph']]['publicKeyCompressedBase64'], true);
+        $statEphPriv = hex2bin($keys[$map['stationEph']]['privateKeyHex']);
+        $statEphPub = base64_decode($keys[$map['stationEph']]['publicKeyCompressedBase64'], true);
+        self::assertSame($scenario['ecdh']['eeHex'], bin2hex(SessionCrypto::ecdhSharedX($appPriv, $statEphPub)));
+        self::assertSame($scenario['ecdh']['eeHex'], bin2hex(SessionCrypto::ecdhSharedX($statEphPriv, $appPub)));
+    }
+
+    #[Test]
+    public function ecdh_output_is_exactly_32_bytes(): void
+    {
+        $keys = self::vector()['keys'];
+        $x = SessionCrypto::ecdhSharedX(
+            hex2bin($keys['appEphemeralFull']['privateKeyHex']),
+            base64_decode($keys['stationStatic']['publicKeyCompressedBase64'], true),
+        );
+        self::assertSame(32, strlen($x));
+    }
+
+    #[Test]
+    public function ecdh_bite_mutated_private_key_diverges(): void
+    {
+        $v = self::vector();
+        $keys = $v['keys'];
+        $full = $v['scenarios'][0];
+        $appPriv = hex2bin($keys['appEphemeralFull']['privateKeyHex']);
+        $statPub = base64_decode($keys['stationStatic']['publicKeyCompressedBase64'], true);
+        self::assertSame($full['ecdh']['esHex'], bin2hex(SessionCrypto::ecdhSharedX($appPriv, $statPub))); // sanity
+        $mutated = $appPriv;
+        $last = strlen($mutated) - 1;
+        $mutated[$last] = chr(ord($mutated[$last]) ^ 0x01);
+        self::assertNotSame($full['ecdh']['esHex'], bin2hex(SessionCrypto::ecdhSharedX($mutated, $statPub)));
+    }
+
+    #[Test]
+    public function leftPad32_is_unconditional(): void
+    {
+        // no-op on a full-width 32-byte input
+        self::assertSame(str_repeat('ff', 32), bin2hex(SessionCrypto::leftPad32(hex2bin(str_repeat('ff', 32)))));
+        // left-pads a short (high-zero-byte) value — the ~1/256 EC-scalar parity case (Pin 1)
+        $padded = SessionCrypto::leftPad32(hex2bin(str_repeat('ab', 31)));
+        self::assertSame(32, strlen($padded));
+        self::assertSame('00'.str_repeat('ab', 31), bin2hex($padded));
+    }
+
+    #[Test]
+    public function leftPad32_rejects_over_width_input(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        SessionCrypto::leftPad32(hex2bin(str_repeat('ab', 33)));
     }
 }
