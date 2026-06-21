@@ -12,10 +12,11 @@ use PHPUnit\Framework\TestCase;
 final class OsppErrorCodeTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_106_cases(): void
+    public function it_has_exactly_107_cases(): void
     {
-        // 102 standard + 4 v0.5.2 auth codes (2014-2017, spec v0.4.2 07-errors.md §3.2) = 106.
-        self::assertCount(106, OsppErrorCode::cases());
+        // 102 standard + 4 v0.5.2 auth codes (2014-2017, spec v0.4.2 07-errors.md §3.2)
+        // + 1 v0.6.2 auth code (2018 SERVER_AUTH_NONCE_MISMATCH) = 107.
+        self::assertCount(107, OsppErrorCode::cases());
     }
 
     #[Test]
@@ -99,6 +100,30 @@ final class OsppErrorCodeTest extends TestCase
             'Signed-body cross-check failure → 422 (signature verified, values inconsistent)');
     }
 
+    #[Test]
+    public function v0_6_2_code_2018_is_present_with_spec_metadata(): void
+    {
+        // spec 07-errors.md §3.2: 2018 SERVER_AUTH_NONCE_MISMATCH — BLE Partial-A
+        // ServerSignedAuth anti-replay (signed appNonce != Hello.appNonce).
+        // Severity Critical, recoverable=false (07-errors.md:245), auth category.
+        self::assertSame(2018, OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->value);
+        self::assertSame('SERVER_AUTH_NONCE_MISMATCH', OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->errorText());
+        self::assertSame(Severity::CRITICAL, OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->severity());
+        self::assertFalse(OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->isRecoverable());
+        self::assertSame('auth', OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->category());
+    }
+
+    #[Test]
+    public function v0_6_2_code_2018_httpStatus_is_401_aligned_cross_SDK(): void
+    {
+        // 2018 → 401 (NOT 422 like 2017). The ServerSignedAuth replay is REJECTED
+        // at the BLE handshake (station refuses + disconnects) — auth does NOT
+        // succeed, unlike 2017 (auth succeeded, only a receipt cross-check failed).
+        // Mirrors the 2005 counter-replay / JWT-rejection family. Same value in
+        // ospp-sdk-ts OSPP_ERROR_REGISTRY (cross-SDK aligned).
+        self::assertSame(401, OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->httpStatus());
+    }
+
     // =========================================================================
     // category()
     // =========================================================================
@@ -152,6 +177,8 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::OFFLINE_ORG_MISMATCH,
             OsppErrorCode::OFFLINE_USER_MISMATCH,
             OsppErrorCode::OFFLINE_RECEIPT_MISMATCH,
+            // v0.6.2 spec addition
+            OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH,
         ];
 
         foreach ($authCodes as $code) {
@@ -811,14 +838,15 @@ final class OsppErrorCodeTest extends TestCase
     }
 
     #[Test]
-    public function auth_category_has_eighteen_codes(): void
+    public function auth_category_has_nineteen_codes(): void
     {
-        // v0.5.2: 14 + 4 (2014/2015/2016/2017 spec v0.4.2 additions) = 18.
+        // v0.5.2: 14 + 4 (2014/2015/2016/2017 spec v0.4.2 additions) = 18;
+        // v0.6.2: + 1 (2018 SERVER_AUTH_NONCE_MISMATCH) = 19.
         $count = count(array_filter(
             OsppErrorCode::cases(),
             static fn (OsppErrorCode $c): bool => $c->category() === 'auth',
         ));
-        self::assertSame(18, $count);
+        self::assertSame(19, $count);
     }
 
     #[Test]

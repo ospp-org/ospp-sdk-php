@@ -10,6 +10,7 @@ enum SecurityEventType: string
     case CERTIFICATE_ERROR = 'CertificateError';
     case UNAUTHORIZED_ACCESS = 'UnauthorizedAccess';
     case OFFLINE_PASS_REJECTED = 'OfflinePassRejected';
+    case SERVER_SIGNED_AUTH_REPLAY = 'ServerSignedAuthReplay';
     case TAMPER_DETECTED = 'TamperDetected';
     case BRUTE_FORCE_ATTEMPT = 'BruteForceAttempt';
     case FIRMWARE_INTEGRITY_FAILURE = 'FirmwareIntegrityFailure';

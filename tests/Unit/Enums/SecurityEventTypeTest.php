@@ -11,9 +11,9 @@ use PHPUnit\Framework\TestCase;
 final class SecurityEventTypeTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_eleven_cases(): void
+    public function it_has_exactly_twelve_cases(): void
     {
-        self::assertCount(11, SecurityEventType::cases());
+        self::assertCount(12, SecurityEventType::cases());
     }
 
     #[Test]
@@ -23,6 +23,7 @@ final class SecurityEventTypeTest extends TestCase
         self::assertSame('CertificateError', SecurityEventType::CERTIFICATE_ERROR->value);
         self::assertSame('UnauthorizedAccess', SecurityEventType::UNAUTHORIZED_ACCESS->value);
         self::assertSame('OfflinePassRejected', SecurityEventType::OFFLINE_PASS_REJECTED->value);
+        self::assertSame('ServerSignedAuthReplay', SecurityEventType::SERVER_SIGNED_AUTH_REPLAY->value);
         self::assertSame('TamperDetected', SecurityEventType::TAMPER_DETECTED->value);
         self::assertSame('BruteForceAttempt', SecurityEventType::BRUTE_FORCE_ATTEMPT->value);
         self::assertSame('FirmwareIntegrityFailure', SecurityEventType::FIRMWARE_INTEGRITY_FAILURE->value);

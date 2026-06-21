@@ -7,8 +7,9 @@ namespace Ospp\Protocol\Enums;
 /**
  * Complete OSPP Error Code registry.
  *
- * 106 standard error codes across 6 categories (spec 07-errors.md §1.1, v0.4.2:
- * 102 → 106 with the 2014-2017 additions). Fully spec-aligned with sdk-ts.
+ * 107 standard error codes across 6 categories (spec 07-errors.md §1.1, v0.4.2:
+ * 102 → 106 with the 2014-2017 additions; v0.6.2: → 107 with 2018
+ * SERVER_AUTH_NONCE_MISMATCH). Fully spec-aligned with sdk-ts.
  */
 enum OsppErrorCode: int
 {
@@ -29,7 +30,7 @@ enum OsppErrorCode: int
     case MAC_MISSING = 1013;
     case MESSAGE_TOO_LARGE = 1014;
 
-    // 2xxx - Authentication & Authorization Errors (18 codes — v0.5.2 added 2014-2017)
+    // 2xxx - Authentication & Authorization Errors (19 codes — v0.5.2 added 2014-2017, v0.6.2 added 2018)
     case AUTH_GENERIC = 2000;
     case STATION_NOT_REGISTERED = 2001;
     case OFFLINE_PASS_INVALID = 2002;
@@ -49,6 +50,8 @@ enum OsppErrorCode: int
     case OFFLINE_ORG_MISMATCH = 2015;
     case OFFLINE_USER_MISMATCH = 2016;
     case OFFLINE_RECEIPT_MISMATCH = 2017;
+    // spec v0.6.2 07-errors.md §3.2 — BLE Partial-A ServerSignedAuth anti-replay nonce check
+    case SERVER_AUTH_NONCE_MISMATCH = 2018;
 
     // 3xxx - Session & Bay Errors (17 codes)
     case SESSION_GENERIC = 3000;
@@ -152,6 +155,7 @@ enum OsppErrorCode: int
             self::MAC_VERIFICATION_FAILED,
             self::OFFLINE_COUNTER_REPLAY,
             self::OFFLINE_RECEIPT_MISMATCH,
+            self::SERVER_AUTH_NONCE_MISMATCH,
             self::PUMP_SYSTEM,
             self::ELECTRICAL_SYSTEM,
             self::EMERGENCY_STOP,
@@ -245,6 +249,7 @@ enum OsppErrorCode: int
             self::OFFLINE_ORG_MISMATCH,
             self::OFFLINE_USER_MISMATCH,
             self::OFFLINE_RECEIPT_MISMATCH,
+            self::SERVER_AUTH_NONCE_MISMATCH,
             self::COMMAND_NOT_SUPPORTED,
             self::ACTION_NOT_PERMITTED,
             self::JWT_INVALID,
@@ -301,7 +306,12 @@ enum OsppErrorCode: int
             // credential ≡ credential no longer valid; RFC 9110 401 "credential invalid").
             self::OFFLINE_PASS_REVOKED,
             self::JWT_EXPIRED, self::JWT_INVALID, self::ACTION_NOT_PERMITTED,
-            self::SESSION_TOKEN_EXPIRED, self::SESSION_TOKEN_INVALID => 401,
+            self::SESSION_TOKEN_EXPIRED, self::SESSION_TOKEN_INVALID,
+            // v0.6.2: 2018 SERVER_AUTH_NONCE_MISMATCH → 401 — ServerSignedAuth replay
+            // at the BLE handshake; the auth is REJECTED (station refuses the
+            // handshake), unlike 2017 where auth succeeded → 422. Same shape as the
+            // 2005 counter-replay / JWT-rejection family (2009-2012).
+            self::SERVER_AUTH_NONCE_MISMATCH => 401,
             self::INSUFFICIENT_BALANCE => 402,
             // v0.5.2: 2015 OFFLINE_ORG_MISMATCH + 2016 OFFLINE_USER_MISMATCH aligned
             // cross-SDK to 403 — pass is cryptographically valid but used in a
