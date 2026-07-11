@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.0] — 2026-07-10
+
+TLS 1.2 floor (lockstep, ADR-011). Re-vendors `schemas/provisioning-response.schema.json`
+at spec **v0.7.0**: the MQTT `tlsVersion` field widens from `["1.3"]` to
+`["1.2","1.3"]` (default `"1.3"` → `"1.2"`) and its semantics change from "the
+TLS version" to a **minimum floor** — the station must support this version;
+the broker accepts it or higher. This lowers the MQTT/mTLS transport floor from
+TLS-1.3-only to TLS 1.2+ (TLS 1.3 recommended, negotiated when both peers
+support it), admitting cellular modems capped at TLS 1.2 (e.g. SIMCom
+A7608E-H). Sub-1.2 remains rejected, 0-RTT remains forbidden, mTLS unchanged.
+`.spec-ref` → `v0.7.0`.
+
+No PHP code change: the SDK carries the `tlsVersion` contract only through the
+JSON schema (no hand-written type/enum), and the 0.7.0 provisioning-token §2
+formalisation (single-use + TTL-bounded idempotent retry; 401 for
+expired/superseded/revoked) reuses existing auth codes — `OsppErrorCode`
+already maps 2009/2010/2011/2012 → 401. phpunit + phpstan (level 9) green.
+
 ## [0.5.7] — 2026-06-18
 
 Left-pad the P-256 private scalar to 32 bytes at key-loading, killing the
