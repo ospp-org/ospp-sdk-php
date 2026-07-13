@@ -113,7 +113,7 @@ final class SigningWorkflowTest extends TestCase
             ->withPayload([
                 'stationId' => 'ST-001',
                 'configuration' => [
-                    'key' => 'HeartbeatInterval',
+                    'key' => 'HeartbeatIntervalSeconds',
                     'value' => '60',
                     'metadata' => [
                         'source' => 'admin',

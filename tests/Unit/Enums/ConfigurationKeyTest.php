@@ -11,9 +11,9 @@ use PHPUnit\Framework\TestCase;
 final class ConfigurationKeyTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_41_cases(): void
+    public function it_has_exactly_29_cases(): void
     {
-        self::assertCount(41, ConfigurationKey::cases());
+        self::assertCount(29, ConfigurationKey::cases());
     }
 
     // =========================================================================
@@ -21,10 +21,10 @@ final class ConfigurationKeyTest extends TestCase
     // =========================================================================
 
     #[Test]
-    public function core_profile_has_12_keys(): void
+    public function core_profile_has_9_keys(): void
     {
         $count = $this->countByProfile('Core');
-        self::assertSame(12, $count);
+        self::assertSame(9, $count);
     }
 
     #[Test]
@@ -35,17 +35,17 @@ final class ConfigurationKeyTest extends TestCase
     }
 
     #[Test]
-    public function security_profile_has_7_keys(): void
+    public function security_profile_has_6_keys(): void
     {
         $count = $this->countByProfile('Security');
-        self::assertSame(7, $count);
+        self::assertSame(6, $count);
     }
 
     #[Test]
-    public function offline_profile_has_12_keys(): void
+    public function offline_profile_has_4_keys(): void
     {
         $count = $this->countByProfile('Offline');
-        self::assertSame(12, $count);
+        self::assertSame(4, $count);
     }
 
     #[Test]
@@ -56,7 +56,7 @@ final class ConfigurationKeyTest extends TestCase
     }
 
     #[Test]
-    public function profile_counts_sum_to_41(): void
+    public function profile_counts_sum_to_29(): void
     {
         $sum = $this->countByProfile('Core')
             + $this->countByProfile('Transaction')
@@ -64,7 +64,7 @@ final class ConfigurationKeyTest extends TestCase
             + $this->countByProfile('Offline')
             + $this->countByProfile('DeviceManagement');
 
-        self::assertSame(41, $sum);
+        self::assertSame(29, $sum);
     }
 
     // =========================================================================
@@ -92,7 +92,6 @@ final class ConfigurationKeyTest extends TestCase
         self::assertSame('string', ConfigurationKey::TIME_ZONE->type());
         self::assertSame('string', ConfigurationKey::PROTOCOL_VERSION->type());
         self::assertSame('string', ConfigurationKey::FIRMWARE_VERSION->type());
-        self::assertSame('string', ConfigurationKey::LOCALE->type());
         self::assertSame('string', ConfigurationKey::CERTIFICATE_SERIAL_NUMBER->type());
         self::assertSame('string', ConfigurationKey::MESSAGE_SIGNING_MODE->type());
         self::assertSame('string', ConfigurationKey::OFFLINE_PASS_PUBLIC_KEY->type());
@@ -106,7 +105,6 @@ final class ConfigurationKeyTest extends TestCase
         self::assertSame('boolean', ConfigurationKey::AUTHORIZATION_CACHE_ENABLED->type());
         self::assertSame('boolean', ConfigurationKey::CERTIFICATE_RENEWAL_ENABLED->type());
         self::assertSame('boolean', ConfigurationKey::OFFLINE_MODE_ENABLED->type());
-        self::assertSame('boolean', ConfigurationKey::BLE_ADVERTISING_ENABLED->type());
         self::assertSame('boolean', ConfigurationKey::FIRMWARE_UPDATE_ENABLED->type());
         self::assertSame('boolean', ConfigurationKey::AUTO_REBOOT_ENABLED->type());
     }
@@ -117,8 +115,8 @@ final class ConfigurationKeyTest extends TestCase
         self::assertSame('integer', ConfigurationKey::HEARTBEAT_INTERVAL_SECONDS->type());
         self::assertSame('integer', ConfigurationKey::CONNECTION_TIMEOUT->type());
         self::assertSame('integer', ConfigurationKey::MAX_SESSION_DURATION_SECONDS->type());
-        self::assertSame('integer', ConfigurationKey::SECURITY_PROFILE->type());
-        self::assertSame('integer', ConfigurationKey::BLE_TX_POWER->type());
+        self::assertSame('integer', ConfigurationKey::METER_VALUES_INTERVAL->type());
+        self::assertSame('integer', ConfigurationKey::RESERVATION_DEFAULT_TTL->type());
     }
 
     // =========================================================================
@@ -132,21 +130,19 @@ final class ConfigurationKeyTest extends TestCase
         self::assertSame(60, ConfigurationKey::CONNECTION_TIMEOUT->defaultValue());
         self::assertSame('UTC', ConfigurationKey::TIME_ZONE->defaultValue());
         self::assertSame('0.2.1', ConfigurationKey::PROTOCOL_VERSION->defaultValue());
-        self::assertSame('en-US', ConfigurationKey::LOCALE->defaultValue());
     }
 
     #[Test]
     public function default_values_for_transaction_profile(): void
     {
-        self::assertSame(15, ConfigurationKey::METER_VALUES_INTERVAL->defaultValue());
-        self::assertSame(600, ConfigurationKey::MAX_SESSION_DURATION_SECONDS->defaultValue());
+        self::assertSame(60, ConfigurationKey::METER_VALUES_INTERVAL->defaultValue());
+        self::assertSame(900, ConfigurationKey::MAX_SESSION_DURATION_SECONDS->defaultValue());
         self::assertSame(100, ConfigurationKey::DEFAULT_CREDITS_PER_SESSION->defaultValue());
     }
 
     #[Test]
     public function default_values_for_security_profile(): void
     {
-        self::assertSame(2, ConfigurationKey::SECURITY_PROFILE->defaultValue());
         self::assertTrue(ConfigurationKey::AUTHORIZATION_CACHE_ENABLED->defaultValue());
         self::assertSame('Critical', ConfigurationKey::MESSAGE_SIGNING_MODE->defaultValue());
     }
@@ -196,7 +192,7 @@ final class ConfigurationKeyTest extends TestCase
     {
         self::assertSame('RW', ConfigurationKey::HEARTBEAT_INTERVAL_SECONDS->access());
         self::assertSame('RW', ConfigurationKey::MAX_SESSION_DURATION_SECONDS->access());
-        self::assertSame('RW', ConfigurationKey::BLE_ADVERTISING_ENABLED->access());
+        self::assertSame('RW', ConfigurationKey::AUTHORIZATION_CACHE_ENABLED->access());
     }
 
     // =========================================================================
@@ -210,7 +206,6 @@ final class ConfigurationKeyTest extends TestCase
         self::assertFalse(ConfigurationKey::TIME_ZONE->isMutable());
         self::assertFalse(ConfigurationKey::PROTOCOL_VERSION->isMutable());
         self::assertFalse(ConfigurationKey::FIRMWARE_VERSION->isMutable());
-        self::assertFalse(ConfigurationKey::SECURITY_PROFILE->isMutable());
         self::assertFalse(ConfigurationKey::CERTIFICATE_SERIAL_NUMBER->isMutable());
         self::assertFalse(ConfigurationKey::DIAGNOSTICS_UPLOAD_URL->isMutable());
     }
@@ -221,7 +216,6 @@ final class ConfigurationKeyTest extends TestCase
         self::assertTrue(ConfigurationKey::HEARTBEAT_INTERVAL_SECONDS->isMutable());
         self::assertTrue(ConfigurationKey::MAX_SESSION_DURATION_SECONDS->isMutable());
         self::assertTrue(ConfigurationKey::AUTHORIZATION_CACHE_ENABLED->isMutable());
-        self::assertTrue(ConfigurationKey::BLE_ADVERTISING_ENABLED->isMutable());
         self::assertTrue(ConfigurationKey::LOG_LEVEL->isMutable());
     }
 
@@ -246,7 +240,7 @@ final class ConfigurationKeyTest extends TestCase
     {
         self::assertSame(ConfigurationKey::HEARTBEAT_INTERVAL_SECONDS, ConfigurationKey::from('HeartbeatIntervalSeconds'));
         self::assertSame(ConfigurationKey::PROTOCOL_VERSION, ConfigurationKey::from('ProtocolVersion'));
-        self::assertSame(ConfigurationKey::BLE_ADVERTISING_ENABLED, ConfigurationKey::from('BLEAdvertisingEnabled'));
+        self::assertSame(ConfigurationKey::HEARTBEAT_INTERVAL_SECONDS, ConfigurationKey::from('HeartbeatIntervalSeconds'));
     }
 
     #[Test]

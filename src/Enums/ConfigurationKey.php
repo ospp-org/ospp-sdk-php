@@ -6,11 +6,11 @@ namespace Ospp\Protocol\Enums;
 
 /**
  * Complete OSPP Configuration Key registry.
- * 41 keys across 5 profiles.
+ * 29 keys across 5 profiles.
  */
 enum ConfigurationKey: string
 {
-    // Core Profile (12 keys)
+    // Core Profile (9 keys)
     case HEARTBEAT_INTERVAL_SECONDS = 'HeartbeatIntervalSeconds';
     case CONNECTION_TIMEOUT = 'ConnectionTimeout';
     case RECONNECT_BACKOFF_MAX = 'ReconnectBackoffMax';
@@ -19,10 +19,7 @@ enum ConfigurationKey: string
     case PROTOCOL_VERSION = 'ProtocolVersion';
     case FIRMWARE_VERSION = 'FirmwareVersion';
     case BOOT_RETRY_INTERVAL = 'BootRetryInterval';
-    case STATUS_NOTIFICATION_INTERVAL = 'StatusNotificationInterval';
-    case EVENT_THROTTLE_SECONDS = 'EventThrottleSeconds';
     case CONNECTION_LOST_GRACE_PERIOD = 'ConnectionLostGracePeriod';
-    case LOCALE = 'Locale';
 
     // Transaction Profile (6 keys)
     case METER_VALUES_INTERVAL = 'MeterValuesInterval';
@@ -32,8 +29,7 @@ enum ConfigurationKey: string
     case RESERVATION_DEFAULT_TTL = 'ReservationDefaultTTL';
     case DEFAULT_CREDITS_PER_SESSION = 'DefaultCreditsPerSession';
 
-    // Security Profile (7 keys)
-    case SECURITY_PROFILE = 'SecurityProfile';
+    // Security Profile (6 keys)
     case CERTIFICATE_SERIAL_NUMBER = 'CertificateSerialNumber';
     case AUTHORIZATION_CACHE_ENABLED = 'AuthorizationCacheEnabled';
     case MESSAGE_SIGNING_MODE = 'MessageSigningMode';
@@ -41,19 +37,11 @@ enum ConfigurationKey: string
     case CERTIFICATE_RENEWAL_THRESHOLD_DAYS = 'CertificateRenewalThresholdDays';
     case CERTIFICATE_RENEWAL_ENABLED = 'CertificateRenewalEnabled';
 
-    // Offline / BLE Profile (12 keys)
+    // Offline Profile (4 keys)
     case OFFLINE_MODE_ENABLED = 'OfflineModeEnabled';
     case MAX_OFFLINE_TRANSACTIONS = 'MaxOfflineTransactions';
     case OFFLINE_PASS_MAX_AGE = 'OfflinePassMaxAge';
-    case BLE_ADVERTISING_ENABLED = 'BLEAdvertisingEnabled';
-    case MAX_CONCURRENT_BLE_CONNECTIONS = 'MaxConcurrentBLEConnections';
-    case BLE_ADVERTISING_INTERVAL = 'BLEAdvertisingInterval';
-    case BLE_TX_POWER = 'BLETxPower';
-    case BLE_CONNECTION_TIMEOUT = 'BLEConnectionTimeout';
-    case BLE_MTU_PREFERRED = 'BLEMTUPreferred';
-    case BLE_STATUS_INTERVAL = 'BLEStatusInterval';
     case REVOCATION_EPOCH = 'RevocationEpoch';
-    case BLE_MAX_RETRIES = 'BLEMaxRetries';
 
     // Device Management Profile (4 keys)
     case FIRMWARE_UPDATE_ENABLED = 'FirmwareUpdateEnabled';
@@ -68,7 +56,6 @@ enum ConfigurationKey: string
             self::TIME_ZONE,
             self::PROTOCOL_VERSION,
             self::FIRMWARE_VERSION,
-            self::LOCALE,
             self::CERTIFICATE_SERIAL_NUMBER,
             self::MESSAGE_SIGNING_MODE,
             self::OFFLINE_PASS_PUBLIC_KEY,
@@ -78,7 +65,6 @@ enum ConfigurationKey: string
             self::AUTHORIZATION_CACHE_ENABLED,
             self::CERTIFICATE_RENEWAL_ENABLED,
             self::OFFLINE_MODE_ENABLED,
-            self::BLE_ADVERTISING_ENABLED,
             self::FIRMWARE_UPDATE_ENABLED,
             self::AUTO_REBOOT_ENABLED => 'boolean',
 
@@ -96,17 +82,13 @@ enum ConfigurationKey: string
             self::TIME_ZONE => 'UTC',
             self::PROTOCOL_VERSION => '0.2.1',
             self::BOOT_RETRY_INTERVAL => 30,
-            self::STATUS_NOTIFICATION_INTERVAL => 0,
-            self::EVENT_THROTTLE_SECONDS => 0,
             self::CONNECTION_LOST_GRACE_PERIOD => 300,
-            self::LOCALE => 'en-US',
-            self::METER_VALUES_INTERVAL => 15,
+            self::METER_VALUES_INTERVAL => 60,
             self::METER_VALUES_SAMPLE_INTERVAL => 10,
-            self::MAX_SESSION_DURATION_SECONDS => 600,
+            self::MAX_SESSION_DURATION_SECONDS => 900,
             self::SESSION_TIMEOUT => 120,
-            self::RESERVATION_DEFAULT_TTL => 180,
+            self::RESERVATION_DEFAULT_TTL => 300,
             self::DEFAULT_CREDITS_PER_SESSION => 100,
-            self::SECURITY_PROFILE => 2,
             self::AUTHORIZATION_CACHE_ENABLED => true,
             self::MESSAGE_SIGNING_MODE => 'Critical',
             self::CERTIFICATE_RENEWAL_THRESHOLD_DAYS => 30,
@@ -114,15 +96,7 @@ enum ConfigurationKey: string
             self::OFFLINE_MODE_ENABLED => true,
             self::MAX_OFFLINE_TRANSACTIONS => 50,
             self::OFFLINE_PASS_MAX_AGE => 3600,
-            self::BLE_ADVERTISING_ENABLED => true,
-            self::MAX_CONCURRENT_BLE_CONNECTIONS => 1,
-            self::BLE_ADVERTISING_INTERVAL => 200,
-            self::BLE_TX_POWER => 4,
-            self::BLE_CONNECTION_TIMEOUT => 30,
-            self::BLE_MTU_PREFERRED => 247,
-            self::BLE_STATUS_INTERVAL => 5,
             self::REVOCATION_EPOCH => 0,
-            self::BLE_MAX_RETRIES => 3,
             self::FIRMWARE_UPDATE_ENABLED => true,
             self::DIAGNOSTICS_UPLOAD_URL => '',
             self::LOG_LEVEL => 'Info',
@@ -153,7 +127,6 @@ enum ConfigurationKey: string
             self::TIME_ZONE,
             self::PROTOCOL_VERSION,
             self::FIRMWARE_VERSION,
-            self::SECURITY_PROFILE,
             self::CERTIFICATE_SERIAL_NUMBER,
             self::DIAGNOSTICS_UPLOAD_URL => false,
 
@@ -172,10 +145,7 @@ enum ConfigurationKey: string
             self::PROTOCOL_VERSION,
             self::FIRMWARE_VERSION,
             self::BOOT_RETRY_INTERVAL,
-            self::STATUS_NOTIFICATION_INTERVAL,
-            self::EVENT_THROTTLE_SECONDS,
-            self::CONNECTION_LOST_GRACE_PERIOD,
-            self::LOCALE => 'Core',
+            self::CONNECTION_LOST_GRACE_PERIOD => 'Core',
 
             self::METER_VALUES_INTERVAL,
             self::METER_VALUES_SAMPLE_INTERVAL,
@@ -184,7 +154,6 @@ enum ConfigurationKey: string
             self::RESERVATION_DEFAULT_TTL,
             self::DEFAULT_CREDITS_PER_SESSION => 'Transaction',
 
-            self::SECURITY_PROFILE,
             self::CERTIFICATE_SERIAL_NUMBER,
             self::AUTHORIZATION_CACHE_ENABLED,
             self::MESSAGE_SIGNING_MODE,
@@ -195,15 +164,7 @@ enum ConfigurationKey: string
             self::OFFLINE_MODE_ENABLED,
             self::MAX_OFFLINE_TRANSACTIONS,
             self::OFFLINE_PASS_MAX_AGE,
-            self::BLE_ADVERTISING_ENABLED,
-            self::MAX_CONCURRENT_BLE_CONNECTIONS,
-            self::BLE_ADVERTISING_INTERVAL,
-            self::BLE_TX_POWER,
-            self::BLE_CONNECTION_TIMEOUT,
-            self::BLE_MTU_PREFERRED,
-            self::BLE_STATUS_INTERVAL,
-            self::REVOCATION_EPOCH,
-            self::BLE_MAX_RETRIES => 'Offline',
+            self::REVOCATION_EPOCH => 'Offline',
 
             self::FIRMWARE_UPDATE_ENABLED,
             self::DIAGNOSTICS_UPLOAD_URL,
