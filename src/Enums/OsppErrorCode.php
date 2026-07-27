@@ -52,6 +52,8 @@ enum OsppErrorCode: int
     case OFFLINE_RECEIPT_MISMATCH = 2017;
     // spec v0.6.2 07-errors.md §3.2 — BLE Partial-A ServerSignedAuth anti-replay nonce check
     case SERVER_AUTH_NONCE_MISMATCH = 2018;
+    // spec v0.8.0 07-errors.md §3.2 — provisioning token unusable (expired / superseded / revoked)
+    case PROVISIONING_TOKEN_INVALID = 2019;
 
     // 3xxx - Session & Bay Errors (17 codes)
     case SESSION_GENERIC = 3000;
@@ -87,6 +89,10 @@ enum OsppErrorCode: int
     case CERTIFICATE_TYPE_MISMATCH = 4012;
     case RENEWAL_DENIED = 4013;
     case KEYPAIR_GENERATION_FAILED = 4014;
+    // spec v0.8.0 07-errors.md §3.4 — provisioning identity binding (§2 bound-set rule)
+    case PROVISIONING_KEY_MISMATCH = 4015;
+    case PROVISIONING_KEY_REUSE = 4016;
+    case PROVISIONING_REQUEST_INVALID = 4017;
 
     // 5xxx - Station Hardware & Software Errors (34 codes)
     case HARDWARE_GENERIC = 5000;
@@ -220,7 +226,12 @@ enum OsppErrorCode: int
             self::INVALID_CATALOG,
             self::CATALOG_TOO_LARGE,
             self::CONFIGURATION_KEY_READONLY,
-            self::INVALID_CONFIGURATION_VALUE => Severity::ERROR,
+            self::INVALID_CONFIGURATION_VALUE,
+            // v0.8.0 provisioning identity codes — all Severity Error per registry
+            self::PROVISIONING_TOKEN_INVALID,
+            self::PROVISIONING_KEY_MISMATCH,
+            self::PROVISIONING_KEY_REUSE,
+            self::PROVISIONING_REQUEST_INVALID => Severity::ERROR,
 
             self::SERVICE_DEGRADED => Severity::INFO,
 
@@ -287,7 +298,12 @@ enum OsppErrorCode: int
             self::CONFIGURATION_KEY_READONLY,
             self::INVALID_CONFIGURATION_VALUE,
             self::RESET_FAILED,
-            self::FIRMWARE_SIGNATURE_INVALID => false,
+            self::FIRMWARE_SIGNATURE_INVALID,
+            // v0.8.0: 2019 and 4015 are recoverable=false per registry — no retry on
+            // the same token can succeed. 4016 and 4017 are recoverable=true and fall
+            // through to the default: both leave the token unconsumed.
+            self::PROVISIONING_TOKEN_INVALID,
+            self::PROVISIONING_KEY_MISMATCH => false,
 
             default => true,
         };
@@ -298,10 +314,49 @@ enum OsppErrorCode: int
         return $this->name;
     }
 
+    /**
+     * The per-code corrective action from the spec registry (07-errors.md §3).
+     *
+     * spec 07-errors.md §1.4: `recommendedAction` is a property of the CODE, not of
+     * the occurrence — two errors carrying the same `errorCode` MUST carry the same
+     * action — and an implementation MUST NOT substitute a generic string derived
+     * from `severity` or `recoverable`. The values below are transcribed verbatim
+     * from the registry cells; do not paraphrase them here.
+     *
+     * There is deliberately no matching `errorDescription()` accessor. That field is
+     * PER-OCCURRENCE and written by the emitter; §1.4 states that an implementation
+     * MUST NOT emit a registry Description cell verbatim and that "a generator MUST
+     * NOT be built to do so".
+     *
+     * Returns null for codes whose registry cell has not been transcribed yet.
+     * Callers that must emit the REST Error Object (§2.4), where the field is
+     * REQUIRED, are responsible for treating null as a defect rather than emitting
+     * an empty string.
+     */
+    public function recommendedAction(): ?string
+    {
+        return match ($this) {
+            // 07-errors.md §3.2
+            self::PROVISIONING_TOKEN_INVALID => 'Station: display the error and **await a new provisioning token** — no retry with this token can succeed. Operator: issue a fresh token. Do not regenerate keys in response to this error; the keys are not what was rejected.',
+
+            // 07-errors.md §3.4
+            self::PROVISIONING_KEY_MISMATCH => 'Station: **do NOT retry with this token** — no retry can succeed, because the token is permanently bound to the earlier key. Request a **new** provisioning token from the operator, then provision again with the keys currently held. Server: log the mismatch; the already-issued certificate is unaffected.',
+
+            self::PROVISIONING_KEY_REUSE => 'Station: recovery depends on `details.phase`. `first-provision` — generate a separate key pair for the colliding role and resubmit; this rejection does not consume the token. `retry` — do NOT regenerate: the bound keys are what was certified, and a fresh key is answered `4015`, which is not recoverable. Resubmit the keys already bound, or request a new token. If `details.phase` is absent, assume `retry`. Firmware deriving two roles from one key slot must be updated.',
+
+            self::PROVISIONING_REQUEST_INVALID => 'Station: correct the offending property and resubmit on the **same** token — this rejection does not consume it. Inspect `details` for the failing property path. Do **not** regenerate keys: the keys are not what was rejected, and on a retry a fresh key would be answered `4015`, which is not recoverable. Server: name the failing property and the constraint it violated in `details`.',
+
+            default => null,
+        };
+    }
+
     public function httpStatus(): int
     {
         return match ($this) {
-            self::INVALID_MESSAGE_FORMAT, self::PAYLOAD_INVALID, self::VALIDATION_ERROR => 400,
+            self::INVALID_MESSAGE_FORMAT, self::PAYLOAD_INVALID, self::VALIDATION_ERROR,
+            // v0.8.0: 4017 → 400 at the provisioning endpoint (07-errors.md §3.4);
+            // body failed schema validation, evaluated first in the §2 precedence chain.
+            self::PROVISIONING_REQUEST_INVALID => 400,
             // v0.5.2: 2014 OFFLINE_PASS_REVOKED aligned cross-SDK to 401 (revoked
             // credential ≡ credential no longer valid; RFC 9110 401 "credential invalid").
             self::OFFLINE_PASS_REVOKED,
@@ -311,7 +366,10 @@ enum OsppErrorCode: int
             // at the BLE handshake; the auth is REJECTED (station refuses the
             // handshake), unlike 2017 where auth succeeded → 422. Same shape as the
             // 2005 counter-replay / JWT-rejection family (2009-2012).
-            self::SERVER_AUTH_NONCE_MISMATCH => 401,
+            self::SERVER_AUTH_NONCE_MISMATCH,
+            // v0.8.0: 2019 → 401 — the provisioning token is unusable (expired,
+            // superseded, or revoked); the credential itself is rejected.
+            self::PROVISIONING_TOKEN_INVALID => 401,
             self::INSUFFICIENT_BALANCE => 402,
             // v0.5.2: 2015 OFFLINE_ORG_MISMATCH + 2016 OFFLINE_USER_MISMATCH aligned
             // cross-SDK to 403 — pass is cryptographically valid but used in a
@@ -320,6 +378,9 @@ enum OsppErrorCode: int
             self::OFFLINE_ORG_MISMATCH, self::OFFLINE_USER_MISMATCH => 403,
             self::BAY_NOT_FOUND, self::SESSION_NOT_FOUND, self::RESERVATION_NOT_FOUND => 404,
             self::BAY_BUSY, self::BAY_RESERVED, self::SESSION_ALREADY_ACTIVE,
+            // v0.8.0: 4015 → 409 — the retry presents an identity that conflicts with
+            // the one the token already bound; not a replay, and no second cert issued.
+            self::PROVISIONING_KEY_MISMATCH,
             self::OPERATION_IN_PROGRESS => 409,
             // v0.5.2: 2017 OFFLINE_RECEIPT_MISMATCH aligned cross-SDK to 422 —
             // signature itself verified per spec §3.2; the cross-check failure
@@ -328,6 +389,9 @@ enum OsppErrorCode: int
             self::OFFLINE_RECEIPT_MISMATCH,
             self::DURATION_INVALID, self::MAX_DURATION_EXCEEDED, self::INVALID_SERVICE,
             self::STATION_NOT_REGISTERED,
+            // v0.8.0: 4016 → 422 — the body is well-formed but two submitted key kinds
+            // carry the same key; a defect in the request, visible without stored state.
+            self::PROVISIONING_KEY_REUSE,
             self::INVALID_TIME_WINDOW => 422,
             self::RATE_LIMIT_EXCEEDED => 429,
             self::STATION_OFFLINE => 502,

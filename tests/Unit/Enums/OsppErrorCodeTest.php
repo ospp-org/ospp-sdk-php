@@ -12,11 +12,64 @@ use PHPUnit\Framework\TestCase;
 final class OsppErrorCodeTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_107_cases(): void
+    public function it_has_exactly_111_cases(): void
     {
         // 102 standard + 4 v0.5.2 auth codes (2014-2017, spec v0.4.2 07-errors.md §3.2)
         // + 1 v0.6.2 auth code (2018 SERVER_AUTH_NONCE_MISMATCH) = 107.
-        self::assertCount(107, OsppErrorCode::cases());
+        // + 4 v0.8.0 provisioning-identity codes (2019, 4015, 4016, 4017) = 111.
+        self::assertCount(111, OsppErrorCode::cases());
+    }
+
+    // =========================================================================
+    // v0.8.0 — provisioning identity codes (spec 07-errors.md §3.2, §3.4)
+    // =========================================================================
+
+    #[Test]
+    public function v0_8_0_provisioning_codes_are_present_with_spec_metadata(): void
+    {
+        // Attributes quoted from the registry rows, not chosen here:
+        //   2019 PROVISIONING_TOKEN_INVALID   Error false 401  (07-errors.md:302)
+        //   4015 PROVISIONING_KEY_MISMATCH    Error false 409  (07-errors.md:357)
+        //   4016 PROVISIONING_KEY_REUSE       Error true  422  (07-errors.md:358)
+        //   4017 PROVISIONING_REQUEST_INVALID Error true  400  (07-errors.md:359)
+        $expected = [
+            [OsppErrorCode::PROVISIONING_TOKEN_INVALID, 2019, 'auth', false, 401],
+            [OsppErrorCode::PROVISIONING_KEY_MISMATCH, 4015, 'payment', false, 409],
+            [OsppErrorCode::PROVISIONING_KEY_REUSE, 4016, 'payment', true, 422],
+            [OsppErrorCode::PROVISIONING_REQUEST_INVALID, 4017, 'payment', true, 400],
+        ];
+
+        foreach ($expected as [$case, $value, $category, $recoverable, $status]) {
+            self::assertSame($value, $case->value);
+            self::assertSame($case->name, $case->errorText());
+            self::assertSame(Severity::ERROR, $case->severity());
+            self::assertSame($recoverable, $case->isRecoverable());
+            self::assertSame($category, $case->category());
+            self::assertSame($status, $case->httpStatus());
+        }
+    }
+
+    #[Test]
+    public function v0_8_0_provisioning_codes_carry_the_registry_recommended_action(): void
+    {
+        // spec 07-errors.md §1.4: recommendedAction is per-CODE and MUST carry the
+        // action the §3 registry gives. A generic severity-derived string is
+        // explicitly forbidden. Appendix C bounds the wire value at 500 chars, and
+        // §1.4 requires every registry cell to fit that bound.
+        $mustContain = [
+            [OsppErrorCode::PROVISIONING_TOKEN_INVALID, 'await a new provisioning token'],
+            [OsppErrorCode::PROVISIONING_KEY_MISMATCH, 'do NOT retry with this token'],
+            [OsppErrorCode::PROVISIONING_KEY_REUSE, 'details.phase'],
+            [OsppErrorCode::PROVISIONING_REQUEST_INVALID, 'resubmit on the **same** token'],
+        ];
+
+        foreach ($mustContain as [$case, $fragment]) {
+            $action = $case->recommendedAction();
+            self::assertNotSame('', $action);
+            self::assertLessThanOrEqual(500, mb_strlen($action));
+            self::assertStringContainsString($fragment, $action);
+            self::assertStringNotContainsString('Review the error details', $action);
+        }
     }
 
     #[Test]
@@ -838,7 +891,7 @@ final class OsppErrorCodeTest extends TestCase
     }
 
     #[Test]
-    public function auth_category_has_nineteen_codes(): void
+    public function auth_category_has_twenty_codes(): void
     {
         // v0.5.2: 14 + 4 (2014/2015/2016/2017 spec v0.4.2 additions) = 18;
         // v0.6.2: + 1 (2018 SERVER_AUTH_NONCE_MISMATCH) = 19.
@@ -846,7 +899,7 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::cases(),
             static fn (OsppErrorCode $c): bool => $c->category() === 'auth',
         ));
-        self::assertSame(19, $count);
+        self::assertSame(20, $count);
     }
 
     #[Test]
@@ -860,13 +913,13 @@ final class OsppErrorCodeTest extends TestCase
     }
 
     #[Test]
-    public function payment_category_has_fourteen_codes(): void
+    public function payment_category_has_seventeen_codes(): void
     {
         $count = count(array_filter(
             OsppErrorCode::cases(),
             static fn (OsppErrorCode $c): bool => $c->category() === 'payment',
         ));
-        self::assertSame(14, $count);
+        self::assertSame(17, $count);
     }
 
     #[Test]
