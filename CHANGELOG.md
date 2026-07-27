@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.1] — 2026-07-27
+
+Completes `recommendedAction()` for the codes `POST /api/v1/stations/provision`
+can emit. 0.8.0 transcribed only the four codes it added, leaving **4010**
+`CSR_INVALID`, **6001** `SERVER_INTERNAL_ERROR`, **6006** `RATE_LIMIT_EXCEEDED`
+and **6007** `SERVICE_DEGRADED` returning `null` — and `07-errors.md` §2.4 makes
+the field REQUIRED on every REST error of an endpoint the specification defines,
+so a `null` would have produced a non-conforming envelope on the wire.
+
+Now pinned by a test over the **whole reachable set**, not just the codes a given
+version adds, so the next code that becomes reachable fails loudly rather than
+emitting `null`. Scope stays the provisioning surface: the remaining codes return
+`null` until a surface that emits them needs them.
+
+No new cases; count stays 111. `.spec-ref` stays **v0.7.0**. phpunit 741 tests /
+4563 assertions green; phpstan level 9 clean.
+
 ## [0.8.0] — 2026-07-27
 
 Registers the four provisioning-identity error codes the spec's §2 bound-set rule
