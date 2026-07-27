@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.0] — 2026-07-27
+
+Registers the four provisioning-identity error codes the spec's §2 bound-set rule
+needs, so a server can express them on the wire: **2019** `PROVISIONING_TOKEN_INVALID`
+(401), **4015** `PROVISIONING_KEY_MISMATCH` (409), **4016** `PROVISIONING_KEY_REUSE`
+(422), **4017** `PROVISIONING_REQUEST_INVALID` (400). Severity, `recoverable` and
+HTTP status are transcribed from the spec registry rows, not chosen here. Case count
+107 → 111 (auth 19 → 20, payment 14 → 17).
+
+Adds `OsppErrorCode::recommendedAction(): ?string`, carrying the registry's per-code
+corrective action verbatim for those four. Spec `07-errors.md` §1.4 makes this field
+a property of the **code** and forbids substituting a generic severity-derived
+string, so it cannot be synthesised at the emitter. Returns `null` for codes not yet
+transcribed; a caller emitting the REST Error Object (§2.4), where the field is
+REQUIRED, must treat `null` as a defect rather than emitting an empty string.
+
+There is deliberately **no** `errorDescription()` accessor: that field is
+per-occurrence, and §1.4 states an implementation MUST NOT emit a registry
+*Description* cell verbatim and that "a generator MUST NOT be built to do so".
+
+`.spec-ref` stays at **v0.7.0**. These are PHP source, not schemas, so vendored
+schema byte-identity against spec v0.7.0 is unaffected; the ref moves when the spec
+is published (ADR-001 as amended — lockstep binds at publication, not during
+development). phpunit 740 tests / 4531 assertions green; phpstan level 9 clean.
+
 ## [0.7.0] — 2026-07-10
 
 TLS 1.2 floor (lockstep, ADR-011). Re-vendors `schemas/provisioning-response.schema.json`
