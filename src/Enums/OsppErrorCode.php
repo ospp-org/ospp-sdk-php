@@ -339,6 +339,18 @@ enum OsppErrorCode: int
             // 07-errors.md §3.2
             self::PROVISIONING_TOKEN_INVALID => 'Station: display the error and **await a new provisioning token** — no retry with this token can succeed. Operator: issue a fresh token. Do not regenerate keys in response to this error; the keys are not what was rejected.',
 
+            // 07-errors.md §3.4 §4.01x — also reachable from certificate renewal
+            // (SignCertificate [MSG-022]); the branch is carried in details.phase.
+            self::CSR_INVALID => 'Station: recovery depends on `details.phase`, which the server MUST carry. `first-provision` or `renewal` — regenerate the keypair and CSR with correct parameters and resubmit; nothing is bound yet. `retry` — do NOT regenerate: a fresh key is answered `4015`, which is not recoverable. Resubmit a well-formed CSR over the already-bound key, or request a new token if it cannot be produced. If `details.phase` is absent, assume `retry`. Server: log the specific validation failure.',
+
+            // 07-errors.md §3.6 — reachable from every REST endpoint, including the
+            // provisioning endpoint (unhandled fault, throttle, degraded crypto material).
+            self::SERVER_INTERNAL_ERROR => 'Retry with exponential backoff. Server: log full error with request context, correlate via `X-Request-Id`.',
+
+            self::RATE_LIMIT_EXCEEDED => 'Wait before retrying. The `Retry-After` HTTP header (if present) indicates when to retry. See Chapter 06 §7.1 for rate limit thresholds.',
+
+            self::SERVICE_DEGRADED => 'Non-blocking. The server continues to function with reduced capabilities. Degraded features are listed in the `details` field.',
+
             // 07-errors.md §3.4
             self::PROVISIONING_KEY_MISMATCH => 'Station: **do NOT retry with this token** — no retry can succeed, because the token is permanently bound to the earlier key. Request a **new** provisioning token from the operator, then provision again with the keys currently held. Server: log the mismatch; the already-issued certificate is unaffected.',
 

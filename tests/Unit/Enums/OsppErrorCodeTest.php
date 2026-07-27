@@ -73,6 +73,33 @@ final class OsppErrorCodeTest extends TestCase
     }
 
     #[Test]
+    public function every_code_reachable_from_the_provisioning_endpoint_carries_an_action(): void
+    {
+        // spec 07-errors.md §2.4 makes recommendedAction REQUIRED on every REST error
+        // of an endpoint the specification defines, and §4.4 lists
+        // POST /api/v1/stations/provision as one. A null here is a defect that would
+        // surface as a non-conforming envelope on the wire, so pin the whole reachable
+        // set rather than only the codes this SDK version happens to have added.
+        $reachable = [
+            OsppErrorCode::PROVISIONING_TOKEN_INVALID,   // 2019 — token expired/superseded/revoked
+            OsppErrorCode::CSR_INVALID,                  // 4010 — CSR malformed / CN / curve
+            OsppErrorCode::PROVISIONING_KEY_MISMATCH,    // 4015 — retry drifts from the bound set
+            OsppErrorCode::PROVISIONING_KEY_REUSE,       // 4016 — submitted keys not pairwise distinct
+            OsppErrorCode::PROVISIONING_REQUEST_INVALID, // 4017 — body fails schema validation
+            OsppErrorCode::SERVER_INTERNAL_ERROR,        // 6001 — unhandled server fault
+            OsppErrorCode::RATE_LIMIT_EXCEEDED,          // 6006 — endpoint is throttled
+            OsppErrorCode::SERVICE_DEGRADED,             // 6007 — crypto material unavailable
+        ];
+
+        foreach ($reachable as $case) {
+            $action = $case->recommendedAction();
+            self::assertNotNull($action, "{$case->name} has no registry recommendedAction");
+            self::assertNotSame('', $action);
+            self::assertLessThanOrEqual(500, mb_strlen($action));
+        }
+    }
+
+    #[Test]
     public function v0_5_2_codes_are_present_with_correct_values(): void
     {
         self::assertSame(2014, OsppErrorCode::OFFLINE_PASS_REVOKED->value);
