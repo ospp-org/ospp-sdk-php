@@ -368,7 +368,12 @@ enum OsppErrorCode: int
             self::INVALID_MESSAGE_FORMAT, self::PAYLOAD_INVALID, self::VALIDATION_ERROR,
             // v0.8.0: 4017 → 400 at the provisioning endpoint (07-errors.md §3.4);
             // body failed schema validation, evaluated first in the §2 precedence chain.
-            self::PROVISIONING_REQUEST_INVALID => 400,
+            self::PROVISIONING_REQUEST_INVALID,
+            // v0.8.2 FIX: 4010 is listed under 400 in the §2.4 status table
+            // (07-errors.md:241) and §3.4 states "At the provisioning endpoint:
+            // HTTP 400 Bad Request". It had no arm and fell through to the default
+            // 500, turning a client error into a server error on the wire.
+            self::CSR_INVALID => 400,
             // v0.5.2: 2014 OFFLINE_PASS_REVOKED aligned cross-SDK to 401 (revoked
             // credential ≡ credential no longer valid; RFC 9110 401 "credential invalid").
             self::OFFLINE_PASS_REVOKED,

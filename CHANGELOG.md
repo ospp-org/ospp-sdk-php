@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.2] — 2026-07-27
+
+**Fix:** `4010 CSR_INVALID` had no `httpStatus()` arm and fell through to the
+default `500`. The spec lists it under **400** in the §2.4 status table
+(`07-errors.md:241`) and §3.4 states "At the provisioning endpoint: HTTP `400 Bad
+Request`". A server routing this code through the SDK therefore turned a client
+error into a server error on the wire.
+
+Pre-existing — 4010 predates this cycle; it surfaced only when a caller began
+resolving its status through the enum rather than hard-coding one.
+
+Adds a test pinning the status of every code the provisioning endpoint can emit
+against the registry table, so the next code with a missing arm fails loudly
+instead of silently becoming a 500. No new cases; count stays 111. `.spec-ref`
+stays **v0.7.0**. phpunit 742 tests / 4569 assertions; phpstan level 9 clean.
+
 ## [0.8.1] — 2026-07-27
 
 Completes `recommendedAction()` for the codes `POST /api/v1/stations/provision`

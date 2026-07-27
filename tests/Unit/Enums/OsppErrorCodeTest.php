@@ -100,6 +100,27 @@ final class OsppErrorCodeTest extends TestCase
     }
 
     #[Test]
+    public function provisioning_reachable_codes_map_to_the_status_the_registry_gives(): void
+    {
+        // spec 07-errors.md §2.4 status table (07-errors.md:241 and the rows below
+        // it). A code that falls through to the default 500 silently turns a
+        // client error into a server error on the wire, which is what happened to
+        // 4010: it is listed under 400 in the table but had no arm.
+        $expected = [
+            [OsppErrorCode::PROVISIONING_REQUEST_INVALID, 400],
+            [OsppErrorCode::CSR_INVALID, 400],
+            [OsppErrorCode::PROVISIONING_TOKEN_INVALID, 401],
+            [OsppErrorCode::PROVISIONING_KEY_MISMATCH, 409],
+            [OsppErrorCode::PROVISIONING_KEY_REUSE, 422],
+            [OsppErrorCode::RATE_LIMIT_EXCEEDED, 429],
+        ];
+
+        foreach ($expected as [$case, $status]) {
+            self::assertSame($status, $case->httpStatus(), "{$case->name} status");
+        }
+    }
+
+    #[Test]
     public function v0_5_2_codes_are_present_with_correct_values(): void
     {
         self::assertSame(2014, OsppErrorCode::OFFLINE_PASS_REVOKED->value);
