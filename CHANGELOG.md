@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.3] — 2026-07-28
+
+Transcribes **4018** `PROVISIONING_TOKEN_CONSUMED` and **4019** `PUBLIC_KEY_INVALID`
+from the registry at spec HEAD (`07-errors.md:362`, `:363`). Both are listed in
+§4.4's row for `POST /api/v1/stations/provision` (`:509`), and §2.4 makes
+`errorCode` REQUIRED on every error of an endpoint the specification defines — so
+their absence left two reachable paths unable to carry a conforming envelope.
+
+Both are reachable in csms-server today, which is why they are added rather than
+deferred: `ProvisioningTokenConsumer.php:93` and `:195` and
+`CertificateManager.php:279` throw the already-consumed / consumed-without-
+certificate conditions 4018 covers, and a malformed bare receipt-signing key
+raises 4019's. Both currently answer `422` with no `errorCode`.
+
+- `4018` → `409`, recoverable **true**, branches on `details.reason`
+  (`already_consumed` | `consumed_without_certificate`; absent ⇒ `already_consumed`).
+- `4019` → `400`, recoverable **true**, branches on `details.phase`
+  (`first-provision` | `retry`; absent ⇒ `retry`). Answers `400` like `4010`
+  deliberately: the same defect must not vary by how the key was packaged.
+
+`recommendedAction()` for both is the registry cell **verbatim**, not a
+paraphrase — §1.4 binds the emitted value to the registry text and forbids a
+generic severity-derived string. Asserted byte-identical against the spec source.
+457 and 454 characters against Appendix C's 500 bound.
+
+**Count comments were already stale and are swept to measured values**: the
+`2xxx` header said 19 (actual 20, since 2019 landed in 0.8.0) and the `4xxx`
+header said 14 (actual 17 before this change). README said 102 codes; actual was
+111. Now 113 total, `4xxx` = 19, `2xxx` = 20 — every figure re-derived from
+`OsppErrorCode::cases()` rather than incremented. Contract-test counts updated to
+match.
+
+`.spec-ref` stays **v0.7.0**. phpunit 742 tests / 4627 assertions; phpstan
+level 9 clean.
+
 ## [0.8.2] — 2026-07-27
 
 **Fix:** `4010 CSR_INVALID` had no `httpStatus()` arm and fell through to the

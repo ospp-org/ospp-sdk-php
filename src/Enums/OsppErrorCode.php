@@ -30,7 +30,7 @@ enum OsppErrorCode: int
     case MAC_MISSING = 1013;
     case MESSAGE_TOO_LARGE = 1014;
 
-    // 2xxx - Authentication & Authorization Errors (19 codes — v0.5.2 added 2014-2017, v0.6.2 added 2018)
+    // 2xxx - Authentication & Authorization Errors (20 codes — v0.5.2 added 2014-2017, v0.6.2 added 2018, v0.8.0 added 2019)
     case AUTH_GENERIC = 2000;
     case STATION_NOT_REGISTERED = 2001;
     case OFFLINE_PASS_INVALID = 2002;
@@ -74,7 +74,7 @@ enum OsppErrorCode: int
     case PAYLOAD_INVALID = 3015;
     case ACTIVE_SESSIONS_PRESENT = 3016;
 
-    // 4xxx - Payment & Credit Errors (14 codes)
+    // 4xxx - Payment & Credit Errors (19 codes — v0.8.0 added 4015-4017, v0.8.3 added 4018-4019)
     case PAYMENT_GENERIC = 4000;
     case INSUFFICIENT_BALANCE = 4001;
     case OFFLINE_LIMIT_EXCEEDED = 4002;
@@ -93,6 +93,8 @@ enum OsppErrorCode: int
     case PROVISIONING_KEY_MISMATCH = 4015;
     case PROVISIONING_KEY_REUSE = 4016;
     case PROVISIONING_REQUEST_INVALID = 4017;
+    case PROVISIONING_TOKEN_CONSUMED = 4018;
+    case PUBLIC_KEY_INVALID = 4019;
 
     // 5xxx - Station Hardware & Software Errors (34 codes)
     case HARDWARE_GENERIC = 5000;
@@ -231,7 +233,9 @@ enum OsppErrorCode: int
             self::PROVISIONING_TOKEN_INVALID,
             self::PROVISIONING_KEY_MISMATCH,
             self::PROVISIONING_KEY_REUSE,
-            self::PROVISIONING_REQUEST_INVALID => Severity::ERROR,
+            self::PROVISIONING_REQUEST_INVALID,
+            self::PROVISIONING_TOKEN_CONSUMED,
+            self::PUBLIC_KEY_INVALID => Severity::ERROR,
 
             self::SERVICE_DEGRADED => Severity::INFO,
 
@@ -358,6 +362,16 @@ enum OsppErrorCode: int
 
             self::PROVISIONING_REQUEST_INVALID => 'Station: correct the offending property and resubmit on the **same** token — this rejection does not consume it. Inspect `details` for the failing property path. Do **not** regenerate keys: the keys are not what was rejected, and on a retry a fresh key would be answered `4015`, which is not recoverable. Server: name the failing property and the constraint it violated in `details`.',
 
+            // 4018 — transcribed verbatim from 07-errors.md:362. Branches on
+            // `details.reason`; the emitter carries the WHOLE entry (§1.4: a branching
+            // entry is emitted in full, never only the selected branch).
+            self::PROVISIONING_TOKEN_CONSUMED => 'Station: do NOT regenerate keys on any branch — a fresh key is answered `4015`. Branch on `details.reason`. `already_consumed` — another request holds this token; retry unchanged after a short delay, bounded, until it resolves to the certificate or to the branch below. `consumed_without_certificate` — this token can never issue one; request a new provisioning token. If `details.reason` is absent, assume `already_consumed`. Operator: issue a fresh token.',
+
+            // 4019 — transcribed verbatim from 07-errors.md:363. Branches on
+            // `details.phase`, default `retry` (the branch whose failure mode is
+            // recoverable, per §1.4).
+            self::PUBLIC_KEY_INVALID => 'Station: submit ECDSA P-256 key material only. Recovery depends on `details.phase`. `first-provision` — generate a correct P-256 key for the named role and resubmit on the same token; nothing is bound yet. `retry` — do NOT generate a new key: a fresh key is answered `4015`. Resubmit the key already bound, or request a new token if it cannot be produced. If `details.phase` is absent, assume `retry`. Server: name the rejected member in `details.field`.',
+
             default => null,
         };
     }
@@ -373,7 +387,10 @@ enum OsppErrorCode: int
             // (07-errors.md:241) and §3.4 states "At the provisioning endpoint:
             // HTTP 400 Bad Request". It had no arm and fell through to the default
             // 500, turning a client error into a server error on the wire.
-            self::CSR_INVALID => 400,
+            self::CSR_INVALID,
+            // v0.8.3: 4019 → 400 — the bare-key counterpart of 4010; 07-errors.md:363
+            // states both answer 400 so the same defect does not vary by packaging.
+            self::PUBLIC_KEY_INVALID => 400,
             // v0.5.2: 2014 OFFLINE_PASS_REVOKED aligned cross-SDK to 401 (revoked
             // credential ≡ credential no longer valid; RFC 9110 401 "credential invalid").
             self::OFFLINE_PASS_REVOKED,
@@ -398,6 +415,9 @@ enum OsppErrorCode: int
             // v0.8.0: 4015 → 409 — the retry presents an identity that conflicts with
             // the one the token already bound; not a replay, and no second cert issued.
             self::PROVISIONING_KEY_MISMATCH,
+            // v0.8.3: 4018 → 409 — the token authenticated but is already consumed
+            // and this is not a replay of the provision that consumed it (07-errors.md:362).
+            self::PROVISIONING_TOKEN_CONSUMED,
             self::OPERATION_IN_PROGRESS => 409,
             // v0.5.2: 2017 OFFLINE_RECEIPT_MISMATCH aligned cross-SDK to 422 —
             // signature itself verified per spec §3.2; the cross-check failure
