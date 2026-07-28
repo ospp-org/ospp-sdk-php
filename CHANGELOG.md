@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.4] — 2026-07-28
+
+Transcribes **4020** `BAY_COUNT_MISMATCH` from the new `4.02x — Provisioning
+Errors` sub-range at spec HEAD. A declared `bayCount` that does not match the
+station's registered count is reachable on `POST /api/v1/stations/provision`
+today (`CertificateManager.php:145-147` in csms-server) and was the last error
+path on that endpoint with no registry code, while §2.4 makes `errorCode`
+REQUIRED on every error of a specification-defined endpoint.
+
+- `4020` → `422`, recoverable **true**, **no branch and no discriminator**: the
+  check runs before the token is consumed, so the station resubmits the
+  corrected count on the same token, and it is reachable only on a first
+  provision — on a replay the token is the key and body drift is ignored.
+
+`recommendedAction()` is the registry cell **verbatim**, asserted byte-identical
+against the spec source. 374 characters against Appendix C's 500 bound.
+
+Counts re-derived from `OsppErrorCode::cases()` rather than incremented: 114
+total, `4xxx` = 20. Note the derived `category()` still reports `payment` for
+`4020` as for every other provisioning code — recorded as an open defect in the
+spec's KNOWN-ISSUES (the arithmetic range derivation at
+`src/Enums/OsppErrorCode.php:143-155`), not fixed here, because making
+`category` per-code is a cross-SDK change.
+
+`.spec-ref` stays **v0.7.0**. phpunit 742 tests / 4656 assertions; phpstan
+level 9 clean.
+
 ## [0.8.3] — 2026-07-28
 
 Transcribes **4018** `PROVISIONING_TOKEN_CONSUMED` and **4019** `PUBLIC_KEY_INVALID`

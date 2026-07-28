@@ -74,7 +74,7 @@ enum OsppErrorCode: int
     case PAYLOAD_INVALID = 3015;
     case ACTIVE_SESSIONS_PRESENT = 3016;
 
-    // 4xxx - Payment & Credit Errors (19 codes — v0.8.0 added 4015-4017, v0.8.3 added 4018-4019)
+    // 4xxx - Payment & Credit Errors (20 codes — v0.8.0 added 4015-4017, v0.8.3 added 4018-4019, v0.8.4 added 4020)
     case PAYMENT_GENERIC = 4000;
     case INSUFFICIENT_BALANCE = 4001;
     case OFFLINE_LIMIT_EXCEEDED = 4002;
@@ -95,6 +95,7 @@ enum OsppErrorCode: int
     case PROVISIONING_REQUEST_INVALID = 4017;
     case PROVISIONING_TOKEN_CONSUMED = 4018;
     case PUBLIC_KEY_INVALID = 4019;
+    case BAY_COUNT_MISMATCH = 4020;
 
     // 5xxx - Station Hardware & Software Errors (34 codes)
     case HARDWARE_GENERIC = 5000;
@@ -235,7 +236,8 @@ enum OsppErrorCode: int
             self::PROVISIONING_KEY_REUSE,
             self::PROVISIONING_REQUEST_INVALID,
             self::PROVISIONING_TOKEN_CONSUMED,
-            self::PUBLIC_KEY_INVALID => Severity::ERROR,
+            self::PUBLIC_KEY_INVALID,
+            self::BAY_COUNT_MISMATCH => Severity::ERROR,
 
             self::SERVICE_DEGRADED => Severity::INFO,
 
@@ -372,6 +374,11 @@ enum OsppErrorCode: int
             // recoverable, per §1.4).
             self::PUBLIC_KEY_INVALID => 'Station: submit ECDSA P-256 key material only. Recovery depends on `details.phase`. `first-provision` — generate a correct P-256 key for the named role and resubmit on the same token; nothing is bound yet. `retry` — do NOT generate a new key: a fresh key is answered `4015`. Resubmit the key already bound, or request a new token if it cannot be produced. If `details.phase` is absent, assume `retry`. Server: name the rejected member in `details.field`.',
 
+            // 4020 — transcribed verbatim from the 4.02x registry row. Single
+            // recovery: reachable only on a first provision (on a replay body drift
+            // is ignored), so there is no branch and no discriminator.
+            self::BAY_COUNT_MISMATCH => 'Station: correct the declared `bayCount` and resubmit on the **same** token — this rejection does not consume it. Do **not** regenerate keys: they are not what was rejected, and a fresh key on a later retry is answered `4015`, which is not recoverable. If the declared count is right, the operator corrects the station record instead. Server: carry both counts in `details`.',
+
             default => null,
         };
     }
@@ -429,6 +436,10 @@ enum OsppErrorCode: int
             // v0.8.0: 4016 → 422 — the body is well-formed but two submitted key kinds
             // carry the same key; a defect in the request, visible without stored state.
             self::PROVISIONING_KEY_REUSE,
+            // v0.8.4: 4020 -> 422 — declared bayCount does not match the station's
+            // registered bay count; well-formed body, value inconsistent with stored
+            // state (07-errors.md 4.02x).
+            self::BAY_COUNT_MISMATCH,
             self::INVALID_TIME_WINDOW => 422,
             self::RATE_LIMIT_EXCEEDED => 429,
             self::STATION_OFFLINE => 502,

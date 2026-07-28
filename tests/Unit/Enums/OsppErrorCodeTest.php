@@ -12,12 +12,12 @@ use PHPUnit\Framework\TestCase;
 final class OsppErrorCodeTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_113_cases(): void
+    public function it_has_exactly_114_cases(): void
     {
         // 102 standard + 4 v0.5.2 auth codes (2014-2017, spec v0.4.2 07-errors.md §3.2)
         // + 1 v0.6.2 auth code (2018 SERVER_AUTH_NONCE_MISMATCH) = 107.
-        // + 4 v0.8.0 provisioning-identity codes (2019, 4015, 4016, 4017) = 113.
-        self::assertCount(113, OsppErrorCode::cases());
+        // + 4 v0.8.0 provisioning-identity codes (2019, 4015, 4016, 4017) = 114.
+        self::assertCount(114, OsppErrorCode::cases());
     }
 
     // =========================================================================
@@ -34,6 +34,7 @@ final class OsppErrorCodeTest extends TestCase
         //   4017 PROVISIONING_REQUEST_INVALID Error true  400  (07-errors.md:359)
         //   4018 PROVISIONING_TOKEN_CONSUMED  Error true  409  (07-errors.md:362)
         //   4019 PUBLIC_KEY_INVALID           Error true  400  (07-errors.md:363)
+        //   4020 BAY_COUNT_MISMATCH          Error true  422  (07-errors.md 4.02x)
         $expected = [
             [OsppErrorCode::PROVISIONING_TOKEN_INVALID, 2019, 'auth', false, 401],
             [OsppErrorCode::PROVISIONING_KEY_MISMATCH, 4015, 'payment', false, 409],
@@ -41,6 +42,7 @@ final class OsppErrorCodeTest extends TestCase
             [OsppErrorCode::PROVISIONING_REQUEST_INVALID, 4017, 'payment', true, 400],
             [OsppErrorCode::PROVISIONING_TOKEN_CONSUMED, 4018, 'payment', true, 409],
             [OsppErrorCode::PUBLIC_KEY_INVALID, 4019, 'payment', true, 400],
+            [OsppErrorCode::BAY_COUNT_MISMATCH, 4020, 'payment', true, 422],
         ];
 
         foreach ($expected as [$case, $value, $category, $recoverable, $status]) {
@@ -67,6 +69,7 @@ final class OsppErrorCodeTest extends TestCase
             [OsppErrorCode::PROVISIONING_REQUEST_INVALID, 'resubmit on the **same** token'],
             [OsppErrorCode::PROVISIONING_TOKEN_CONSUMED, 'assume `already_consumed`'],
             [OsppErrorCode::PUBLIC_KEY_INVALID, 'submit ECDSA P-256 key material only'],
+            [OsppErrorCode::BAY_COUNT_MISMATCH, 'resubmit on the **same** token'],
         ];
 
         foreach ($mustContain as [$case, $fragment]) {
@@ -94,6 +97,7 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::PROVISIONING_REQUEST_INVALID, // 4017 — body fails schema validation
             OsppErrorCode::PROVISIONING_TOKEN_CONSUMED,  // 4018 — token spent, this is not its replay
             OsppErrorCode::PUBLIC_KEY_INVALID,           // 4019 — bare key undecodable / not P-256
+            OsppErrorCode::BAY_COUNT_MISMATCH,           // 4020 — declared bayCount != registered
             OsppErrorCode::SERVER_INTERNAL_ERROR,        // 6001 — unhandled server fault
             OsppErrorCode::RATE_LIMIT_EXCEEDED,          // 6006 — endpoint is throttled
             OsppErrorCode::SERVICE_DEGRADED,             // 6007 — crypto material unavailable
@@ -969,13 +973,13 @@ final class OsppErrorCodeTest extends TestCase
     }
 
     #[Test]
-    public function payment_category_has_nineteen_codes(): void
+    public function payment_category_has_twenty_codes(): void
     {
         $count = count(array_filter(
             OsppErrorCode::cases(),
             static fn (OsppErrorCode $c): bool => $c->category() === 'payment',
         ));
-        self::assertSame(19, $count);
+        self::assertSame(20, $count);
     }
 
     #[Test]
