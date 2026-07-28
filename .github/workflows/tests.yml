@@ -35,11 +35,56 @@ jobs:
             exit 1
           fi
           echo "SPEC_REF=$ref" >> "$GITHUB_ENV"
+      # Does the pinned tag actually EXIST on the spec remote?
+      #
+      # Checked separately, and BEFORE the clone, because the failure modes
+      # read identically at a glance but mean opposite things:
+      #   - tag missing        -> the pin is wrong; nothing can be compared
+      #   - tag present, drift -> the pin is right; the vendored copy is stale
+      # Left to `git clone --branch`, a missing tag surfaces as
+      # "fatal: Remote branch vX.Y.Z not found in upstream origin", which reads
+      # like a transient network/clone problem and buries the fact that the
+      # comparison NEVER RAN. A pin MUST NOT anticipate an unreleased spec
+      # version (VERSIONING.md, "SDK Versions Are Not This Version").
+      - name: Verify .spec-ref tag exists on the spec remote
+        run: |
+          set -euo pipefail
+          if ! git ls-remote --exit-code --tags https://github.com/ospp-org/spec.git \
+                 "refs/tags/$SPEC_REF" >/dev/null 2>&1; then
+            echo "ERROR: .spec-ref pins '$SPEC_REF', which does not exist on the spec remote." >&2
+            echo "" >&2
+            echo "The byte-identity comparison below CANNOT RUN — this is not a clone failure." >&2
+            echo "A .spec-ref MUST NOT anticipate an unreleased spec version: until the tag is" >&2
+            echo "cut and pushed there is nothing to be byte-identical TO, and a gate that dies" >&2
+            echo "here proves nothing about the vendored schemas." >&2
+            echo "" >&2
+            echo "Fix: pin the newest spec tag that exists, or push the tag you intended." >&2
+            echo "Tags currently on the spec remote:" >&2
+            git ls-remote --tags https://github.com/ospp-org/spec.git \
+              | sed -n 's#.*refs/tags/\(v[0-9][^^]*\)$#  \1#p' | sort -V | tail -10 >&2
+            exit 1
+          fi
+          echo "OK — spec tag $SPEC_REF exists on the remote."
       # Shallow-clone spec at the validated ref. No submodule overhead —
       # the SDK explicitly chooses which spec tag it claims byte-parity
       # with, and the gate enforces it.
       - name: Clone spec at pinned ref
         run: git clone --depth 1 --branch "$SPEC_REF" https://github.com/ospp-org/spec.git /tmp/spec-source
+      # SCOPE — this diffs the WHOLE directory, and that is deliberate.
+      #
+      # ospp-sdk-php vendors the COMPLETE spec schema set (85 of 85 at v0.8.0),
+      # not a subset, so "every vendored file matches the spec" and "the
+      # directory matches the spec" are the same assertion here. The
+      # full-directory form is the stronger one: it also catches a schema
+      # DELETED from the vendored copy, or one ADDED to the spec and never
+      # vendored — which is precisely how provisioning-request.schema.json was
+      # missed at v0.8.0.
+      #
+      # Do NOT narrow this to a hand-maintained file list. A list is a second
+      # place to forget to update, and the failure it produces is silent: the
+      # gate goes green while an unlisted schema drifts. If a genuine reason to
+      # vendor a subset ever arises, derive the list from the vendored tree at
+      # run time (comm -12 of both file sets), never from a literal.
       - name: Byte-identity check (schemas/ ↔ spec/schemas/)
         run: |
           set -euo pipefail
