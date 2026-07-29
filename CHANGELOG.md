@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.0] — 2026-07-29
+
+Released in lockstep with `@ospp/protocol` **0.9.0**, from the same spec pin.
+The two SDKs implement one contract and a consumer must be able to tell which
+pair is coherent; `sdk-ts` jumps `0.7.0` → `0.9.0` to meet this one.
+
+`.spec-ref` → **v0.8.1**. Vendored schemas unchanged and still byte-identical to
+that tag — 0.8.1 corrected §4.4's endpoint rows and §3.4 registry text, not the
+schemas. Verified byte-identical to `sdk-ts`'s vendored tree as well.
+
+### Fixed
+
+- **Four codes reachable over REST fell through to the `500` default**, each at
+  an endpoint whose statuses in §4.4 do not include 500 — so a client-visible
+  rejection was reported as a server fault.
+
+  | Code | Was | Now | Endpoint |
+  |------|----:|----:|----------|
+  | `4008 WEBHOOK_SIGNATURE_INVALID` | 500 | **401** | `POST /webhooks/payment-gateway/notification` — lists 401 and nothing else |
+  | `3002 BAY_NOT_READY` | 500 | **409** | `POST /sessions/start` |
+  | `3007 SESSION_MISMATCH` | 500 | **409** | `POST /sessions/{id}/stop` |
+  | `6007 SERVICE_DEGRADED` | 500 | **503** | §4.4 states this as a **MUST**, and forbids substituting 500 |
+
+  `sdk-ts` already answered all four this way; this converges PHP onto it.
+  **This is the change a consumer could notice**: a caller that mapped these to
+  500, or that asserted the SDK returns 500 for them, sees different values.
+  `503` is new to the set of statuses this enum can return.
+
+### Documented
+
+- **`httpStatus()` is an SDK extension, not the contract.** The method carried a
+  comment citing "the note above this method"; no such note existed. It does
+  now, and it records that the spec *declines* to make status a property of a
+  code — `07-errors.md` §4.4, "The status is not a property of the code": §2.4's
+  table "assigns no code a fixed status", and one code can honestly appear with
+  more than one status (§2.4 lists `2008` under both `401` and `403`).
+
+  This SDK and `sdk-ts` **disagree on 51 of the 114** codes here. Everything else
+  in the two registries is identical: numbers, names, `severity`, `recoverable`,
+  the category partition, the vendored schemas. Recorded in the spec's
+  `KNOWN-ISSUES.md` as one finding together with `category()`, which has the same
+  cause. Treat the result as a default for a server with no better answer, never
+  as the status a code "has".
+
+  The `default => 500` arm is **retained**. An earlier instruction to return
+  `null` for unmapped codes is withdrawn: it predates the §4.4 language, and
+  returning null still asserts a total function from code to status, merely with
+  a hole in it. **`httpStatus()` remains `int`** — no return-type change.
+
 ## [0.8.4] — 2026-07-28
 
 Transcribes **4020** `BAY_COUNT_MISMATCH` from the new `4.02x — Provisioning
