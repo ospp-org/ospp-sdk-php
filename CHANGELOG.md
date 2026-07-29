@@ -7,6 +7,123 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.0] — 2026-07-29
+
+**SDK-pair release against spec `v0.9.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md),
+*SDK-pair releases against a spec tag*). Released at the same version as
+`@ospp/protocol` **0.10.0**, from the same spec pin. The spec is **not** re-tagged:
+it already carries `v0.9.0`, and re-tagging it to chase an SDK number would make the
+tag mean the SDK's cadence rather than the contract's.
+
+`.spec-ref` **v0.8.1 → v0.9.0**.
+
+**Breaking, and the audience differs per change — read the three separately.** Spec
+`v0.9.0` carried three independent bodies of work that shared a tag because none of
+them cut one of their own. Two of them are breaking here, for **different** groups of
+callers, and conflating them will send the wrong people looking for the wrong
+problem:
+
+| Body | Breaks | Who has to act |
+|---|---|---|
+| `Deferred` retired from the status enum | **consumers** | code that reads a `TransactionEventStatus`, or exhausts `cases()` without a default arm |
+| `errorText` constrained to UPPER_SNAKE_CASE | **producers** | code that *emits* `errorText` as prose — a previously-valid payload is now schema-invalid |
+| `provisioning-response` description | **nobody** | description text only, no validation behaviour change |
+
+### Removed (BREAKING — consumers)
+
+- **`TransactionEventStatus::DEFERRED`.** The enum drops to four cases:
+  `ACCEPTED`, `DUPLICATE`, `REJECTED`, `RETRY_LATER`. A `match` or `switch` over
+  `TransactionEventStatus::cases()` **without a default arm** loses an arm, and any
+  reference to `::DEFERRED` no longer compiles.
+
+  Spec 0.9.0 retired the value together with the `txCounter` gap-blocking rule it was
+  invented to express — it had no design rationale of its own, having been added to
+  the schema in spec 0.5.0 two days *after* the reference server began emitting it.
+  Its stated exit, *operator-manual unblock*, was referenced normatively in five spec
+  documents and implemented in **none**, so a transaction answered `Deferred` could
+  not be settled by any code path in any repository. `RETRY_LATER` is now the only
+  non-terminal status.
+
+  **What is not removed:** the `TransactionEventStatus` enum itself and its remaining
+  four cases. A station needs them to decide whether to delete its local copy.
+
+### Changed (BREAKING — producers)
+
+- **Vendored schemas re-vendored from spec `v0.9.0`.** 17 files changed. Only **one**
+  belongs to the `Deferred` retirement; the other 16 are the two bodies that rode
+  along in the tag:
+
+  | Origin | Files | Change |
+  |---|--:|---|
+  | `Deferred` retirement | 1 | `mqtt/transaction-event-response.schema.json` — `status` enum 5 → 4, **and** the fourth `allOf` branch that required `reason` on `Deferred` |
+  | `errorText` enforcement | 15 | `pattern: ^[A-Z][A-Z0-9_]+$` added wherever `errorText` pairs with `errorCode` at the same object level (16 declarations); **8** of the 15 also gained corrected descriptions |
+  | provisioning trust anchor | 1 | `provisioning-response.schema.json` — `stationCaChain` description no longer names `brokerRootCa` as the universal anchor. **Description only** |
+
+- **`errorText` is a machine-readable name and is now enforced as one.** Spec §1.3
+  has always defined it as *"Machine-readable error name in UPPER_SNAKE_CASE (e.g.
+  `BAY_BUSY`)"*, but only one of the sixteen schemas declaring it enforced that shape.
+  The rest constrained length only, so any string passed — which is how a raw
+  validator diagnostic reached firmware in the field the spec reserves for
+  programmatic matching.
+
+  **This is the change a *producer* could notice**: a payload that put prose in
+  `errorText` and validated before will now fail validation. Emit the registry name
+  (`BAY_BUSY`), and put prose in `errorDescription`, which exists for it.
+
+### Verification
+
+- **The schema-identity gate RAN**, and that is the claim — not its exit code.
+  `scripts/check-schemas.sh` cloned `ospp-org/spec` at `v0.9.0`, checked out
+  `7a448ed`, and reported *"OK — vendored schemas are byte-identical to spec
+  v0.9.0"*. **Falsified before being trusted:** mutating one vendored schema makes it
+  report `DRIFT detected` and name the file. Restored, re-run green. A gate that
+  silently skips has happened in this repository's history, which is why the run is
+  reported rather than the result.
+
+- **The enum test is inverted, not deleted.** `deferred_is_distinct_from_retry_later`
+  pinned the v0.5.0 semantics; it becomes `deferred_is_retired_and_no_longer_a_case`,
+  asserting `tryFrom('Deferred')` is `null` and that `cases()` is exactly the four.
+  Deleting it would have left nothing to notice the case coming back. Proven
+  non-hollow: re-adding the case fails **two** tests by name —
+  *"Failed asserting that actual size 5 matches expected size 4"* and *"Failed
+  asserting that ...Enum (DEFERRED, 'Deferred') is null"* — then reverted.
+
+- **No deferred test vector existed here to delete.** Unlike `sdk-ts`, this SDK
+  vendors `schemas/` but **not** the conformance vector corpus, so the enum test is
+  the whole of the coverage. Stated because the symmetry cannot be assumed.
+
+- **Suite:** `paratest -p 28` → **OK (742 tests, 4655 assertions)**. Baseline measured
+  on the clean tree before any edit: 742 tests / 4656 assertions. Test count unchanged
+  (inversion, not deletion); the single assertion delta is exact — two removed from
+  the value and `from()` tests, three replacing two in the inversion. `phpstan`: no
+  errors.
+
+- **One artifact was excluded rather than committed.** `cp -r` from the spec brought
+  `schemas/README.md`, a file this repository has never carried and which
+  `check-schemas.sh` explicitly `--exclude`s from comparison. It was caught in
+  `git status`, not by the gate — the gate is configured to ignore it, so it would
+  have passed review invisibly.
+
+### Migration
+
+```diff
+- match ($status) {
++ match ($status) {
+      TransactionEventStatus::ACCEPTED     => ...,
+      TransactionEventStatus::DUPLICATE    => ...,
+      TransactionEventStatus::REJECTED     => ...,
+      TransactionEventStatus::RETRY_LATER  => ...,
+-     TransactionEventStatus::DEFERRED     => ...,   // remove; unreachable
+  };
+```
+
+A server still emitting `Deferred` is emitting a value the wire schema no longer
+admits and no station can act on. There is no replacement status: the condition that
+produced it — a `txCounter` discontinuity — is now settled normally and raised as an
+operator alert on the **station**.
+
+---
+
 ## [0.9.0] — 2026-07-29
 
 Released in lockstep with `@ospp/protocol` **0.9.0**, from the same spec pin.
