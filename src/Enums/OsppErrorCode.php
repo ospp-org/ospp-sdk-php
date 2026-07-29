@@ -383,6 +383,32 @@ enum OsppErrorCode: int
         };
     }
 
+    /**
+     * A conventional HTTP status for this code — an SDK extension, NOT the contract.
+     *
+     * The specification declines to make status a property of a code.
+     * `07-errors.md` §4.4 is headed "The status is not a property of the code": §2.4's
+     * mapping table "is illustrative and assigns no code a fixed status", nothing in §3
+     * carries an HTTP status column, and one code can honestly appear with more than one
+     * status. §2.4's own table lists 2008 under BOTH 401 and 403 — which no function from
+     * code to status can represent.
+     *
+     * So this method answers a question the spec does not define, and `sdk-ts` answers it
+     * differently: the two disagree on 51 of the 114 codes. Everything else in the two
+     * registries is identical — numbers, names, severity, recoverable, the category
+     * partition, the vendored schemas. Recorded in the spec's KNOWN-ISSUES.md together
+     * with `category()`, which has the same cause.
+     *
+     * Treat the result as a default for a server that has no better answer, never as the
+     * status a code "has". A server that knows the state it is in knows the truer status;
+     * §4.4 requires it to send that one and forbids downgrading it to match an enumeration.
+     *
+     * The `default => 500` arm is retained rather than made to return null or throw. Both
+     * alternatives were considered and rejected: returning null for the unmapped codes
+     * still asserts a total function from code to status, merely with a hole in it, and
+     * throwing would make an accessor fail on codes that are perfectly valid — neither is
+     * more honest than a documented default, and both break callers to no benefit.
+     */
     public function httpStatus(): int
     {
         return match ($this) {
@@ -410,7 +436,11 @@ enum OsppErrorCode: int
             self::SERVER_AUTH_NONCE_MISMATCH,
             // v0.8.0: 2019 → 401 — the provisioning token is unusable (expired,
             // superseded, or revoked); the credential itself is rejected.
-            self::PROVISIONING_TOKEN_INVALID => 401,
+            self::PROVISIONING_TOKEN_INVALID,
+            // v0.9.0: 4008 is reachable from POST /webhooks/payment-gateway/notification,
+            // whose ONLY status in 07-errors.md §4.4 is 401. It had no arm and fell to
+            // the default 500, turning a rejected signature into a server fault.
+            self::WEBHOOK_SIGNATURE_INVALID => 401,
             self::INSUFFICIENT_BALANCE => 402,
             // v0.5.2: 2015 OFFLINE_ORG_MISMATCH + 2016 OFFLINE_USER_MISMATCH aligned
             // cross-SDK to 403 — pass is cryptographically valid but used in a
@@ -425,6 +455,12 @@ enum OsppErrorCode: int
             // v0.8.3: 4018 → 409 — the token authenticated but is already consumed
             // and this is not a replay of the provision that consumed it (07-errors.md:362).
             self::PROVISIONING_TOKEN_CONSUMED,
+            // v0.9.0: both reachable over REST and both fell to the default 500.
+            // 3002 from POST /sessions/start and 3007 from POST /sessions/{id}/stop
+            // (07-errors.md §4.4); each endpoint lists 409, and both codes are
+            // resource-state preconditions — the same family as BAY_BUSY above.
+            self::BAY_NOT_READY,
+            self::SESSION_MISMATCH,
             self::OPERATION_IN_PROGRESS => 409,
             // v0.5.2: 2017 OFFLINE_RECEIPT_MISMATCH aligned cross-SDK to 422 —
             // signature itself verified per spec §3.2; the cross-check failure
@@ -443,7 +479,15 @@ enum OsppErrorCode: int
             self::INVALID_TIME_WINDOW => 422,
             self::RATE_LIMIT_EXCEEDED => 429,
             self::STATION_OFFLINE => 502,
+            // v0.9.0: 6007 answers 503 + Retry-After, and 07-errors.md §4.4 now makes
+            // that REQUIRED rather than tolerated: "A server MUST answer 503 there and
+            // MUST NOT substitute 500 to make the response match the enumeration."
+            // Status follows transience, not numeric range — 500 tells a station to back
+            // off blindly, 503 + Retry-After tells it when to return.
+            self::SERVICE_DEGRADED => 503,
             self::ACK_TIMEOUT => 504,
+            // Everything else: 500. See the docblock above this method — the default is
+            // deliberate, and is a default rather than a claim about the code.
             default => 500,
         };
     }

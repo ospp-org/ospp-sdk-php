@@ -849,7 +849,9 @@ final class OsppErrorCodeTest extends TestCase
     public function http_status_returns_valid_http_code_for_all_cases(): void
     {
         // v0.5.2: 403 added for 2015 OFFLINE_ORG_MISMATCH + 2016 OFFLINE_USER_MISMATCH.
-        $validHttpCodes = [400, 401, 402, 403, 404, 409, 422, 429, 500, 502, 504];
+        // v0.9.0: 503 added for 6007 SERVICE_DEGRADED — 07-errors.md §4.4 makes
+        // 503 + Retry-After REQUIRED there, not merely permitted.
+        $validHttpCodes = [400, 401, 402, 403, 404, 409, 422, 429, 500, 502, 503, 504];
 
         foreach (OsppErrorCode::cases() as $code) {
             self::assertContains(
