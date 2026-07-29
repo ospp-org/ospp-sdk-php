@@ -11,9 +11,9 @@ use PHPUnit\Framework\TestCase;
 final class TransactionEventStatusTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_five_cases(): void
+    public function it_has_exactly_four_cases(): void
     {
-        self::assertCount(5, TransactionEventStatus::cases());
+        self::assertCount(4, TransactionEventStatus::cases());
     }
 
     #[Test]
@@ -23,7 +23,6 @@ final class TransactionEventStatusTest extends TestCase
         self::assertSame('Duplicate', TransactionEventStatus::DUPLICATE->value);
         self::assertSame('Rejected', TransactionEventStatus::REJECTED->value);
         self::assertSame('RetryLater', TransactionEventStatus::RETRY_LATER->value);
-        self::assertSame('Deferred', TransactionEventStatus::DEFERRED->value);
     }
 
     #[Test]
@@ -33,19 +32,30 @@ final class TransactionEventStatusTest extends TestCase
         self::assertSame(TransactionEventStatus::DUPLICATE, TransactionEventStatus::from('Duplicate'));
         self::assertSame(TransactionEventStatus::REJECTED, TransactionEventStatus::from('Rejected'));
         self::assertSame(TransactionEventStatus::RETRY_LATER, TransactionEventStatus::from('RetryLater'));
-        self::assertSame(TransactionEventStatus::DEFERRED, TransactionEventStatus::from('Deferred'));
     }
 
     #[Test]
-    public function deferred_is_distinct_from_retry_later(): void
+    public function deferred_is_retired_and_no_longer_a_case(): void
     {
-        // OSPP v0.5.0 reconciliation.md §4.2 step 4: Deferred and RetryLater are
-        // distinct station behaviors. RetryLater = back-off-and-resend (transient
-        // server condition); Deferred = held server-side, NO auto-resend, awaits
-        // operator-manual unblock OR arrival of the missing in-sequence transactions.
-        // Distinct enum cases enforce that a consumer cannot conflate the two.
-        self::assertNotSame(TransactionEventStatus::DEFERRED, TransactionEventStatus::RETRY_LATER);
-        self::assertNotSame('RetryLater', TransactionEventStatus::DEFERRED->value);
+        // INVERTED from `deferred_is_distinct_from_retry_later`, which pinned the
+        // v0.5.0 semantics: Deferred = held server-side, no auto-resend, awaiting
+        // operator-manual unblock. Spec 0.9.0 retired the value — the gap-blocking
+        // rule it existed to express is gone, and the unblock it waited for was
+        // never implemented anywhere. RetryLater is now the ONLY non-terminal
+        // status.
+        //
+        // Kept as an inversion rather than deleted because the danger is real: a
+        // server that still emits 'Deferred' is emitting a value no station can
+        // act on, and the wire schema no longer admits it. This fails loudly if
+        // the case is ever reintroduced.
+        self::assertNull(TransactionEventStatus::tryFrom('Deferred'));
+
+        $values = array_map(
+            static fn (TransactionEventStatus $c): string => $c->value,
+            TransactionEventStatus::cases(),
+        );
+        self::assertNotContains('Deferred', $values);
+        self::assertSame(['Accepted', 'Duplicate', 'Rejected', 'RetryLater'], $values);
     }
 
     #[Test]
