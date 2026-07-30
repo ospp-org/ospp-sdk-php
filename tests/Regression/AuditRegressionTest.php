@@ -15,7 +15,8 @@ use PHPUnit\Framework\TestCase;
  * Regression tests pinning the 5 bugs found in the CSMS audit.
  *
  * These tests ensure that once-broken behavior stays fixed:
- * - BayStatus::fromOspp uses strtolower (accepts PascalCase)
+ * - BayStatus::fromOspp uses strtolower (accepts PascalCase) — for the six
+ *   REPORTABLE cases; `Unknown` is refused at the wire boundary (spec v0.10.0)
  * - BayStatus::toOspp uses ucfirst (returns PascalCase)
  * - SessionStatus::isBillable is ACTIVE, not COMPLETED
  * - FirmwareUpdateStatus::fromNotificationStatus uses explicit PascalCase match
@@ -109,8 +110,14 @@ final class AuditRegressionTest extends TestCase
     #[Test]
     public function REGRESSION_all_fromOspp_roundtrip_with_toOspp(): void
     {
-        // BayStatus roundtrip
+        // BayStatus roundtrip — REPORTABLE cases only. `UNKNOWN` renders via
+        // toOspp() but is refused by fromOspp(): it is a state of the FSM and
+        // not a value of the wire (spec v0.10.0). The round trip is asymmetric
+        // by design, and the inverse is pinned in BayStatusContractTest.
         foreach (BayStatus::cases() as $case) {
+            if (! $case->isReportable()) {
+                continue;
+            }
             self::assertSame(
                 $case,
                 BayStatus::fromOspp($case->toOspp()),

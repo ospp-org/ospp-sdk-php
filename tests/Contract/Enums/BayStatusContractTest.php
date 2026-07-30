@@ -17,6 +17,26 @@ use PHPUnit\Framework\TestCase;
  */
 final class BayStatusContractTest extends TestCase
 {
+    /**
+     * The six states that may cross the wire, derived rather than listed.
+     *
+     * @return list<BayStatus>
+     */
+    private static function reportable(): array
+    {
+        return array_values(array_filter(
+            BayStatus::cases(),
+            static fn (BayStatus $s): bool => $s->isReportable(),
+        ));
+    }
+
+    #[Test]
+    public function reportable_count_is_exactly_6_of_7(): void
+    {
+        self::assertCount(7, BayStatus::cases());
+        self::assertCount(6, self::reportable());
+    }
+
     #[Test]
     public function canStartSession_count_is_exactly_2(): void
     {
@@ -39,15 +59,29 @@ final class BayStatusContractTest extends TestCase
     }
 
     #[Test]
-    public function fromOspp_converts_PascalCase_for_all_7_cases(): void
+    public function fromOspp_converts_PascalCase_for_all_6_reportable_cases(): void
     {
-        foreach (BayStatus::cases() as $case) {
+        foreach (self::reportable() as $case) {
             self::assertSame(
                 $case,
                 BayStatus::fromOspp(ucfirst($case->value)),
                 "fromOspp(ucfirst('{$case->value}')) should return BayStatus::{$case->name}",
             );
         }
+    }
+
+    #[Test]
+    public function fromOspp_rejects_the_one_unreportable_case(): void
+    {
+        $unreportable = array_values(array_filter(
+            BayStatus::cases(),
+            static fn (BayStatus $s): bool => ! $s->isReportable(),
+        ));
+
+        self::assertSame([BayStatus::UNKNOWN], $unreportable);
+
+        $this->expectException(\ValueError::class);
+        BayStatus::fromOspp(BayStatus::UNKNOWN->toOspp());
     }
 
     #[Test]
@@ -63,9 +97,9 @@ final class BayStatusContractTest extends TestCase
     }
 
     #[Test]
-    public function fromOspp_toOspp_roundtrip_for_all_cases(): void
+    public function fromOspp_toOspp_roundtrip_for_all_reportable_cases(): void
     {
-        foreach (BayStatus::cases() as $case) {
+        foreach (self::reportable() as $case) {
             self::assertSame(
                 $case,
                 BayStatus::fromOspp($case->toOspp()),

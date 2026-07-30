@@ -10,9 +10,25 @@ use PHPUnit\Framework\TestCase;
 
 final class BayStatusTest extends TestCase
 {
+    /**
+     * The six states that may cross the wire. Derived from `isReportable()`
+     * rather than listed, so adding a case cannot silently skip it here.
+     *
+     * @return list<BayStatus>
+     */
+    private static function reportable(): array
+    {
+        return array_values(array_filter(
+            BayStatus::cases(),
+            static fn (BayStatus $s): bool => $s->isReportable(),
+        ));
+    }
+
     #[Test]
     public function it_has_exactly_seven_cases(): void
     {
+        // Seven states, six reportable. The wire narrowed in spec v0.10.0; the
+        // FSM did not, and `UNKNOWN` remains a state this enum must express.
         self::assertCount(7, BayStatus::cases());
     }
 
@@ -123,7 +139,6 @@ final class BayStatusTest extends TestCase
     #[Test]
     public function from_ospp_handles_pascal_case_wire_values(): void
     {
-        self::assertSame(BayStatus::UNKNOWN, BayStatus::fromOspp('Unknown'));
         self::assertSame(BayStatus::AVAILABLE, BayStatus::fromOspp('Available'));
         self::assertSame(BayStatus::RESERVED, BayStatus::fromOspp('Reserved'));
         self::assertSame(BayStatus::OCCUPIED, BayStatus::fromOspp('Occupied'));
@@ -135,7 +150,7 @@ final class BayStatusTest extends TestCase
     #[Test]
     public function from_ospp_also_handles_lowercase_input(): void
     {
-        foreach (BayStatus::cases() as $status) {
+        foreach (self::reportable() as $status) {
             self::assertSame($status, BayStatus::fromOspp($status->value));
         }
     }
@@ -145,6 +160,40 @@ final class BayStatusTest extends TestCase
     {
         $this->expectException(\ValueError::class);
         BayStatus::fromOspp('nonexistent');
+    }
+
+    /**
+     * The inverse of the assertion this test file used to make. `Unknown` was a
+     * wire value until spec v0.10.0; it is now refused at the boundary in both
+     * casings. Inverted rather than deleted, so nothing silently readmits it.
+     */
+    #[Test]
+    public function from_ospp_rejects_unknown_pascal_case(): void
+    {
+        $this->expectException(\ValueError::class);
+        BayStatus::fromOspp('Unknown');
+    }
+
+    #[Test]
+    public function from_ospp_rejects_unknown_lowercase(): void
+    {
+        $this->expectException(\ValueError::class);
+        BayStatus::fromOspp('unknown');
+    }
+
+    #[Test]
+    public function unknown_is_the_only_unreportable_case(): void
+    {
+        self::assertFalse(BayStatus::UNKNOWN->isReportable());
+
+        foreach (BayStatus::cases() as $status) {
+            if ($status === BayStatus::UNKNOWN) {
+                continue;
+            }
+            self::assertTrue($status->isReportable(), "BayStatus::{$status->name} should be reportable");
+        }
+
+        self::assertCount(6, self::reportable());
     }
 
     // --- toOspp (lowercase enum → PascalCase for wire) ---
@@ -164,9 +213,24 @@ final class BayStatusTest extends TestCase
     #[Test]
     public function from_ospp_roundtrips_with_to_ospp(): void
     {
-        foreach (BayStatus::cases() as $status) {
+        foreach (self::reportable() as $status) {
             self::assertSame($status, BayStatus::fromOspp($status->toOspp()));
         }
+    }
+
+    /**
+     * `toOspp()` is total and `fromOspp()` is not, so the round trip is too —
+     * and that asymmetry is the point, not an oversight. `Unknown` renders (for
+     * logs and display) but does not parse back off the wire, because nothing
+     * may put it there.
+     */
+    #[Test]
+    public function unknown_renders_but_does_not_round_trip(): void
+    {
+        self::assertSame('Unknown', BayStatus::UNKNOWN->toOspp());
+
+        $this->expectException(\ValueError::class);
+        BayStatus::fromOspp(BayStatus::UNKNOWN->toOspp());
     }
 
     // --- from / tryFrom ---
