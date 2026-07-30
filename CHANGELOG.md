@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.11.0] — 2026-07-30
+
+**SDK-pair release against spec `v0.10.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md),
+*SDK-pair releases against a spec tag*). Released at the same version as
+`@ospp/protocol` **0.11.0**, from the same spec pin.
+
+`.spec-ref` **v0.9.0 → v0.10.0**.
+
+> **Breaking, for callers that cross the wire boundary — and NOT in the way the headline
+> suggests.** Spec `v0.10.0` removed `Unknown` from `bay-status.schema.json`. **`BayStatus`
+> does not lose the case.** Read the next paragraph before changing any code.
+
+### Changed
+
+- **`BayStatus::fromOspp()` now rejects `Unknown`**, in any casing, with a `\ValueError`
+  naming the six reportable states. This is the whole of the behavioural break.
+
+  **The enum keeps all seven cases**, and `it_has_exactly_seven_cases` still asserts seven.
+  Deleting `UNKNOWN` is the obvious reading of the spec change and it is wrong for this SDK,
+  for a reason worth stating so nobody "completes" the job later: **this enum is not the wire
+  vocabulary.** Its backing values are lowercase (`'unknown'`), the wire's are PascalCase, and
+  `fromOspp()`/`toOspp()` have always been the adapter between the two. `UNKNOWN` is a state
+  the enum must be able to express — a server holds a bay there before its first report, and
+  in the reference server it is a *persisted* value: the `bays.status` column is a Postgres
+  enum type that **defaults** to `'unknown'`, and live rows hold it. Removing the case would
+  raise `ValueError` on hydrating every one of them.
+
+  So the wire narrowed and the vocabulary did not. Seven states, six reportable.
+
+- **`BayStatus::isReportable()`** — new. `false` for `UNKNOWN`, `true` for the other six.
+  Derived from the case rather than a list, so it stays correct if a case is ever added. Gate
+  on it before putting a status on the wire.
+
+- **`BayStatus::toOspp()` is unchanged and remains total**, `UNKNOWN` included. It is used for
+  logging and display as well as serialisation, and making it partial would throw inside a log
+  line. The consequence is deliberate: `fromOspp(toOspp())` round-trips for the six reportable
+  states and **not** for `UNKNOWN` — which is exactly the spec's model of a state held by both
+  parties and transmitted by neither. The asymmetry is pinned by a test rather than left as a
+  gap.
+
+### Vendored
+
+- `schemas/common/bay-status.schema.json` — enum 7 → 6 values; `"Unavailable", "Unknown"` →
+  `"Unavailable"`. One file of 85 changed. `scripts/check-schemas.sh` passes against
+  `v0.10.0`.
+
+### What breaks
+
+| Caller | Breaks | What to do |
+|---|:---:|---|
+| Parses a bay status off the wire via `fromOspp()` | **yes** | A payload carrying `Unknown` was already non-conforming and is now refused. Handle the `\ValueError`, or reject the message — do not fall back to `BayStatus::UNKNOWN`, which would re-admit exactly what the spec removed. |
+| Holds, stores or compares `BayStatus::UNKNOWN` | no | The case is still there. Server-side `Unknown` is still required by CORE-008. |
+| Calls `toOspp()` | no | Still total. |
+| Exhausts `BayStatus::cases()` | no | Still seven arms. |
+| Relies on `fromOspp(toOspp())` round-tripping every case | **yes** | It now holds for the six reportable states only. Filter on `isReportable()`. |
+
+### Tests
+
+742 → **748** tests, 4655 → **4665** assertions; phpstan level 9 clean. Six sites iterated
+every case and broke — three round-trip tests plus
+`from_ospp_handles_pascal_case_wire_values`, `from_ospp_also_handles_lowercase_input` and
+`fromOspp_converts_PascalCase_for_all_7_cases`. All six are re-scoped through a derived
+`reportable()` helper, and each removed assertion gained its inverse rather than being
+deleted — the convention this repo set when 0.10.0 retired `Deferred`, so that nothing
+silently readmits the value.
+
+---
+
 ## [0.10.0] — 2026-07-29
 
 **SDK-pair release against spec `v0.9.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md),
