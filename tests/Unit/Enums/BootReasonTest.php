@@ -11,9 +11,11 @@ use PHPUnit\Framework\TestCase;
 final class BootReasonTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_six_cases(): void
+    public function it_has_exactly_eight_cases(): void
     {
-        self::assertCount(6, BootReason::cases());
+        // v0.11.0: +RemoteReset (a commanded return, reset.md §5 rule 6) and
+        // +Reconnect (no boot occurred, boot-notification.md §5.2).
+        self::assertCount(8, BootReason::cases());
     }
 
     #[Test]
@@ -22,9 +24,11 @@ final class BootReasonTest extends TestCase
         self::assertSame('PowerOn', BootReason::POWER_ON->value);
         self::assertSame('Watchdog', BootReason::WATCHDOG->value);
         self::assertSame('FirmwareUpdate', BootReason::FIRMWARE_UPDATE->value);
+        self::assertSame('RemoteReset', BootReason::REMOTE_RESET->value);
         self::assertSame('ManualReset', BootReason::MANUAL_RESET->value);
         self::assertSame('ScheduledReset', BootReason::SCHEDULED_RESET->value);
         self::assertSame('ErrorRecovery', BootReason::ERROR_RECOVERY->value);
+        self::assertSame('Reconnect', BootReason::RECONNECT->value);
     }
 
     #[Test]
