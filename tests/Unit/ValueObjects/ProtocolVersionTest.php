@@ -255,43 +255,43 @@ final class ProtocolVersionTest extends TestCase
     }
 
     // ---------------------------------------------------------------
-    // isCompatibleWith()
+    // isSupportedBy() — exact-match negotiation (VERSIONING.md)
     // ---------------------------------------------------------------
 
     #[Test]
-    public function isCompatibleWithSameMajorReturnsTrue(): void
+    public function isSupportedByReturnsTrueOnlyForAnExactMember(): void
     {
-        $a = new ProtocolVersion(1, 0, 0);
-        $b = new ProtocolVersion(1, 5, 3);
+        $declared = new ProtocolVersion(0, 3, 0);
+        $serverSet = [new ProtocolVersion(0, 3, 0), new ProtocolVersion(0, 4, 0)];
 
-        self::assertTrue($a->isCompatibleWith($b));
+        self::assertTrue($declared->isSupportedBy($serverSet));
     }
 
     #[Test]
-    public function isCompatibleWithSameVersionReturnsTrue(): void
+    public function isSupportedByRejectsASharedMajor(): void
     {
-        $a = new ProtocolVersion(1, 0, 0);
-        $b = new ProtocolVersion(1, 0, 0);
+        // The deleted "same MAJOR is compatible" rule accepted this pairing,
+        // and MAJOR is 0 for every version OSPP has shipped.
+        $declared = new ProtocolVersion(1, 5, 3);
+        $serverSet = [new ProtocolVersion(1, 0, 0)];
 
-        self::assertTrue($a->isCompatibleWith($b));
+        self::assertFalse($declared->isSupportedBy($serverSet));
     }
 
     #[Test]
-    public function isCompatibleWithDifferentMajorReturnsFalse(): void
+    public function isSupportedByRejectsAnEmptySet(): void
     {
-        $a = new ProtocolVersion(1, 0, 0);
-        $b = new ProtocolVersion(2, 0, 0);
-
-        self::assertFalse($a->isCompatibleWith($b));
+        self::assertFalse((new ProtocolVersion(0, 3, 0))->isSupportedBy([]));
     }
 
     #[Test]
-    public function isCompatibleWithIsSymmetric(): void
+    public function isSupportedByAcceptsAnyIterable(): void
     {
-        $a = new ProtocolVersion(1, 2, 3);
-        $b = new ProtocolVersion(1, 9, 0);
+        $gen = (function () {
+            yield new ProtocolVersion(0, 3, 0);
+        })();
 
-        self::assertSame($a->isCompatibleWith($b), $b->isCompatibleWith($a));
+        self::assertTrue((new ProtocolVersion(0, 3, 0))->isSupportedBy($gen));
     }
 
     // ---------------------------------------------------------------

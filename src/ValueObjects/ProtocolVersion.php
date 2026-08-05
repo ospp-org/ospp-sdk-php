@@ -83,12 +83,39 @@ final class ProtocolVersion implements \JsonSerializable, \Stringable
     }
 
     /**
-     * OSPP compatibility rule: same MAJOR version is compatible.
-     * Different MAJOR version triggers 1007 PROTOCOL_VERSION_MISMATCH.
+     * Is this version a member of the set the peer supports?
+     *
+     * VERSIONING.md: "**Negotiation is exact match.** At boot the station
+     * declares one version in `BootNotification`'s envelope. The server holds a
+     * **set** of versions it supports. If the declared version is a member of
+     * that set, the server responds `Accepted`. If it is not, the server MUST
+     * reject with error code `1007` (`PROTOCOL_VERSION_MISMATCH`) and MUST
+     * include the `supportedVersions` array."
+     *
+     * This replaces `isCompatibleWith()`, which encoded "same MAJOR is
+     * compatible". That rule is deleted rather than narrowed: MAJOR is `0` for
+     * every version OSPP has shipped, so it classified `0.1.0` and `0.10.0` as
+     * compatible while the pre-1.0 policy directly above it licences breaking
+     * changes between `0.x` minors. The contradiction cost money — a `0.4.0`
+     * station accepted by a `0.3.0` server delivers a full session and emits
+     * `SessionEnded` with a `reason` the older schema rejects, and SessionEnded
+     * is the sole billing source when no StopService was issued. Session
+     * delivered, never billed, on a pairing the rule told the server to accept.
+     *
+     * An empty set supports nothing: a server that has configured no versions
+     * accepts no station, rather than silently accepting every one.
+     *
+     * @param  iterable<self>  $supportedVersions  the peer's supported set
      */
-    public function isCompatibleWith(self $other): bool
+    public function isSupportedBy(iterable $supportedVersions): bool
     {
-        return $this->major === $other->major;
+        foreach ($supportedVersions as $supported) {
+            if ($this->equals($supported)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function equals(self $other): bool
