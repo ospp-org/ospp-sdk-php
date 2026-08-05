@@ -1,0 +1,54 @@
+{
+  "stationId": "stn_d4e5f6a7b8c9",
+  "firmwareVersion": "2.3.1",
+  "stationModel": "SSP-5000 Pro",
+  "stationVendor": "AcmeCorp",
+  "serialNumber": "SN-2025-006789",
+  "bays": [
+    {
+      "bayNumber": 1,
+      "programNumbers": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "bayNumber": 2,
+      "programNumbers": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "bayNumber": 3,
+      "programNumbers": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "bayNumber": 4,
+      "programNumbers": [
+        1,
+        2,
+        3
+      ]
+    }
+  ],
+  "uptimeSeconds": 0,
+  "pendingOfflineTransactions": 0,
+  "timezone": "America/Chicago",
+  "bootReason": "RemoteReset",
+  "capabilities": {
+    "bleSupported": true,
+    "offlineModeSupported": true,
+    "meterValuesSupported": true
+  },
+  "networkInfo": {
+    "connectionType": "Wifi",
+    "signalStrength": -55
+  }
+}

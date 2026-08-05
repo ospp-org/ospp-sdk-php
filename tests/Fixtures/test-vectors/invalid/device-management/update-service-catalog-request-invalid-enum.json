@@ -1,0 +1,17 @@
+{
+  "catalogVersion": "2026.02.1",
+  "services": [
+    {
+      "serviceId": "svc_basic",
+      "serviceName": "Basic Service",
+      "pricingType": "per_session",
+      "available": true,
+      "bindings": [
+        {
+          "bayNumber": 1,
+          "programNumber": 1
+        }
+      ]
+    }
+  ]
+}

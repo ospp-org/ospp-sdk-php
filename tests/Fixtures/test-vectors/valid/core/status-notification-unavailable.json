@@ -1,0 +1,19 @@
+{
+  "bayId": "bay_d4e5f6a7b8c9",
+  "bayNumber": 4,
+  "status": "Unavailable",
+  "programs": [
+    {
+      "programNumber": 1,
+      "available": false
+    },
+    {
+      "programNumber": 2,
+      "available": false
+    },
+    {
+      "programNumber": 3,
+      "available": false
+    }
+  ]
+}
