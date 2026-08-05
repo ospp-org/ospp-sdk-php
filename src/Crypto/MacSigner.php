@@ -25,7 +25,7 @@ final class MacSigner
     /**
      * Sign a message payload with HMAC-SHA256.
      *
-     * @param  array<string, mixed>  $payload  Message payload (WITHOUT the `mac` field)
+     * @param  array<string, mixed>|\stdClass  $payload  Message (the `mac` field is stripped if present)
      * @param  string  $sessionKey  Base64-encoded session key
      * @return string Base64-encoded HMAC-SHA256 signature
      *
@@ -35,7 +35,7 @@ final class MacSigner
      *   operator, and MUST NOT silently drop it without a record." Raising is
      *   the only response that is neither of the two the clause forbids.
      */
-    public function sign(array $payload, string $sessionKey): string
+    public function sign(array|\stdClass $payload, string $sessionKey): string
     {
         $rawKey = self::decodeKey($sessionKey);
 
@@ -52,9 +52,7 @@ final class MacSigner
             );
         }
 
-        unset($payload['mac']);
-
-        $canonical = $this->serializer->serialize($payload);
+        $canonical = $this->serializer->serialize(self::withoutMac($payload));
 
         return base64_encode(hash_hmac('sha256', $canonical, $rawKey, true));
     }
@@ -62,11 +60,11 @@ final class MacSigner
     /**
      * Verify a message's HMAC-SHA256 signature using timing-safe comparison.
      *
-     * @param  array<string, mixed>  $payload  Message payload (WITHOUT the `mac` field)
+     * @param  array<string, mixed>|\stdClass  $payload  Message (the `mac` field is stripped if present)
      * @param  string  $mac  Received Base64-encoded MAC
      * @param  string  $sessionKey  Base64-encoded session key
      */
-    public function verify(array $payload, string $mac, string $sessionKey): bool
+    public function verify(array|\stdClass $payload, string $mac, string $sessionKey): bool
     {
         // §5.7 Receiving: "No session key held for the peer | 1013 MAC_MISSING |
         // Reject the message. A receiver that holds no key cannot verify, and
@@ -90,13 +88,34 @@ final class MacSigner
     /**
      * Get the canonical JSON representation of a payload.
      *
-     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>|\stdClass  $payload
      */
-    public function canonicalize(array $payload): string
+    public function canonicalize(array|\stdClass $payload): string
     {
+        return $this->serializer->serialize(self::withoutMac($payload));
+    }
+
+    /**
+     * Strip the top-level `mac` without mutating the caller's value.
+     *
+     * §5.3 step 1: "Remove the `mac` field from the message envelope if present
+     * -- the MAC field cannot be part of the input that produces it."
+     *
+     * @param  array<string, mixed>|\stdClass  $payload
+     * @return array<string, mixed>|\stdClass
+     */
+    private static function withoutMac(array|\stdClass $payload): array|\stdClass
+    {
+        if ($payload instanceof \stdClass) {
+            $clone = clone $payload;
+            unset($clone->mac);
+
+            return $clone;
+        }
+
         unset($payload['mac']);
 
-        return $this->serializer->serialize($payload);
+        return $payload;
     }
 
     /**
