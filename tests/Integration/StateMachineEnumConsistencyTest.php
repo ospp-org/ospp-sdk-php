@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Ospp\Protocol\Tests\Integration;
 
 use Ospp\Protocol\Enums\BayStatus;
+use Ospp\Protocol\Enums\EffectedBy;
 use Ospp\Protocol\Enums\DiagnosticsStatus;
 use Ospp\Protocol\Enums\FirmwareUpdateStatus;
 use Ospp\Protocol\Enums\ReservationStatus;
@@ -23,7 +24,7 @@ final class StateMachineEnumConsistencyTest extends TestCase
     public function BayTransitions_keys_match_BayStatus_values(): void
     {
         $transitions = new BayTransitions();
-        $table = $transitions->getTransitionTable();
+        $table = $transitions->getTransitionTable(EffectedBy::STATION);
         $tableKeys = array_keys($table);
 
         $enumValues = array_map(
@@ -41,7 +42,9 @@ final class StateMachineEnumConsistencyTest extends TestCase
     public function BayTransitions_targets_are_valid_BayStatus_values(): void
     {
         $transitions = new BayTransitions();
-        $table = $transitions->getTransitionTable();
+        // SERVER is the superset -- all twenty-six rows, so this validates the
+        // `Server` targets too (spec/05-state-machines.md §2.3).
+        $table = $transitions->getTransitionTable(EffectedBy::SERVER);
 
         foreach ($table as $source => $targets) {
             foreach ($targets as $target) {

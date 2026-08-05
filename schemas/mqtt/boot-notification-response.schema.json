@@ -58,7 +58,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 1024,
-      "description": "Base64-encoded 32-byte HMAC session key for message authentication."
+      "description": "Base64-encoded 32-byte HMAC session key. REQUIRED on every Accepted AND every Pending response, unconditionally. Pending is included because a Pending station answers server commands (Chapter 05 section 1.4) and every command is signed -- without a key the server could not send one and the station could not answer, which would close the exact channel the Pending window exists to keep open. Absent on Rejected, which accepts no commands and establishes nothing. It was previously conditional on MessageSigningMode -- which is station configuration, not a field of this message, so the condition was not expressible in JSON Schema and would have stayed prose forever. Under MessageSigningMode None the key is simply unused; issuing one costs 44 bytes and makes the requirement machine-checkable. A station that receives Accepted or Pending WITHOUT it MUST treat the response as malformed (Core profile -- BootNotification section 5.3)."
     },
     "supportedVersions": {
       "type": "array",
@@ -68,6 +68,29 @@
       },
       "minItems": 1,
       "description": "Protocol versions supported by server. Required when Rejected with 1007 PROTOCOL_VERSION_MISMATCH."
+    },
+    "details": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Diagnostic detail for the accompanying errorCode. REQUIRED on a Pending response carrying 3018 TOPOLOGY_MISMATCH, where it MUST name what the server expected and what arrived; absent otherwise. A station held out of service for a reason nobody can see is a station nobody can repair, which is why this is required rather than recommended. Closed, like every other object in this schema set: a future error code that needs its own detail adds its member here, and the protocol is unreleased, so that costs a schema edit and nothing else.",
+      "properties": {
+        "expected": {
+          "type": "array",
+          "maxItems": 64,
+          "description": "The topology recorded for this station at provisioning, in the same shape as the request's bays[].",
+          "items": {
+            "$ref": "../common/bay-topology.schema.json"
+          }
+        },
+        "declared": {
+          "type": "array",
+          "maxItems": 64,
+          "description": "The topology this BootNotification declared, echoed back so an operator can compare the two without correlating two messages.",
+          "items": {
+            "$ref": "../common/bay-topology.schema.json"
+          }
+        }
+      }
     }
   },
   "allOf": [
@@ -105,6 +128,57 @@
         "required": [
           "retryInterval"
         ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "Accepted",
+              "Pending"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "sessionKey"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "Pending"
+          },
+          "errorCode": {
+            "const": 3018
+          }
+        },
+        "required": [
+          "status",
+          "errorCode"
+        ]
+      },
+      "then": {
+        "required": [
+          "errorCode",
+          "errorText",
+          "details"
+        ],
+        "properties": {
+          "details": {
+            "required": [
+              "expected",
+              "declared"
+            ]
+          }
+        }
       }
     }
   ]

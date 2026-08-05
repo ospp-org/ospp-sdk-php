@@ -11,7 +11,7 @@
     "stationModel",
     "stationVendor",
     "serialNumber",
-    "bayCount",
+    "bays",
     "uptimeSeconds",
     "pendingOfflineTransactions",
     "timezone",
@@ -47,10 +47,14 @@
       "maxLength": 64,
       "description": "Unique serial number of the station unit."
     },
-    "bayCount": {
-      "type": "integer",
-      "minimum": 1,
-      "description": "Number of service bays available at this station."
+    "bays": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "description": "The station's RE-DECLARED PHYSICAL TOPOLOGY — the same bays and program ordinals it declared at provisioning, restated on every boot so the server can detect that the two no longer agree. Labels are NOT re-declared and are NOT compared: they are descriptive (Chapter 04 — Protocol Flows §2), and comparing them would put a station into Pending for a corrected typo in a firmware constant. The declaration MUST be STABLE between boots while the hardware is unchanged; how firmware achieves that — NVS, a compiled-in table, a hardware scan — is its own business, and the contract is the stability, not the mechanism. A MISMATCH in either direction against the provisioned topology puts the station in Pending, NOT Rejected: Pending keeps the command channel open so an operator can repair the disagreement, and Rejected would remove the only channel through which it could be repaired (Chapter 05 — State Machines §1, station state machine). Provisioning creates the bays and boot never does, so a FIRST boot always matches unless the provisioning declaration and this one disagree — which is the same mismatch and the same Pending. A faulted bay or program is re-declared present-but-unavailable, never omitted: omission means the hardware changed and requires re-provisioning. At the 64-bay and 32-program maxima this field is under 8 KB, far below the 64 KB MQTT Maximum Packet Size of Chapter 02 — Transport §1.2.",
+      "items": {
+        "$ref": "../common/bay-topology.schema.json"
+      }
     },
     "uptimeSeconds": {
       "type": "integer",
@@ -74,11 +78,13 @@
         "PowerOn",
         "Watchdog",
         "FirmwareUpdate",
+        "RemoteReset",
         "ManualReset",
         "ScheduledReset",
-        "ErrorRecovery"
+        "ErrorRecovery",
+        "Reconnect"
       ],
-      "description": "Reason the station booted."
+      "description": "Reason the station sent this BootNotification. SEVEN of the eight name an actual boot; `Reconnect` names the case where NONE occurred — the firmware never restarted, only the MQTT session is new. OSPP requires a BootNotification after every connection including reconnections, so without `Reconnect` a station that merely re-dialled had to pick a value it knew to be false, and a server reading it could not tell whether the station's volatile state survived. It matters because the answer decides whether a live session is kept or terminated. `RemoteReset` means the server asked for this return via Reset [MSG-015], distinguishing a commanded reboot from a spontaneous one. `ManualReset` is a human acting at the station; `ScheduledReset` is the station's own scheduled restart. No member denotes a credential wipe: OSPP has no remote factory reset (Reset profile §5.1). `uptimeSeconds` is the cross-check, and the two MUST agree: a `Reconnect` carries the uptime the station already had, and a station claiming `PowerOn` with a large uptime is detectably lying."
     },
     "capabilities": {
       "type": "object",

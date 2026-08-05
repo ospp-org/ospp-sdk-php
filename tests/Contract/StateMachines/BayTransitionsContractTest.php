@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Ospp\Protocol\Tests\Contract\StateMachines;
 
 use Ospp\Protocol\Enums\BayStatus;
+use Ospp\Protocol\Enums\EffectedBy;
 use Ospp\Protocol\StateMachines\BayTransitions;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -21,7 +22,7 @@ final class BayTransitionsContractTest extends TestCase
     #[Test]
     public function transition_table_has_exactly_7_states(): void
     {
-        $table = $this->transitions->getTransitionTable();
+        $table = $this->transitions->getTransitionTable(EffectedBy::STATION);
         $tableKeys = array_keys($table);
         sort($tableKeys);
 
@@ -33,9 +34,12 @@ final class BayTransitionsContractTest extends TestCase
     }
 
     #[Test]
-    public function transition_count_is_exactly_18(): void
+    public function transition_count_is_exactly_20_for_a_station(): void
     {
-        self::assertSame(18, $this->transitions->transitionCount());
+        // spec/05-state-machines.md §2.3: "Twenty `Station` rows by distinct
+        // `(from, to)` pair, and six `Server` rows -- twenty-six in all."
+        self::assertSame(20, $this->transitions->transitionCount(EffectedBy::STATION));
+        self::assertSame(26, $this->transitions->transitionCount(EffectedBy::SERVER));
     }
 
     #[Test]
@@ -43,7 +47,7 @@ final class BayTransitionsContractTest extends TestCase
     {
         foreach (BayStatus::cases() as $status) {
             self::assertFalse(
-                $this->transitions->canTransition($status, $status),
+                $this->transitions->canTransition($status, $status, EffectedBy::STATION),
                 "Self-transition should not be allowed for {$status->value}",
             );
         }
@@ -57,7 +61,7 @@ final class BayTransitionsContractTest extends TestCase
 
         foreach (BayStatus::cases() as $from) {
             foreach (BayStatus::cases() as $to) {
-                if ($this->transitions->canTransition($from, $to)) {
+                if ($this->transitions->canTransition($from, $to, EffectedBy::STATION)) {
                     $valid++;
                 } else {
                     $invalid++;
@@ -65,8 +69,8 @@ final class BayTransitionsContractTest extends TestCase
             }
         }
 
-        self::assertSame(18, $valid, 'Expected exactly 18 valid transitions');
-        self::assertSame(31, $invalid, 'Expected exactly 31 invalid transitions');
+        self::assertSame(20, $valid, 'Expected exactly 20 valid Station transitions');
+        self::assertSame(29, $invalid, 'Expected exactly 29 invalid Station transitions');
         self::assertSame(49, $valid + $invalid, 'Total pairs should be 49 (7x7)');
     }
 
@@ -80,7 +84,7 @@ final class BayTransitionsContractTest extends TestCase
                 continue;
             }
 
-            if ($this->transitions->canTransition($status, BayStatus::FAULTED)) {
+            if ($this->transitions->canTransition($status, BayStatus::FAULTED, EffectedBy::STATION)) {
                 $statesThatCanReachFaulted[] = $status->value;
             }
         }
@@ -88,7 +92,7 @@ final class BayTransitionsContractTest extends TestCase
         // unknown, available, reserved, occupied, finishing, unavailable can all reach faulted
         self::assertCount(6, $statesThatCanReachFaulted);
         self::assertFalse(
-            $this->transitions->canTransition(BayStatus::FAULTED, BayStatus::FAULTED),
+            $this->transitions->canTransition(BayStatus::FAULTED, BayStatus::FAULTED, EffectedBy::STATION),
             'FAULTED should not transition to itself',
         );
     }
@@ -96,7 +100,7 @@ final class BayTransitionsContractTest extends TestCase
     #[Test]
     public function faulted_recovers_to_exactly_available_or_unavailable(): void
     {
-        $allowed = $this->transitions->allowedTransitions(BayStatus::FAULTED);
+        $allowed = $this->transitions->allowedTransitions(BayStatus::FAULTED, EffectedBy::STATION);
 
         self::assertCount(2, $allowed);
 
@@ -110,7 +114,7 @@ final class BayTransitionsContractTest extends TestCase
     public function all_target_values_are_valid_BayStatus_strings(): void
     {
         $validValues = array_map(fn (BayStatus $s) => $s->value, BayStatus::cases());
-        $table = $this->transitions->getTransitionTable();
+        $table = $this->transitions->getTransitionTable(EffectedBy::STATION);
 
         foreach ($table as $source => $targets) {
             self::assertContains($source, $validValues, "Source '{$source}' is not a valid BayStatus");
