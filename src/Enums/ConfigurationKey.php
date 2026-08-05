@@ -90,7 +90,11 @@ enum ConfigurationKey: string
             self::RESERVATION_DEFAULT_TTL => 300,
             self::DEFAULT_CREDITS_PER_SESSION => 100,
             self::AUTHORIZATION_CACHE_ENABLED => true,
-            self::MESSAGE_SIGNING_MODE => 'Critical',
+            // spec/08-configuration.md §3: default `"All"`, and Static rather
+            // than Dynamic -- the mode is bound to the session key, which is
+            // issued at boot, so a mid-session change would leave one peer
+            // signing and the other not.
+            self::MESSAGE_SIGNING_MODE => 'All',
             self::CERTIFICATE_RENEWAL_THRESHOLD_DAYS => 30,
             self::CERTIFICATE_RENEWAL_ENABLED => true,
             self::OFFLINE_MODE_ENABLED => true,

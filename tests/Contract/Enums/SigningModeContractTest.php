@@ -5,109 +5,87 @@ declare(strict_types=1);
 namespace Ospp\Protocol\Tests\Contract\Enums;
 
 use Ospp\Protocol\Actions\OsppAction;
-use Ospp\Protocol\Crypto\CriticalMessageRegistry;
+use Ospp\Protocol\Crypto\MessageSigningRegistry;
+use Ospp\Protocol\Enums\MessageType;
 use Ospp\Protocol\Enums\SigningMode;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Contract tests for SigningMode enum.
+ * Contract tests for SigningMode — spec/06-security.md §5.1, §5.6.
  *
- * Pins the three mode behaviors (ALL, CRITICAL, NONE) and verifies
- * that shouldVerify is identical to shouldSign for all modes and actions.
+ * Two modes now, not three. `Critical` is removed: with everything signed it
+ * selected nothing, and the 47-row per-message classification table went with
+ * it. The exhaustive per-message proof lives in
+ * {@see \Ospp\Protocol\Tests\Contract\Crypto\CrossLanguageSigningParityTest},
+ * which runs the shared fixture sdk-ts runs; this file pins the enum itself.
  */
 final class SigningModeContractTest extends TestCase
 {
     #[Test]
-    public function CRITICAL_mode_delegates_to_CriticalMessageRegistry(): void
+    public function ALL_mode_signs_everything_except_the_three_structural_exemptions(): void
     {
-        $criticalActions = CriticalMessageRegistry::allCriticalActions();
-        self::assertCount(19, $criticalActions, 'Expected exactly 19 critical actions');
-
-        // All 19 critical actions must return true
-        foreach ($criticalActions as $action) {
-            self::assertTrue(
-                SigningMode::CRITICAL->shouldSign($action),
-                "CRITICAL->shouldSign('{$action}') should be true",
-            );
-        }
-
-        // Find a non-critical MQTT action and verify it returns false
-        $nonCriticalMqttActions = array_filter(
-            OsppAction::mqttActions(),
-            fn (string $action) => ! CriticalMessageRegistry::isCritical($action),
-        );
-
-        foreach ($nonCriticalMqttActions as $action) {
-            self::assertFalse(
-                SigningMode::CRITICAL->shouldSign($action),
-                "CRITICAL->shouldSign('{$action}') should be false (non-critical MQTT action)",
-            );
-        }
-    }
-
-    #[Test]
-    public function ALL_mode_signs_everything_except_always_exempt(): void
-    {
-        // Every known action EXCEPT always-exempt ones is signed in ALL mode.
         foreach (OsppAction::all() as $action) {
-            if (CriticalMessageRegistry::isAlwaysExempt($action)) {
-                self::assertFalse(
-                    SigningMode::ALL->shouldSign($action),
-                    "ALL->shouldSign('{$action}') should be false (always-exempt)",
+            foreach (MessageType::cases() as $type) {
+                $exempt = MessageSigningRegistry::isStructurallyExempt($action, $type);
+
+                self::assertSame(
+                    ! $exempt,
+                    SigningMode::ALL->requiresMac($action, $type),
+                    "ALL->requiresMac('{$action}', '{$type->value}')",
                 );
-
-                continue;
             }
-
-            self::assertTrue(
-                SigningMode::ALL->shouldSign($action),
-                "ALL->shouldSign('{$action}') should be true",
-            );
         }
 
-        // Even completely unknown actions are signed in ALL mode.
-        self::assertTrue(SigningMode::ALL->shouldSign('FooBarUnknown'));
+        // There is no per-message judgement left, so an action this SDK has
+        // never heard of is signed rather than exempted.
+        self::assertTrue(SigningMode::ALL->requiresMac('FooBarUnknown', MessageType::REQUEST));
     }
 
     #[Test]
-    public function ALL_mode_exempts_always_exempt_actions(): void
+    public function ALL_mode_exempts_the_three_and_only_the_three(): void
     {
-        // ConnectionLost (broker-generated LWT) is always exempt — the
-        // station cannot pre-sign the broker's Last Will, in any mode.
-        self::assertFalse(SigningMode::ALL->shouldSign('ConnectionLost'));
-        self::assertFalse(SigningMode::ALL->shouldVerify('ConnectionLost'));
+        // ConnectionLost is exempt only as the broker's LWT EVENT: the station
+        // cannot pre-sign the broker's Last Will. As a REQUEST it is signed
+        // like anything else.
+        self::assertFalse(SigningMode::ALL->requiresMac('ConnectionLost', MessageType::EVENT));
+        self::assertTrue(SigningMode::ALL->requiresMac('ConnectionLost', MessageType::REQUEST));
+
+        // BootNotification is exempt in BOTH directions, for two different
+        // structural reasons — one precedes the key, one carries it.
+        self::assertFalse(SigningMode::ALL->requiresMac('BootNotification', MessageType::REQUEST));
+        self::assertFalse(SigningMode::ALL->requiresMac('BootNotification', MessageType::RESPONSE));
+        self::assertTrue(SigningMode::ALL->requiresMac('BootNotification', MessageType::EVENT));
     }
 
     #[Test]
     public function NONE_mode_signs_nothing(): void
     {
-        // All known actions
         foreach (OsppAction::all() as $action) {
-            self::assertFalse(
-                SigningMode::NONE->shouldSign($action),
-                "NONE->shouldSign('{$action}') should be false",
-            );
+            foreach (MessageType::cases() as $type) {
+                self::assertFalse(
+                    SigningMode::NONE->requiresMac($action, $type),
+                    "NONE->requiresMac('{$action}', '{$type->value}')",
+                );
+            }
         }
-
-        // Even critical actions
-        self::assertFalse(SigningMode::NONE->shouldSign('StartService'));
     }
 
     #[Test]
-    public function shouldVerify_identical_to_shouldSign_for_all_modes_and_all_30_actions(): void
+    public function verification_is_identical_to_signing_for_every_mode_action_and_type(): void
     {
         $allActions = OsppAction::all();
         self::assertCount(30, $allActions, 'Expected exactly 30 OSPP actions');
 
         foreach (SigningMode::cases() as $mode) {
             foreach ($allActions as $action) {
-                self::assertSame(
-                    $mode->shouldSign($action),
-                    $mode->shouldVerify($action),
-                    "SigningMode::{$mode->name}->shouldVerify('{$action}') "
-                    . "should be identical to shouldSign('{$action}')",
-                );
+                foreach (MessageType::cases() as $type) {
+                    self::assertSame(
+                        $mode->requiresMac($action, $type),
+                        $mode->requiresMacVerification($action, $type),
+                        "SigningMode::{$mode->name} disagrees with itself on {$action}:{$type->value}",
+                    );
+                }
             }
         }
     }

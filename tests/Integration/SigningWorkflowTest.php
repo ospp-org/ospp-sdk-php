@@ -6,7 +6,8 @@ namespace Ospp\Protocol\Tests\Integration;
 
 use Ospp\Protocol\Actions\OsppAction;
 use Ospp\Protocol\Crypto\CanonicalJsonSerializer;
-use Ospp\Protocol\Crypto\CriticalMessageRegistry;
+use Ospp\Protocol\Crypto\MessageSigningRegistry;
+use Ospp\Protocol\Enums\MessageType;
 use Ospp\Protocol\Crypto\MacSigner;
 use Ospp\Protocol\Envelope\MessageBuilder;
 use Ospp\Protocol\Enums\SigningMode;
@@ -59,39 +60,18 @@ final class SigningWorkflowTest extends TestCase
     }
 
     #[Test]
-    public function signing_mode_ALL_signs_every_action_except_always_exempt(): void
+    public function signing_mode_ALL_signs_every_action_except_the_structural_exemptions(): void
     {
         self::assertCount(30, OsppAction::all());
 
         foreach (OsppAction::all() as $action) {
-            if (CriticalMessageRegistry::isAlwaysExempt($action)) {
-                self::assertFalse(
-                    SigningMode::ALL->shouldSign($action),
-                    "SigningMode::ALL should NOT sign always-exempt action '{$action}'",
+            foreach (MessageType::cases() as $type) {
+                self::assertSame(
+                    ! MessageSigningRegistry::isStructurallyExempt($action, $type),
+                    SigningMode::ALL->requiresMac($action, $type),
+                    "SigningMode::ALL on {$action}:{$type->value}",
                 );
-
-                continue;
             }
-
-            self::assertTrue(
-                SigningMode::ALL->shouldSign($action),
-                "SigningMode::ALL should sign action '{$action}'",
-            );
-        }
-    }
-
-    #[Test]
-    public function signing_mode_CRITICAL_matches_registry(): void
-    {
-        foreach (OsppAction::all() as $action) {
-            $expected = CriticalMessageRegistry::isCritical($action);
-            $actual = SigningMode::CRITICAL->shouldSign($action);
-
-            self::assertSame(
-                $expected,
-                $actual,
-                "SigningMode::CRITICAL->shouldSign('{$action}') should match CriticalMessageRegistry::isCritical('{$action}')",
-            );
         }
     }
 
@@ -100,7 +80,7 @@ final class SigningWorkflowTest extends TestCase
     {
         foreach (OsppAction::all() as $action) {
             self::assertFalse(
-                SigningMode::NONE->shouldSign($action),
+                SigningMode::NONE->requiresMac($action, MessageType::REQUEST),
                 "SigningMode::NONE should not sign action '{$action}'",
             );
         }

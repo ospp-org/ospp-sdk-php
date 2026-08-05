@@ -1,150 +1,278 @@
 {
-  "_comment": "OSPP §5.6 message-signing classification, as machine-readable data. MUST stay BYTE-IDENTICAL with the sibling copy in the other SDK repo (ospp-sdk-php: tests/Contract/Crypto/fixtures/signing-classification.json ; sdk-ts: tests/crypto/fixtures/signing-classification.json). Cross-language parity safety net for live HMAC signing: sdk-ts asserts its (action,messageType) registry equals criticalInCriticalMode + alwaysExempt; ospp-sdk-php (which keys by action only) asserts its critical set MINUS phpApiOnlySuperset collapses to the 16 distinct critical actions here, and runs a no-split guard proving that action-only collapse stays sound. Source of truth: spec/06-security.md §5.6 (Critical mode: 31 of 47 signed, 16 exempt, 3 always-exempt).",
-  "specRef": "v0.5.0",
-  "specSection": "06-security.md §5.6",
-  "criticalInCriticalMode": [
-    {
-      "action": "AuthorizeOfflinePass",
-      "messageType": "Request"
-    },
-    {
-      "action": "AuthorizeOfflinePass",
-      "messageType": "Response"
-    },
-    {
-      "action": "ReserveBay",
-      "messageType": "Request"
-    },
-    {
-      "action": "ReserveBay",
-      "messageType": "Response"
-    },
-    {
-      "action": "CancelReservation",
-      "messageType": "Request"
-    },
-    {
-      "action": "CancelReservation",
-      "messageType": "Response"
-    },
-    {
-      "action": "StartService",
-      "messageType": "Request"
-    },
-    {
-      "action": "StartService",
-      "messageType": "Response"
-    },
-    {
-      "action": "StopService",
-      "messageType": "Request"
-    },
-    {
-      "action": "StopService",
-      "messageType": "Response"
-    },
-    {
-      "action": "TransactionEvent",
-      "messageType": "Request"
-    },
-    {
-      "action": "TransactionEvent",
-      "messageType": "Response"
-    },
-    {
-      "action": "SessionEnded",
-      "messageType": "Event"
-    },
-    {
-      "action": "ChangeConfiguration",
-      "messageType": "Request"
-    },
-    {
-      "action": "ChangeConfiguration",
-      "messageType": "Response"
-    },
-    {
-      "action": "Reset",
-      "messageType": "Request"
-    },
-    {
-      "action": "Reset",
-      "messageType": "Response"
-    },
-    {
-      "action": "UpdateFirmware",
-      "messageType": "Request"
-    },
-    {
-      "action": "UpdateFirmware",
-      "messageType": "Response"
-    },
-    {
-      "action": "SetMaintenanceMode",
-      "messageType": "Request"
-    },
-    {
-      "action": "SetMaintenanceMode",
-      "messageType": "Response"
-    },
-    {
-      "action": "UpdateServiceCatalog",
-      "messageType": "Request"
-    },
-    {
-      "action": "UpdateServiceCatalog",
-      "messageType": "Response"
-    },
-    {
-      "action": "SignCertificate",
-      "messageType": "Request"
-    },
-    {
-      "action": "SignCertificate",
-      "messageType": "Response"
-    },
-    {
-      "action": "CertificateInstall",
-      "messageType": "Request"
-    },
-    {
-      "action": "CertificateInstall",
-      "messageType": "Response"
-    },
-    {
-      "action": "TriggerCertificateRenewal",
-      "messageType": "Request"
-    },
-    {
-      "action": "TriggerCertificateRenewal",
-      "messageType": "Response"
-    },
-    {
-      "action": "TriggerMessage",
-      "messageType": "Request"
-    },
-    {
-      "action": "TriggerMessage",
-      "messageType": "Response"
-    }
+  "_comment": "OSPP §5.6 message-signing classification, as machine-readable data. MUST stay BYTE-IDENTICAL with the sibling copy in the other SDK repo (ospp-sdk-php: tests/Contract/Crypto/fixtures/signing-classification.json ; sdk-ts: tests/crypto/fixtures/signing-classification.json). Cross-language parity safety net: both SDKs assert requiresMac() against EVERY row below, so a signing rule implemented in one language and not the other turns one repo suite RED. The table is exhaustive -- all 47 message types of Chapter 03 catalogue, 44 signed and 3 structurally exempt -- because §5.6 removed per-message judgement entirely: \"every MQTT message MUST carry a valid mac, in either direction, with exactly three exceptions. There are no other exemptions, no per-message judgement, and no informational category.\"",
+  "specRef": "feat/topology-and-signing (untagged; .spec-ref still names v0.10.0 because a pin MUST NOT anticipate an unreleased tag)",
+  "specSection": "06-security.md §5.1, §5.6, §5.7",
+  "modes": [
+    "All",
+    "None"
   ],
-  "alwaysExempt": [
+  "defaultMode": "All",
+  "removedMode": {
+    "value": "Critical",
+    "reason": "With everything signed it selected nothing. Removed rather than deprecated: the protocol is unreleased, so there is no installed base a compatibility window would serve. The 47-row per-message classification table went with it."
+  },
+  "structuralExemptions": [
     {
       "action": "BootNotification",
-      "messageType": "Request"
+      "messageType": "Request",
+      "reason": "It PRECEDES the session key. There is no key to sign with."
     },
     {
       "action": "BootNotification",
-      "messageType": "Response"
+      "messageType": "Response",
+      "reason": "It CARRIES the session key. A MAC computed with the key delivered inside the same message is cryptographically void."
     },
     {
       "action": "ConnectionLost",
-      "messageType": "Event"
+      "messageType": "Event",
+      "reason": "It REPLACES the station. Published by the broker after the station is gone, and on a reconnect the station holds key N-1 while the server has rotated to key N, so a will-MAC is guaranteed stale on arrival."
     }
   ],
+  "totals": {
+    "messageTypes": 47,
+    "signedInAll": 44,
+    "structurallyExempt": 3
+  },
   "phpApiOnlySuperset": [
     "IssueOfflinePass",
     "RevokeOfflinePass",
     "WebPaymentAuthorization"
+  ],
+  "messages": [
+    {
+      "action": "AuthorizeOfflinePass",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "AuthorizeOfflinePass",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "BootNotification",
+      "messageType": "Request",
+      "signedInAll": false
+    },
+    {
+      "action": "BootNotification",
+      "messageType": "Response",
+      "signedInAll": false
+    },
+    {
+      "action": "CancelReservation",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "CancelReservation",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "CertificateInstall",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "CertificateInstall",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "ChangeConfiguration",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "ChangeConfiguration",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "ConnectionLost",
+      "messageType": "Event",
+      "signedInAll": false
+    },
+    {
+      "action": "DataTransfer",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "DataTransfer",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "DiagnosticsNotification",
+      "messageType": "Event",
+      "signedInAll": true
+    },
+    {
+      "action": "FirmwareStatusNotification",
+      "messageType": "Event",
+      "signedInAll": true
+    },
+    {
+      "action": "GetConfiguration",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "GetConfiguration",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "GetDiagnostics",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "GetDiagnostics",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "Heartbeat",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "Heartbeat",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "MeterValues",
+      "messageType": "Event",
+      "signedInAll": true
+    },
+    {
+      "action": "ReserveBay",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "ReserveBay",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "Reset",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "Reset",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "SecurityEvent",
+      "messageType": "Event",
+      "signedInAll": true
+    },
+    {
+      "action": "SessionEnded",
+      "messageType": "Event",
+      "signedInAll": true
+    },
+    {
+      "action": "SetMaintenanceMode",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "SetMaintenanceMode",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "SignCertificate",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "SignCertificate",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "StartService",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "StartService",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "StatusNotification",
+      "messageType": "Event",
+      "signedInAll": true
+    },
+    {
+      "action": "StopService",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "StopService",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "TransactionEvent",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "TransactionEvent",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "TriggerCertificateRenewal",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "TriggerCertificateRenewal",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "TriggerMessage",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "TriggerMessage",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "UpdateFirmware",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "UpdateFirmware",
+      "messageType": "Response",
+      "signedInAll": true
+    },
+    {
+      "action": "UpdateServiceCatalog",
+      "messageType": "Request",
+      "signedInAll": true
+    },
+    {
+      "action": "UpdateServiceCatalog",
+      "messageType": "Response",
+      "signedInAll": true
+    }
   ]
 }

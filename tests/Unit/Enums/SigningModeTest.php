@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Ospp\Protocol\Tests\Unit\Enums;
 
+use Ospp\Protocol\Enums\MessageType;
 use Ospp\Protocol\Enums\SigningMode;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -11,161 +12,58 @@ use PHPUnit\Framework\TestCase;
 final class SigningModeTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_three_cases(): void
+    public function it_has_exactly_two_cases(): void
     {
-        self::assertCount(3, SigningMode::cases());
+        // spec/06-security.md §5.1: "Two modes are defined". `Critical` is
+        // removed rather than deprecated -- with everything signed it selected
+        // nothing, and there is no installed base a window would serve.
+        self::assertCount(2, SigningMode::cases());
     }
 
     #[Test]
     public function all_cases_have_correct_values(): void
     {
         self::assertSame('All', SigningMode::ALL->value);
-        self::assertSame('Critical', SigningMode::CRITICAL->value);
         self::assertSame('None', SigningMode::NONE->value);
     }
 
-    // --- shouldSign in ALL mode ---
-
     #[Test]
-    public function all_mode_signs_critical_actions(): void
+    public function the_default_is_all(): void
     {
-        self::assertTrue(SigningMode::ALL->shouldSign('StartService'));
-        self::assertTrue(SigningMode::ALL->shouldSign('StopService'));
+        self::assertSame(SigningMode::ALL, SigningMode::default());
     }
-
-    #[Test]
-    public function all_mode_signs_non_critical_actions(): void
-    {
-        self::assertTrue(SigningMode::ALL->shouldSign('Heartbeat'));
-        self::assertTrue(SigningMode::ALL->shouldSign('StatusNotification'));
-        self::assertTrue(SigningMode::ALL->shouldSign('MeterValues'));
-        self::assertTrue(SigningMode::ALL->shouldSign('SomeArbitraryAction'));
-    }
-
-    #[Test]
-    public function all_mode_exempts_boot_notification(): void
-    {
-        // BootNotification is always-exempt (whole-action) — never signed.
-        self::assertFalse(SigningMode::ALL->shouldSign('BootNotification'));
-    }
-
-    // --- shouldSign in CRITICAL mode ---
-
-    #[Test]
-    public function critical_mode_signs_critical_actions(): void
-    {
-        $criticalActions = [
-            'StartService',
-            'StopService',
-            'ReserveBay',
-            'CancelReservation',
-            'TransactionEvent',
-            'AuthorizeOfflinePass',
-            'SignCertificate',
-            'CertificateInstall',
-            'TriggerCertificateRenewal',
-            'ChangeConfiguration',
-            'Reset',
-            'UpdateFirmware',
-            'SetMaintenanceMode',
-            'UpdateServiceCatalog',
-            'TriggerMessage',
-            'IssueOfflinePass',
-            'RevokeOfflinePass',
-            'WebPaymentAuthorization',
-        ];
-
-        foreach ($criticalActions as $action) {
-            self::assertTrue(
-                SigningMode::CRITICAL->shouldSign($action),
-                "CRITICAL mode should sign '{$action}'",
-            );
-        }
-    }
-
-    #[Test]
-    public function critical_mode_does_not_sign_non_critical_actions(): void
-    {
-        $nonCritical = [
-            'Heartbeat',
-            'StatusNotification',
-            'MeterValues',
-            'GetConfiguration',
-            'GetDiagnostics',
-            'SomeArbitraryAction',
-        ];
-
-        foreach ($nonCritical as $action) {
-            self::assertFalse(
-                SigningMode::CRITICAL->shouldSign($action),
-                "CRITICAL mode should NOT sign '{$action}'",
-            );
-        }
-    }
-
-    // --- shouldSign in NONE mode ---
-
-    #[Test]
-    public function none_mode_does_not_sign_critical_actions(): void
-    {
-        self::assertFalse(SigningMode::NONE->shouldSign('StartService'));
-        self::assertFalse(SigningMode::NONE->shouldSign('TransactionEvent'));
-        self::assertFalse(SigningMode::NONE->shouldSign('SignCertificate'));
-    }
-
-    #[Test]
-    public function none_mode_does_not_sign_non_critical_actions(): void
-    {
-        self::assertFalse(SigningMode::NONE->shouldSign('Heartbeat'));
-        self::assertFalse(SigningMode::NONE->shouldSign('MeterValues'));
-        self::assertFalse(SigningMode::NONE->shouldSign('SomeArbitraryAction'));
-    }
-
-    // --- shouldVerify delegates to shouldSign ---
-
-    #[Test]
-    public function should_verify_matches_should_sign_for_all_mode(): void
-    {
-        self::assertTrue(SigningMode::ALL->shouldVerify('StartService'));
-        self::assertTrue(SigningMode::ALL->shouldVerify('Heartbeat'));
-    }
-
-    #[Test]
-    public function should_verify_matches_should_sign_for_critical_mode(): void
-    {
-        self::assertTrue(SigningMode::CRITICAL->shouldVerify('StartService'));
-        self::assertFalse(SigningMode::CRITICAL->shouldVerify('Heartbeat'));
-    }
-
-    #[Test]
-    public function should_verify_matches_should_sign_for_none_mode(): void
-    {
-        self::assertFalse(SigningMode::NONE->shouldVerify('StartService'));
-        self::assertFalse(SigningMode::NONE->shouldVerify('Heartbeat'));
-    }
-
-    // --- from / tryFrom ---
 
     #[Test]
     public function it_can_be_created_from_valid_string(): void
     {
         self::assertSame(SigningMode::ALL, SigningMode::from('All'));
-        self::assertSame(SigningMode::CRITICAL, SigningMode::from('Critical'));
         self::assertSame(SigningMode::NONE, SigningMode::from('None'));
     }
 
     #[Test]
-    public function try_from_returns_null_for_invalid_values(): void
+    public function try_from_refuses_the_removed_and_the_lowercase_forms(): void
     {
+        // §5.1: lowercase spellings "were drift, not an alternative form, and a
+        // receiver MUST NOT accept them".
+        self::assertNull(SigningMode::tryFrom('Critical'));
         self::assertNull(SigningMode::tryFrom('all'));
-        self::assertNull(SigningMode::tryFrom(''));
         self::assertNull(SigningMode::tryFrom('none'));
+        self::assertNull(SigningMode::tryFrom('critical'));
+        self::assertNull(SigningMode::tryFrom(''));
     }
 
     #[Test]
     public function it_throws_for_invalid_string_with_from(): void
     {
         $this->expectException(\ValueError::class);
-        SigningMode::from('invalid');
+        SigningMode::from('Critical');
+    }
+
+    #[Test]
+    public function requires_mac_answers_per_action_and_message_type(): void
+    {
+        self::assertTrue(SigningMode::ALL->requiresMac('StartService', MessageType::REQUEST));
+        self::assertFalse(SigningMode::ALL->requiresMac('BootNotification', MessageType::REQUEST));
+        self::assertFalse(SigningMode::NONE->requiresMac('StartService', MessageType::REQUEST));
     }
 }

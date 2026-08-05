@@ -144,7 +144,7 @@ final class ConfigurationKeyTest extends TestCase
     public function default_values_for_security_profile(): void
     {
         self::assertTrue(ConfigurationKey::AUTHORIZATION_CACHE_ENABLED->defaultValue());
-        self::assertSame('Critical', ConfigurationKey::MESSAGE_SIGNING_MODE->defaultValue());
+        self::assertSame('All', ConfigurationKey::MESSAGE_SIGNING_MODE->defaultValue());
     }
 
     #[Test]
