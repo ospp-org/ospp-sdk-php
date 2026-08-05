@@ -11,7 +11,7 @@ namespace Ospp\Protocol\Enums;
  * on the wire. `UNKNOWN` is the seventh and is not one of them: a station enters
  * it at power-on and leaves it by self-test, and a server enters it on
  * connection loss and leaves it on the next accepted StatusNotification. Both
- * parties hold it; neither transmits it (spec 05-state-machines.md §1.2).
+ * parties hold it; neither transmits it (spec 05-state-machines.md §2.2).
  *
  * The case stays. `UNKNOWN` is a real state this enum must be able to express —
  * it is what a server holds a bay at before its first report, and it is a
@@ -87,7 +87,7 @@ enum BayStatus: string
         if (! $case->isReportable()) {
             throw new \ValueError(sprintf(
                 '"%s" is not a reportable bay status. `Unknown` is held by both parties and '
-                .'transmitted by neither (spec 05-state-machines.md §1.2); a message carrying '
+                .'transmitted by neither (spec 05-state-machines.md §2.2); a message carrying '
                 .'it is non-conforming. Reportable: %s.',
                 $osppValue,
                 implode(', ', array_map(

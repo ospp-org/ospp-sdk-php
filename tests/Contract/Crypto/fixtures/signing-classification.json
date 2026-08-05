@@ -1,6 +1,6 @@
 {
   "_comment": "OSPP §5.6 message-signing classification, as machine-readable data. MUST stay BYTE-IDENTICAL with the sibling copy in the other SDK repo (ospp-sdk-php: tests/Contract/Crypto/fixtures/signing-classification.json ; sdk-ts: tests/crypto/fixtures/signing-classification.json). Cross-language parity safety net: both SDKs assert requiresMac() against EVERY row below, so a signing rule implemented in one language and not the other turns one repo suite RED. The table is exhaustive -- all 47 message types of Chapter 03 catalogue, 44 signed and 3 structurally exempt -- because §5.6 removed per-message judgement entirely: \"every MQTT message MUST carry a valid mac, in either direction, with exactly three exceptions. There are no other exemptions, no per-message judgement, and no informational category.\"",
-  "specRef": "feat/topology-and-signing (untagged; .spec-ref still names v0.10.0 because a pin MUST NOT anticipate an unreleased tag)",
+  "specRef": "v0.11.0",
   "specSection": "06-security.md §5.1, §5.6, §5.7",
   "modes": [
     "All",

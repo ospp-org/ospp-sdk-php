@@ -7,6 +7,214 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.12.0] — 2026-08-05
+
+**SDK-pair release against spec `v0.11.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md),
+*SDK-pair releases against a spec tag*). Released at the same version as
+`@ospp/protocol` **0.12.0**, from the same spec pin.
+
+`.spec-ref` **v0.10.0 → v0.11.0**.
+
+> **BREAKING — this release implements a contract that breaks every consumer built against
+> the previous one.** Spec `v0.11.0` breaks the wire in five places at once and folds them
+> into a single `protocolVersion` move to `0.3.0`. Symbols are deleted rather than
+> deprecated, because in each case there is no correct narrower thing for the old one to
+> mean. There is no compatibility window and no shim.
+>
+> **Deploy order is not a preference.** A receiver must accept a new form before any sender
+> emits it. Two items are a total fleet outage if enforced early: exact-match version
+> negotiation, and MAC enforcement. Read *Breaking changes, and the order they must ship in*
+> in the spec's CHANGELOG before deploying any of this.
+
+### Added
+
+- **`StationState` + `StationTransitions`** — the station's own machine, six states, and the
+  **outermost** one: every other machine on a station is scoped inside it. Neither SDK had
+  it. This SDK had `BootNotificationStatus` as three bare enum cases with no behaviour and
+  nothing consuming them, so `3018 TOPOLOGY_MISMATCH` depended on a state that existed
+  nowhere structurally.
+
+  `Pending` and `Rejected` are **restricted** states and differ in exactly one respect —
+  whether the station answers commands. That resolves a three-way contradiction in
+  `boot-notification.md`: rule 5 said the station MAY operate normally, rule 3 eleven lines
+  above defines "normal operation" as the post-`Accepted` state, and rule 2 forbade it from
+  sending anything at all. Under one reading a `Pending` station activates hardware on a
+  StartService and delivers an unpaid wash. Resolved: a restricted station answers commands
+  (`Pending` only), sends nothing unsolicited, and serves no customer — but a session
+  already running continues and settles, so a customer who has paid is served.
+
+  The §1.4 rows are methods rather than prose. The load-bearing one: `Pending` **holds** a
+  session key and `Rejected` does not. A test pins the two against each other — no state may
+  answer a command in a state where it holds no key.
+
+- **`BayTopology`** — this SDK carried no topology model of any kind; `bayCount` appeared
+  only inside the text of error 4020's recommended action. `bay-topology.schema.json` is
+  `$ref`'d by both the request's `bays[]` and the 3018 response's `details.expected` /
+  `details.declared`, so there is one definition instead of two copies.
+
+  Comparison is by **set**, in both directions. Order carries no meaning, so a station that
+  re-orders its declaration between boots has not changed its hardware and must not be held
+  out of service for it; and the mismatch is symmetric, so a bay present on one side only is
+  a mismatch whichever side it is on. Labels are never compared — a corrected typo in a
+  firmware constant MUST NOT put a station into `Pending`. Bounds (64 bays, 32 programs) are
+  asserted against the vendored schema rather than transcribed from it.
+
+- **`ProtocolVersion::isSupportedBy(iterable $set)`** — takes an iterable so a server can
+  pass whatever it holds its configured set in. An empty set accepts nothing, rather than
+  silently accepting every station.
+
+- **`3017 PROGRAM_NOT_DECLARED`** — the `programNumber` was never declared for that bay. A
+  *reference* failure, not a value failure: the ordinal is well-formed and in range, it
+  simply names nothing. That is why it is not 3015, and not 3003, which presupposes the
+  program IS declared and is merely unavailable right now. Recoverable: `false`.
+
+- **`3018 TOPOLOGY_MISMATCH`** — the boot declaration disagrees with the provisioned
+  topology, in either direction. In 3xxx and not the transport range: it is a disagreement
+  about hardware, not a transport failure. Recoverable: `true` — the station is out of
+  service but reachable.
+
+  Registry total 114 → 116 in every place this SDK states one; the stale class docblock
+  claiming 107 goes with it. `httpStatus` for both is this SDK's extension and has no clause
+  (§2.4's table lists neither, because both are MQTT-only). 3017 takes 404 following the
+  registry's own "one code per identifier KIND" analogy, where 3005/3006/3012 are all 404;
+  3018 takes 409, the shape of a disagreement between two declarations. Both match
+  `@ospp/protocol` exactly.
+
+- **`EffectedBy`** — the canonical bay table's party column.
+
+- **`canonical-json-vectors.json`** — eleven shared cross-language vectors, byte-identical
+  with the sibling copy in `@ospp/protocol`.
+
+### Changed
+
+- **`BayTransitions::canTransition()` now requires the party** rather than defaulting to
+  one. The default *was* the merge that caused the divergence: the table merged the bay a
+  station operates with the bay a server believes in, and each SDK read the merge the other
+  way. This SDK had the profile's eighteen station rows; it gains the two the arc added —
+  `Unknown -> Occupied` and `Unknown -> Finishing`, for a station that rebooted mid-session
+  and owes a truthful post-boot report — and the six `Server` rows behind an explicit party
+  argument. Twenty `Station` pairs, six `Server`, twenty-six in all.
+
+- **Signing default is `All`**, and the config key moves Dynamic → Static: the mode is bound
+  to the session key, which is issued at boot.
+
+- **`MessageSigningRegistry` replaces `CriticalMessageRegistry`**, holding only the three
+  structural exemptions and keying on `(action, messageType)` rather than on `action` alone.
+  The old axis could not tell the BootNotification REQUEST from its RESPONSE, and the two
+  are exempt for different reasons — one precedes the key, one carries it.
+
+- **`opis/json-schema` moves from `suggest` to `require-dev`.** It is a test dependency; the
+  shipped package gains no runtime requirement.
+
+### Removed
+
+- **`ResetType`** — deleted, not narrowed. `Hard`/`Soft` are gone and there is no remaining
+  value for the enum to hold: one reboot operation, carrying an optional `force`. No value
+  of the message clears credentials, because OSPP keeps no bootstrap credential and a remote
+  wipe would leave the station unreachable by every channel it has.
+
+- **`ProtocolVersion::isCompatibleWith()`** — deleted rather than narrowed. A consumer still
+  calling it would read a wrong answer as a right one, and the relation it expressed does
+  not exist any more. A shared MAJOR implied nothing: MAJOR is 0 for every version OSPP has
+  shipped, so the rule classified 0.1.0 and 0.10.0 as compatible while the pre-1.0 policy
+  directly above it licences breaking changes between 0.x minors. That contradiction cost
+  money — a 0.4.0 station accepted by a 0.3.0 server delivers a full session and emits
+  SessionEnded with a reason the older schema rejects, and SessionEnded is the sole billing
+  source when no StopService was issued. Session delivered, never billed, on a pairing the
+  rule told the server to accept.
+
+- **`SigningMode::Critical`** — with everything signed it selected nothing, and the 47-row
+  per-message classification table goes with it.
+
+- **`bayCount` / `bayIds`** from the wire, with no compatibility window; **`services[]` on
+  StatusNotification becomes `programs[]`**.
+
+### Fixed
+
+- **PHP could not express an empty JSON object, and Heartbeat is one.** The two reference
+  implementations disagreed on `{}`, and the spec names both as authoritative for
+  canonicalization — so this was not a bug in one of them, it was a disagreement about what
+  the protocol IS. Measured on a Heartbeat envelope, before the fix:
+
+  ```
+  ospp/protocol    {"action":"Heartbeat",...,"payload":[],...}
+                   mac yGfzxYzyIdpJTF2GtDB4qRwmQxBT1FasV0NzGTdmXoo=
+  @ospp/protocol   {"action":"Heartbeat",...,"payload":{},...}
+                   mac rXmjv9B7uauqFPHM00XjsPKiynyk6PdeRwoEiAoLOfU=
+  ```
+
+  `heartbeat-request.schema.json` declares `"properties": {}` with `additionalProperties:
+  false`, so a Heartbeat REQUEST payload is exactly an empty object — and Heartbeat is one of
+  the thirteen message types this release newly requires to be MAC'd. A PHP peer and a TS
+  peer would have rejected every heartbeat between them: CORE-007's 3.5× timeout fires on a
+  healthy station, CORE-008 marks its bays `Unknown`, and the server stops selling on
+  hardware that is there.
+
+  The cause: `serialize(array $data)` could not express `{}` at all — PHP's `[]` is ambiguous
+  between an empty array and an empty object, and `json_encode` resolves it to `[]`. The
+  serializer now accepts `\stdClass` alongside `array` and preserves the distinction at every
+  nesting level; an empty **array** still emits `[]`, which is the other half of the same
+  rule. This needed no spec clause: §4.8.1 does not state how an empty object renders because
+  JSON already distinguishes the two container types and the schema says which one the payload
+  is. What was missing was the ability of this class to say it.
+
+- **`MacSigner` failed OPEN and now fails closed.** `base64_decode(..., true)` returning
+  `false` degraded to the **empty HMAC key** and still returned a well-formed MAC, so two
+  peers both holding garbage verified each other successfully, and anyone who knew the key
+  was invalid could forge with the empty one. Now `sign()` raises — §5.7 forbids both of its
+  alternatives, publishing unsigned and dropping silently — and `verify()` returns `false`,
+  because a receiver holding no key cannot verify and cannot therefore accept.
+
+  Key length is deliberately **not** checked: §5.2 requires the *server* to generate 32
+  bytes, but `boot-notification-response.schema.json` accepts a base64 string of 1–1024
+  characters and no clause makes a station reject a conforming response carrying another
+  length.
+
+- **This SDK ran none of the spec's conformance corpus.** It vendored the complete schema set
+  and asserted only that the files existed and that one of them parsed as an array. That is
+  the asymmetry that let the two SDKs disagree about the wire while both suites were green:
+  the byte-identity gate catches a vendored schema that has *drifted*, but nothing caught a
+  schema whose content this SDK *misunderstood*, because nothing ever validated a payload
+  against one.
+
+  **316 vectors now run here** — 160 that must pass and 156 that must be rejected, the same
+  counts the spec's own `verify-schemas.py` reports. Two details are the difference between
+  coverage and the appearance of it: an unmapped vector **fails** rather than being skipped,
+  and the filename-prefix search goes down to **one** part, because `hello`, `receipt` and
+  `challenge` are single-word schema names and a loop that stops at two never reaches them —
+  fifteen BLE vectors.
+
+- **Stale spec cross-references.** Spec `v0.11.0` inserted the station machine as
+  `05-state-machines.md` §1 and renumbered every machine under it. Two docblocks in `src/`
+  still cited §1.2 — now the **station's** states — while meaning the bay's, which is now
+  §2.2.
+
+### Vendored
+
+- `schemas/` — byte-identical to spec `v0.11.0`, 86 files, verified through
+  `scripts/check-schemas.sh`'s own clone path.
+- `tests/Fixtures/test-vectors/` — 316 vectors, byte-identical to the tag's
+  `conformance/test-vectors/`.
+- `tests/Contract/Crypto/fixtures/signing-classification.json` — `specRef` was a sentence
+  explaining that the tag did not yet exist; it now reads `v0.11.0`. Byte-identity with the
+  `@ospp/protocol` copy is preserved.
+
+### What breaks
+
+| Caller | Breaks | What to do |
+|---|:---:|---|
+| Uses `ResetType` | **yes** | Deleted. One reboot operation, optional `force`. |
+| Calls `ProtocolVersion::isCompatibleWith()` | **yes** | Use `isSupportedBy($set)`. There is no compatibility relation any more. |
+| Uses `SigningMode::Critical` or `CriticalMessageRegistry` | **yes** | Use `MessageSigningRegistry`; the default is now `All`. |
+| Calls `canTransition($from, $to)` on a bay | **yes** | Pass the `EffectedBy` party. There is deliberately no default. |
+| Builds a BootNotification with `bayCount` / `bayIds` | **yes** | Declare `bays[]`, each with `bayNumber` + `programNumbers`. |
+| Reads `services[]` off a StatusNotification | **yes** | Now `programs[]`, and the set MUST EQUAL the bay's declaration. |
+| Relies on a MAC being produced from an invalid key | **yes** | `sign()` now raises; `verify()` returns `false`. This was a forgery path. |
+| Canonicalizes a payload with an empty object | **yes, silently, before now** | `{}` no longer serializes as `[]`. Any MAC computed by 0.11.0 over an empty-object payload was wrong. |
+| Passes `array` to `CanonicalJsonSerializer::serialize()` | no | Still accepted; `\stdClass` is now accepted alongside it. |
+
+---
+
 ## [0.11.0] — 2026-07-30
 
 **SDK-pair release against spec `v0.10.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md),
