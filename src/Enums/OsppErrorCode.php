@@ -7,9 +7,10 @@ namespace Ospp\Protocol\Enums;
 /**
  * Complete OSPP Error Code registry.
  *
- * 107 standard error codes across 6 categories (spec 07-errors.md §1.1, v0.4.2:
- * 102 → 106 with the 2014-2017 additions; v0.6.2: → 107 with 2018
- * SERVER_AUTH_NONCE_MISMATCH). Fully spec-aligned with sdk-ts.
+ * 116 standard error codes across 6 categories (spec 07-errors.md §1.1). The
+ * count moved 114 → 116 with 3017 PROGRAM_NOT_DECLARED and 3018
+ * TOPOLOGY_MISMATCH; the registry states its own total in five places and they
+ * move together. Fully spec-aligned with sdk-ts.
  */
 enum OsppErrorCode: int
 {
@@ -55,7 +56,8 @@ enum OsppErrorCode: int
     // spec v0.8.0 07-errors.md §3.2 — provisioning token unusable (expired / superseded / revoked)
     case PROVISIONING_TOKEN_INVALID = 2019;
 
-    // 3xxx - Session & Bay Errors (17 codes)
+    // 3xxx - Session & Bay Errors (19 codes — v0.11.0 added 3017 PROGRAM_NOT_DECLARED,
+    // 3018 TOPOLOGY_MISMATCH; the range is dense and gaps are never back-filled)
     case SESSION_GENERIC = 3000;
     case BAY_BUSY = 3001;
     case BAY_NOT_READY = 3002;
@@ -73,6 +75,8 @@ enum OsppErrorCode: int
     case BAY_RESERVED = 3014;
     case PAYLOAD_INVALID = 3015;
     case ACTIVE_SESSIONS_PRESENT = 3016;
+    case PROGRAM_NOT_DECLARED = 3017;
+    case TOPOLOGY_MISMATCH = 3018;
 
     // 4xxx - Payment & Credit Errors (20 codes — v0.8.0 added 4015-4017, v0.8.3 added 4018-4019, v0.8.4 added 4020)
     case PAYMENT_GENERIC = 4000;
@@ -206,6 +210,8 @@ enum OsppErrorCode: int
             self::HARDWARE_ACTIVATION_FAILED,
             self::RESERVATION_NOT_FOUND,
             self::PAYLOAD_INVALID,
+            self::PROGRAM_NOT_DECLARED,
+            self::TOPOLOGY_MISMATCH,
             self::PAYMENT_GENERIC,
             self::OFFLINE_LIMIT_EXCEEDED,
             self::OFFLINE_PER_TX_EXCEEDED,
@@ -281,6 +287,7 @@ enum OsppErrorCode: int
             self::MAX_DURATION_EXCEEDED,
             self::RESERVATION_NOT_FOUND,
             self::PAYLOAD_INVALID,
+            self::PROGRAM_NOT_DECLARED,
             self::OFFLINE_LIMIT_EXCEEDED,
             self::OFFLINE_PER_TX_EXCEEDED,
             self::WEBHOOK_SIGNATURE_INVALID,
@@ -447,7 +454,13 @@ enum OsppErrorCode: int
             // context it wasn't issued for (cross-org / wrong user); RFC 9110 403
             // "authenticated, not permitted for this resource".
             self::OFFLINE_ORG_MISMATCH, self::OFFLINE_USER_MISMATCH => 403,
-            self::BAY_NOT_FOUND, self::SESSION_NOT_FOUND, self::RESERVATION_NOT_FOUND => 404,
+            // 3017/3018 are MQTT-only -- BootNotification and StartService, neither a
+            // REST endpoint -- so §2.4's HTTP status table does not list them and both
+            // rows here are this SDK's extension with no clause behind them. 3017
+            // follows the registry's own stated analogy, "one code per identifier
+            // KIND", where 3005/3006/3012 are 404. Matched byte-for-byte in sdk-ts.
+            self::BAY_NOT_FOUND, self::SESSION_NOT_FOUND, self::RESERVATION_NOT_FOUND,
+            self::PROGRAM_NOT_DECLARED => 404,
             self::BAY_BUSY, self::BAY_RESERVED, self::SESSION_ALREADY_ACTIVE,
             // v0.8.0: 4015 → 409 — the retry presents an identity that conflicts with
             // the one the token already bound; not a replay, and no second cert issued.
@@ -461,7 +474,9 @@ enum OsppErrorCode: int
             // resource-state preconditions — the same family as BAY_BUSY above.
             self::BAY_NOT_READY,
             self::SESSION_MISMATCH,
-            self::OPERATION_IN_PROGRESS => 409,
+            self::OPERATION_IN_PROGRESS,
+            // 3018 is a disagreement between two declarations, which is 409's shape.
+            self::TOPOLOGY_MISMATCH => 409,
             // v0.5.2: 2017 OFFLINE_RECEIPT_MISMATCH aligned cross-SDK to 422 —
             // signature itself verified per spec §3.2; the cross-check failure
             // is "syntax correct, instructions inconsistent" ≡ RFC 9110 422

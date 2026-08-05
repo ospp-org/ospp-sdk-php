@@ -12,12 +12,13 @@ use PHPUnit\Framework\TestCase;
 final class OsppErrorCodeTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_114_cases(): void
+    public function it_has_exactly_116_cases(): void
     {
         // 102 standard + 4 v0.5.2 auth codes (2014-2017, spec v0.4.2 07-errors.md §3.2)
         // + 1 v0.6.2 auth code (2018 SERVER_AUTH_NONCE_MISMATCH) = 107.
-        // + 4 v0.8.0 provisioning-identity codes (2019, 4015, 4016, 4017) = 114.
-        self::assertCount(114, OsppErrorCode::cases());
+        // + 4 v0.8.0 provisioning-identity codes (2019, 4015, 4016, 4017) = 114,
+        // + 3017 PROGRAM_NOT_DECLARED and 3018 TOPOLOGY_MISMATCH = 116.
+        self::assertCount(116, OsppErrorCode::cases());
     }
 
     // =========================================================================
@@ -971,7 +972,7 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::cases(),
             static fn (OsppErrorCode $c): bool => $c->category() === 'session',
         ));
-        self::assertSame(17, $count);
+        self::assertSame(19, $count);
     }
 
     #[Test]
