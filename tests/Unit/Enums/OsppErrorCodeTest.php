@@ -12,13 +12,13 @@ use PHPUnit\Framework\TestCase;
 final class OsppErrorCodeTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_116_cases(): void
+    public function it_has_exactly_118_cases(): void
     {
         // 102 standard + 4 v0.5.2 auth codes (2014-2017, spec v0.4.2 07-errors.md §3.2)
         // + 1 v0.6.2 auth code (2018 SERVER_AUTH_NONCE_MISMATCH) = 107.
         // + 4 v0.8.0 provisioning-identity codes (2019, 4015, 4016, 4017) = 114,
-        // + 3017 PROGRAM_NOT_DECLARED and 3018 TOPOLOGY_MISMATCH = 116.
-        self::assertCount(116, OsppErrorCode::cases());
+        // + 3017 PROGRAM_NOT_DECLARED and 3018 TOPOLOGY_MISMATCH = 118.
+        self::assertCount(118, OsppErrorCode::cases());
     }
 
     // =========================================================================
@@ -966,13 +966,13 @@ final class OsppErrorCodeTest extends TestCase
     }
 
     #[Test]
-    public function session_category_has_seventeen_codes(): void
+    public function session_category_has_twenty_codes(): void
     {
         $count = count(array_filter(
             OsppErrorCode::cases(),
             static fn (OsppErrorCode $c): bool => $c->category() === 'session',
         ));
-        self::assertSame(19, $count);
+        self::assertSame(20, $count);
     }
 
     #[Test]
@@ -996,12 +996,12 @@ final class OsppErrorCodeTest extends TestCase
     }
 
     #[Test]
-    public function server_category_has_eight_codes(): void
+    public function server_category_has_nine_codes(): void
     {
         $count = count(array_filter(
             OsppErrorCode::cases(),
             static fn (OsppErrorCode $c): bool => $c->category() === 'server',
         ));
-        self::assertSame(8, $count);
+        self::assertSame(9, $count);
     }
 }

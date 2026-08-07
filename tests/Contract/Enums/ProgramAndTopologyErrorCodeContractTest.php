@@ -67,9 +67,9 @@ final class ProgramAndTopologyErrorCodeContractTest extends TestCase
      * back-filled. Registry totals move 114 -> 116."
      */
     #[Test]
-    public function registryTotalIs116AndThe3xxxRangeIsDense(): void
+    public function registryTotalIs118AndThe3xxxRangeIsDense(): void
     {
-        self::assertCount(116, OsppErrorCode::cases());
+        self::assertCount(118, OsppErrorCode::cases());
 
         $threeK = array_values(array_filter(
             array_map(fn (OsppErrorCode $c) => $c->value, OsppErrorCode::cases()),
@@ -77,8 +77,8 @@ final class ProgramAndTopologyErrorCodeContractTest extends TestCase
         ));
         sort($threeK);
 
-        self::assertSame(range(3000, 3018), $threeK, '3xxx must be dense from 3000 to 3018');
-        self::assertCount(19, $threeK);
+        self::assertSame(range(3000, 3019), $threeK, '3xxx must be dense from 3000 to 3019');
+        self::assertCount(20, $threeK);
     }
 
     /**

@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.13.0] — 2026-08-07
+
+**SDK-pair release against spec `v0.11.1`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+Released at the same version as `@ospp/protocol` **0.13.0**, from the same spec pin.
+
+MINOR, not PATCH: three enum members are added, and a consumer pinned to `^0.12.0`
+must opt in to receive them.
+
+### Added
+
+- `SessionEndReason::OPERATOR_STOPPED` — an operator ended the session deliberately
+  (a Reset carrying `force: true`, or a station disable). The **only** member that
+  bills a non-zero amount for a session the station did not run to completion.
+  `Deauthorized` reads as the nearest alternative and carries "Session MUST be
+  billed at zero", so reusing it delivers a wash and charges nothing for it.
+- `OsppErrorCode::SERVICE_NOT_BOUND = 3019` — the server holds no service→program
+  binding and cannot form a conforming StartService. Error / recoverable / **409**.
+- `OsppErrorCode::COMMAND_PRE_EMPTED = 6008` — the server stopped a command locally
+  that it could see the station would refuse, carrying `details.wouldBe`. Warning /
+  recoverable / **409**.
+
+Severity and HTTP status are asserted for both new codes rather than left to the
+`match` default arms, which would have given 3019 `Warning` and both `500`. A code
+carrying the wrong status is worse than one carrying none: a client retries a 500
+and does not retry a 409.
+
+### Fixed
+
+- **`4020`'s recommendedAction named a field the request no longer has.** It said
+  "correct the declared `bayCount`"; the spec has said `bays` since v0.11.0, and the
+  text was never regenerated because it is hand-written here rather than generated.
+  It also told the reader to "carry both counts", the two numbers that are equal
+  whenever a bay is swapped — the exact case the set comparison exists to catch.
+
+  The replacement is **shortened relative to the spec's registry text**, to fit
+  Appendix C's 500-char wire bound. `07-errors.md` §1.4 expressly permits this
+  "provided the corrective action itself survives". That divergence is deliberate:
+  syncing this string byte-for-byte with the registry would make every naive
+  emitter produce a non-conforming payload. Do not "fix" it by lengthening it.
+
+### Changed
+
+- vendored `schemas/` refreshed from spec `v0.11.1`; `.spec-ref` → `v0.11.1`.
+- registry counts: 116 → **118** cases, 3xxx dense to **3019**, server family 8 → **9**.
+
+---
+
 ## [0.12.0] — 2026-08-05
 
 **SDK-pair release against spec `v0.11.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md),

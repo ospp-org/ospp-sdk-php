@@ -11,9 +11,9 @@ use PHPUnit\Framework\TestCase;
 final class SessionEndReasonTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_five_cases(): void
+    public function it_has_exactly_six_cases(): void
     {
-        self::assertCount(5, SessionEndReason::cases());
+        self::assertCount(6, SessionEndReason::cases());
     }
 
     #[Test]

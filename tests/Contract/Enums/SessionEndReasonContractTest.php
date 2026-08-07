@@ -17,9 +17,9 @@ use PHPUnit\Framework\TestCase;
 final class SessionEndReasonContractTest extends TestCase
 {
     #[Test]
-    public function cardinality_is_exactly_5(): void
+    public function cardinality_is_exactly_6(): void
     {
-        self::assertCount(5, SessionEndReason::cases());
+        self::assertCount(6, SessionEndReason::cases());
     }
 
     #[Test]

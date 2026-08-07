@@ -56,8 +56,9 @@ enum OsppErrorCode: int
     // spec v0.8.0 07-errors.md §3.2 — provisioning token unusable (expired / superseded / revoked)
     case PROVISIONING_TOKEN_INVALID = 2019;
 
-    // 3xxx - Session & Bay Errors (19 codes — v0.11.0 added 3017 PROGRAM_NOT_DECLARED,
-    // 3018 TOPOLOGY_MISMATCH; the range is dense and gaps are never back-filled)
+    // 3xxx - Session & Bay Errors (20 codes — v0.11.0 added 3017 PROGRAM_NOT_DECLARED
+    // and 3018 TOPOLOGY_MISMATCH; v0.11.1 added 3019 SERVICE_NOT_BOUND; the range is
+    // dense and gaps are never back-filled)
     case SESSION_GENERIC = 3000;
     case BAY_BUSY = 3001;
     case BAY_NOT_READY = 3002;
@@ -77,6 +78,15 @@ enum OsppErrorCode: int
     case ACTIVE_SESSIONS_PRESENT = 3016;
     case PROGRAM_NOT_DECLARED = 3017;
     case TOPOLOGY_MISMATCH = 3018;
+    /**
+     * The server holds no service→program binding and cannot form a conforming
+     * StartService. The mirror of 3017, which is the STATION refusing an ordinal
+     * it was sent. spec v0.11.1 07-errors.md §3.3.
+     *
+     * Server-originated toward the requesting client and MUST NOT be transmitted
+     * to a station.
+     */
+    case SERVICE_NOT_BOUND = 3019;
 
     // 4xxx - Payment & Credit Errors (20 codes — v0.8.0 added 4015-4017, v0.8.3 added 4018-4019, v0.8.4 added 4020)
     case PAYMENT_GENERIC = 4000;
@@ -137,7 +147,7 @@ enum OsppErrorCode: int
     case BUFFER_FULL = 5111;
     case FIRMWARE_SIGNATURE_INVALID = 5112;
 
-    // 6xxx - Server Errors (8 codes)
+    // 6xxx - Server Errors (9 codes — v0.11.1 added 6008 COMMAND_PRE_EMPTED)
     case SERVER_GENERIC = 6000;
     case SERVER_INTERNAL_ERROR = 6001;
     case ACK_TIMEOUT = 6002;
@@ -146,6 +156,16 @@ enum OsppErrorCode: int
     case SESSION_ALREADY_ACTIVE = 6005;
     case RATE_LIMIT_EXCEEDED = 6006;
     case SERVICE_DEGRADED = 6007;
+    /**
+     * The server refused to dispatch a command it could see the station would
+     * refuse, and stopped it locally. spec v0.11.1 07-errors.md §3.6.
+     *
+     * `details.wouldBe` MUST carry the code the station would have answered. Not
+     * the station's own code: 3016 proves the message reached the station, whereas
+     * a pre-empt proves only what the server believed, and the server's view can be
+     * stale. A server MUST NOT pre-empt a Reset carrying `force: true`.
+     */
+    case COMMAND_PRE_EMPTED = 6008;
 
     public function category(): string
     {
@@ -243,7 +263,9 @@ enum OsppErrorCode: int
             self::PROVISIONING_REQUEST_INVALID,
             self::PROVISIONING_TOKEN_CONSUMED,
             self::PUBLIC_KEY_INVALID,
-            self::BAY_COUNT_MISMATCH => Severity::ERROR,
+            self::BAY_COUNT_MISMATCH,
+            // 3019: the server's configuration is incomplete — an operator has to act.
+            self::SERVICE_NOT_BOUND => Severity::ERROR,
 
             self::SERVICE_DEGRADED => Severity::INFO,
 
@@ -384,7 +406,11 @@ enum OsppErrorCode: int
             // 4020 — transcribed verbatim from the 4.02x registry row. Single
             // recovery: reachable only on a first provision (on a replay body drift
             // is ignored), so there is no branch and no discriminator.
-            self::BAY_COUNT_MISMATCH => 'Station: correct the declared `bayCount` and resubmit on the **same** token — this rejection does not consume it. Do **not** regenerate keys: they are not what was rejected, and a fresh key on a later retry is answered `4015`, which is not recoverable. If the declared count is right, the operator corrects the station record instead. Server: carry both counts in `details`.',
+            // Shortened to fit Appendix C's 500-char wire bound, which 07-errors.md §1.4
+            // expressly permits "provided the corrective action itself survives". The
+            // registry's full text is longer; this is NOT drift, and syncing it byte-for-byte
+            // with the spec would make every naive emitter produce a non-conforming payload.
+            self::BAY_COUNT_MISMATCH => 'Station: correct the declared `bays` and resubmit on the **same** token — it is not consumed. Do **not** regenerate keys: a fresh key later is answered `4015`, not recoverable. Compare `details.declaredBayNumbers` with `details.registeredBayNumbers` — their difference is the fault, and counts mislead because a swapped bay leaves both the same length. A truthful declaration means the operator corrects the station record; an untruthful one, the firmware\'s bay table. Server: carry both sets.',
 
             default => null,
         };
@@ -476,7 +502,12 @@ enum OsppErrorCode: int
             self::SESSION_MISMATCH,
             self::OPERATION_IN_PROGRESS,
             // 3018 is a disagreement between two declarations, which is 409's shape.
-            self::TOPOLOGY_MISMATCH => 409,
+            self::TOPOLOGY_MISMATCH,
+            // 409, not 422: for 3019 the request is well-formed and every value in it is
+            // valid — what is incomplete is the server's own configuration. For 6008 the
+            // command was never dispatched, so nothing about the request was wrong either.
+            self::SERVICE_NOT_BOUND,
+            self::COMMAND_PRE_EMPTED => 409,
             // v0.5.2: 2017 OFFLINE_RECEIPT_MISMATCH aligned cross-SDK to 422 —
             // signature itself verified per spec §3.2; the cross-check failure
             // is "syntax correct, instructions inconsistent" ≡ RFC 9110 422
@@ -487,7 +518,7 @@ enum OsppErrorCode: int
             // v0.8.0: 4016 → 422 — the body is well-formed but two submitted key kinds
             // carry the same key; a defect in the request, visible without stored state.
             self::PROVISIONING_KEY_REUSE,
-            // v0.8.4: 4020 -> 422 — declared bayCount does not match the station's
+            // v0.8.4: 4020 -> 422 — the declared bay SET does not match the station's
             // registered bay count; well-formed body, value inconsistent with stored
             // state (07-errors.md 4.02x).
             self::BAY_COUNT_MISMATCH,
