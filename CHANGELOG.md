@@ -7,6 +7,121 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.14.0] — 2026-08-12
+
+**SDK-pair release against spec `v0.13.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+Released at the same version as `@ospp/protocol` **0.14.0**, from the same spec pin.
+
+`.spec-ref` **v0.11.1 → v0.13.0**.
+
+> **BREAKING — this changes MAC bytes, and both ends of a link must move together.**
+>
+> This release corrects how a message is reduced to the bytes that get signed. A peer on
+> 0.13.0 and a peer on 0.14.0 therefore compute **different MACs for the same message**, and
+> the receiver rejects what it cannot verify. This is not an optional upgrade: it requires
+> **both sides to move**, and — because a station and a server are different deployments on
+> different schedules — it requires them to move in a **coordinated window**.
+>
+> **The dangerous part is how narrow the break is.** MACs are unchanged for any message whose
+> strings are ASCII and whose object keys are ordinary identifiers — which is nearly every
+> message on a real fleet. The golden HMAC vectors in this release carry the **same
+> `expectedMac` values as 0.13.0**, unchanged. So a mixed fleet does not fail on upgrade. It
+> works, for days, until one message of an affected shape crosses the wire:
+>
+> - **this SDK's break:** any signed message carrying **U+2028 or U+2029** in any string —
+>   33 free-string sites on the signed path, including `messageId` and `action`, which are on
+>   *every* message;
+> - **the sdk-ts break, which reaches you through the peer:** any message whose open objects
+>   — `DataTransfer.data` (both directions), `SecurityEvent.details`, `StartService.params` —
+>   carry keys that are **integer-like** (`"2"`, `"10"`) or **non-BMP**.
+>
+> That one message fails verification and is rejected, nothing else is affected, and nothing
+> in the failure points at a version skew. Plan the window; do not let the quiet period
+> convince you the fleet is homogeneous.
+
+### Fixed
+
+- **`U+2028` and `U+2029` were escaped, and `06-security.md` §4.8.1 step 3 requires them
+  literally.** The rule admits exactly three reasons to escape — control characters, `"`,
+  `\` — and requires every other character to be emitted literally. U+2028 LINE SEPARATOR
+  and U+2029 PARAGRAPH SEPARATOR are Unicode categories Zl and Zp, not control characters,
+  and JSON itself mandates escaping only below U+0020.
+
+  PHP escapes them anyway, and keeps escaping them under `JSON_UNESCAPED_UNICODE`, because
+  the flag was written to protect a **pre-ES2019 JavaScript** consumer that could not parse
+  them inside a string literal. That is one host language's hazard, and canonical form is not
+  written for one host language. `JSON_UNESCAPED_LINE_TERMINATORS` is now set, and the
+  docblock says why it must not be "cleaned up" as redundant.
+
+  `sdk-ts` emitted both literally all along — `JSON.stringify` never escaped them — so this
+  SDK was the side that diverged, on any of the 33 free-string sites.
+
+- **`5004 ELECTRICAL_SYSTEM` was `recoverable: true`; the spec has said `false` since
+  v0.8.0** — eight spec releases. It is a §7.2 Level 3 (Faulted) entry trigger whose exit is
+  physical intervention + operator verification + station reboot. A welded relay or a lost
+  phase persists while the measured voltage reads nominal, so "power came back" does not mean
+  the fault cleared, and a welded relay may leave the bay energised after the station believes
+  it cut power. A consumer treating the fault as self-clearing could return that bay to
+  service.
+
+  `isRecoverable()` had no arm for it and fell through to `default => true`, which is how a
+  value nobody chose became a value the SDK asserted. The hand-written unit test then pinned
+  that value, so the test defended the defect. It survived because the only thing checking the
+  registry was the *other* SDK, which was wrong in exactly the same way. An audit recorded
+  `recoverable` as "identical — 0 diffs" and that was true. Two implementations that agree are
+  not evidence; they are one opinion held twice. See *Added* for the gate.
+
+### Added
+
+- **`scripts/check-error-registry.sh`** (CI job *Error registry vs spec registry*) — compares
+  every `OsppErrorCode` case against the registry table in the spec's `07-errors.md` at
+  `.spec-ref`, on `errorText`, `severity`, `recoverable`, and the code set in both directions.
+  This is the gate whose absence let 5004 drift for eight releases: the schema gate could not
+  see the registry, because it is a Markdown table and not a schema, and the spec's own
+  `verify-protocol.sh` scrapes that table with a regex that stops before the `Recoverable`
+  column. `httpStatus()` and `category()` are deliberately not checked — the spec declines to
+  give a code either one.
+
+  It refuses to report a pass if it parses fewer than 100 rows, so a reformatted table fails
+  loudly instead of vacuously.
+
+- **`scripts/check-crypto-vectors.sh`** (CI job *Crypto corpus byte-identity gate*) — this SDK
+  had no crypto-corpus gate at all: `schemas/` was checked against the spec and the crypto
+  vectors were not.
+
+- **Canonical-form vectors are now VENDORED FROM THE SPEC**, byte-identical, at
+  `tests/Contract/Crypto/fixtures/canonical-form.json` ←
+  `conformance/test-vectors/crypto/canonical-form.json`. Previously the canonical-form vectors
+  were two hand-maintained copies, one per SDK, whose agreement was asserted in a comment and
+  by nothing else — so both could be edited into agreeing with each other and disagreeing with
+  the spec, which is the shape of every defect in this release. The spec **recomputed** the
+  oracle values from the §4.8.1 rule text in a third implementation rather than adopting either
+  SDK's output; both SDKs reproduce all 17 byte for byte.
+
+- **A falsifiability check** (the spec's Category 20, run on the vendored copy). A corpus that
+  no longer separates right from wrong passes silently, so the suite runs the defect this SDK
+  actually shipped — `json_encode` without `JSON_UNESCAPED_LINE_TERMINATORS` — over the same
+  vectors and requires the corpus to **reject** it. If no vector discriminates, the test says
+  so instead of reporting green. `sdk-ts` runs the same check against its own defect (UTF-16
+  key ordering); PHP arrays never had that one, because they do not reorder integer-like keys
+  and `SORT_STRING` is already a byte comparison.
+
+- **`canonical-mac-strip.json`** — pins the boundary between §4.8 and §5.3 step 1 for the same
+  message: `CanonicalJsonSerializer::serialize()` keeps a top-level `mac`,
+  `MacSigner::canonicalize()` removes it, and neither touches a nested one. This SDK was
+  already correct here; `sdk-ts` stripped inside its `canonicalize()`, so the two disagreed on
+  every message carrying a `mac` and no vector in either repo had one to notice with. It is
+  deliberately *not* vendored: the spec's corpus carries no message with a `mac`, because §4.8
+  says nothing about the field, and that silence is exactly what hid the defect.
+
+### Spec pin
+
+`.spec-ref` **v0.11.1 → v0.13.0**, re-vendored and byte-identity verified. Schema changes
+across that range are `description`-only, plus `trigger-message-request.bayId`, which was an
+unconstrained string where every other `bayId` is a `$ref` to `bay-id.schema.json`.
+
+---
+
 ## [0.13.0] — 2026-08-07
 
 **SDK-pair release against spec `v0.11.1`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).

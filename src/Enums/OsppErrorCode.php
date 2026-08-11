@@ -7,9 +7,11 @@ namespace Ospp\Protocol\Enums;
 /**
  * Complete OSPP Error Code registry.
  *
- * 116 standard error codes across 6 categories (spec 07-errors.md §1.1). The
+ * 118 standard error codes across 6 categories (spec 07-errors.md §1.1). The
  * count moved 114 → 116 with 3017 PROGRAM_NOT_DECLARED and 3018
- * TOPOLOGY_MISMATCH; the registry states its own total in five places and they
+ * TOPOLOGY_MISMATCH, then → 118 with 3019 SERVICE_NOT_BOUND and 6008; the
+ * total is now asserted against the spec by scripts/check-error-registry.sh
+ * rather than restated here. The registry states its own total in five places and they
  * move together. Fully spec-aligned with sdk-ts.
  */
 enum OsppErrorCode: int
@@ -314,6 +316,14 @@ enum OsppErrorCode: int
             self::OFFLINE_PER_TX_EXCEEDED,
             self::WEBHOOK_SIGNATURE_INVALID,
             self::PUMP_SYSTEM,
+            // 5004: a welded relay or a lost phase persists while the measured
+            // voltage reads nominal, so "power came back" does not mean the fault
+            // cleared — and a welded relay may leave the bay energised after the
+            // station believes it cut power. It is a §7.2 Level 3 entry trigger:
+            // physical intervention + operator verification + reboot, never
+            // self-clearing. Spec made this false in v0.8.0 (07-errors.md:396);
+            // both SDKs kept saying true until check-error-registry caught it.
+            self::ELECTRICAL_SYSTEM,
             self::PAYMENT_HARDWARE,
             self::MECHANICAL_SYSTEM,
             self::EMERGENCY_STOP,

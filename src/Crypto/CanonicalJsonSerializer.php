@@ -29,6 +29,26 @@ namespace Ospp\Protocol\Crypto;
  * §4.8.1 does not state this, because it does not need to: JSON already
  * distinguishes the two container types and the schema says which one the
  * payload is. What was missing was the ability of this class to say it.
+ *
+ * **`JSON_UNESCAPED_LINE_TERMINATORS` is load-bearing — do not drop it as
+ * redundant next to `JSON_UNESCAPED_UNICODE`.** It is not redundant. §4.8.1
+ * step 3 admits exactly three reasons to escape — control characters, `"` and
+ * `\` — and requires every other character to be "emitted literally". U+2028
+ * LINE SEPARATOR and U+2029 PARAGRAPH SEPARATOR are none of the three: they are
+ * Unicode categories Zl and Zp, not control characters, and JSON itself only
+ * mandates escaping below U+0020. PHP escapes them anyway, and keeps escaping
+ * them under `JSON_UNESCAPED_UNICODE`, because the flag's author was protecting
+ * a *JavaScript* consumer — before ES2019 those two bytes were illegal inside a
+ * JS string literal, so `eval`-style parsers broke on them. That is a hazard of
+ * one host language, and canonical form is not written for one host language.
+ *
+ * The divergence is real and it is one-directional: `sdk-ts` emits both
+ * literally, because `JSON.stringify` never escaped them. So the same message
+ * canonicalized either side of the wire produced different bytes, hence
+ * different MACs, and the receiver rejected it. The 33 free-string sites on the
+ * signed path (§5.6 — 44 of 47 message types are signed) all carry the
+ * exposure; `messageId` and `action` carry it on *every* message, since the
+ * envelope constrains both only by `maxLength`.
  */
 final class CanonicalJsonSerializer
 {
@@ -43,7 +63,10 @@ final class CanonicalJsonSerializer
     {
         return json_encode(
             $this->recursiveKeySort($data),
-            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
+            JSON_UNESCAPED_SLASHES
+            | JSON_UNESCAPED_UNICODE
+            | JSON_UNESCAPED_LINE_TERMINATORS
+            | JSON_THROW_ON_ERROR,
         );
     }
 

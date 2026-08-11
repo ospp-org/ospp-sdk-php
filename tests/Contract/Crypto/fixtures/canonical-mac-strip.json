@@ -1,0 +1,60 @@
+{
+  "_comment": "Cross-language vectors for the boundary between OSPP Canonical Form (06-security.md §4.8) and the MAC pre-step (§5.3 step 1). MUST stay BYTE-IDENTICAL with the sibling copy in the other SDK repo (ospp-sdk-php: tests/Contract/Crypto/fixtures/canonical-mac-strip.json ; sdk-ts: tests/crypto/fixtures/canonical-mac-strip.json). Unlike canonical-form.json, this file is NOT vendored from the spec: the spec's corpus deliberately contains no message carrying a `mac`, because §4.8 is defined over any JSON value and says nothing about the field. That silence is exactly what hid the defect this file exists for -- sdk-ts stripped `mac` inside canonicalize() while ospp-sdk-php stripped it one layer up in MacSigner, so the two disagreed on every message that carried one, and no vector in either repo had a `mac` to notice with. Each vector therefore pins BOTH results: `canonical` is the pure §4.8 form with the field left in place, and `canonicalForMac` is the §5.3 input with the top-level field removed. PHP: CanonicalJsonSerializer::serialize() and MacSigner::canonicalize(). TS: canonicalize() and canonicalizeForMac().",
+  "specSection": "06-security.md §4.8.1 and §5.3 step 1",
+  "vectors": [
+    {
+      "name": "top-level-mac",
+      "why": "The base case. §5.3 step 1: 'Remove the mac field from the message envelope if present — the MAC field cannot be part of the input that produces it.' §4.8 says nothing about it, so the pure form keeps it, sorted into place like any other key.",
+      "input": {
+        "b": 1,
+        "mac": "secret",
+        "a": 2
+      },
+      "canonical": "{\"a\":2,\"b\":1,\"mac\":\"secret\"}",
+      "canonicalForMac": "{\"a\":2,\"b\":1}"
+    },
+    {
+      "name": "only-the-top-level-mac",
+      "why": "§5.3 step 1 says 'the message envelope', not 'anywhere'. A nested key that happens to be called mac is payload data and survives both forms — a recursive strip would corrupt a DataTransfer.data whose vendor chose the name.",
+      "input": {
+        "mac": "outer",
+        "payload": {
+          "mac": "inner",
+          "a": 1
+        }
+      },
+      "canonical": "{\"mac\":\"outer\",\"payload\":{\"a\":1,\"mac\":\"inner\"}}",
+      "canonicalForMac": "{\"payload\":{\"a\":1,\"mac\":\"inner\"}}"
+    },
+    {
+      "name": "no-mac-present",
+      "why": "With no mac the two forms are the same string. Receipts (§6.2) and OfflinePass payloads are signed and have no mac field at all, so this is the shape most signed values actually have.",
+      "input": {
+        "z": 1,
+        "a": 2
+      },
+      "canonical": "{\"a\":2,\"z\":1}",
+      "canonicalForMac": "{\"a\":2,\"z\":1}"
+    },
+    {
+      "name": "signed-envelope",
+      "why": "The real shape, and the one the divergence broke. `mac` sorts between `action` and `messageId` — 'm','a' precedes 'm','e' — so it is not merely appended and its removal is not merely a suffix trim. The mac value is the one from the spec's own conformance/test-vectors/crypto/mqtt-mac.json.",
+      "input": {
+        "action": "StartService",
+        "mac": "erTp0jMKlFrA76eJfDpMoZ+3tr1ZwGvvvuooJWSREB0=",
+        "messageId": "cmd_550e8400",
+        "messageType": "Request",
+        "payload": {
+          "sessionId": "sess_a1b2c3d4",
+          "bayId": "bay_c1d2e3f4a5b6",
+          "durationSeconds": 300
+        },
+        "protocolVersion": "0.3.0",
+        "source": "Server",
+        "timestamp": "2026-01-30T12:00:00.000Z"
+      },
+      "canonical": "{\"action\":\"StartService\",\"mac\":\"erTp0jMKlFrA76eJfDpMoZ+3tr1ZwGvvvuooJWSREB0=\",\"messageId\":\"cmd_550e8400\",\"messageType\":\"Request\",\"payload\":{\"bayId\":\"bay_c1d2e3f4a5b6\",\"durationSeconds\":300,\"sessionId\":\"sess_a1b2c3d4\"},\"protocolVersion\":\"0.3.0\",\"source\":\"Server\",\"timestamp\":\"2026-01-30T12:00:00.000Z\"}",
+      "canonicalForMac": "{\"action\":\"StartService\",\"messageId\":\"cmd_550e8400\",\"messageType\":\"Request\",\"payload\":{\"bayId\":\"bay_c1d2e3f4a5b6\",\"durationSeconds\":300,\"sessionId\":\"sess_a1b2c3d4\"},\"protocolVersion\":\"0.3.0\",\"source\":\"Server\",\"timestamp\":\"2026-01-30T12:00:00.000Z\"}"
+    }
+  ]
+}

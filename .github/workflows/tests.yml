@@ -97,3 +97,40 @@ jobs:
             echo "Bump .spec-ref if vendoring against a newer spec release."
             exit 1
           fi
+
+  # The schemas job above proves the vendored SCHEMAS match the spec. The ERROR
+  # REGISTRY sat outside it: it is a Markdown table in spec/07-errors.md, not a
+  # schema, so nothing vendored it and nothing diffed it. The only check on it
+  # compared this SDK to sdk-ts — and reported "recoverable: identical, 0 diffs"
+  # while both were wrong about 5004 ELECTRICAL_SYSTEM for eight spec releases.
+  # Two implementations that agree are one opinion held twice; this job compares
+  # against the spec instead.
+  #
+  # The script does its own .spec-ref validation and clone (see
+  # scripts/check-error-registry.sh), so this job stays a single step.
+  error-registry:
+    name: Error registry vs spec registry
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json, openssl
+      - run: composer install --no-interaction --prefer-dist
+      - name: Compare src/Enums/OsppErrorCode.php against spec/07-errors.md
+        run: scripts/check-error-registry.sh
+
+  # This SDK had no crypto-corpus gate at all: schemas/ was checked against the
+  # spec and the crypto vectors were not. canonical-form.json is why that stopped
+  # being acceptable — until 0.14.0 the canonical-form vectors were two
+  # hand-maintained copies, one per SDK, whose agreement was asserted in a comment.
+  # Both could be edited into agreeing with each other and disagreeing with the
+  # spec, which is the shape of every defect 0.14.0 fixes.
+  crypto-vectors:
+    name: Crypto corpus byte-identity gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Byte-identity check (tests/Contract/Crypto/fixtures/ ↔ spec conformance corpus)
+        run: scripts/check-crypto-vectors.sh

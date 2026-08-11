@@ -636,6 +636,12 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::OFFLINE_PER_TX_EXCEEDED,
             OsppErrorCode::WEBHOOK_SIGNATURE_INVALID,
             OsppErrorCode::PUMP_SYSTEM,
+            // 5004 moved here from the recoverable list. The spec made it
+            // recoverable=false in v0.8.0 (07-errors.md:396) as a safety fix —
+            // a welded relay or a lost phase persists while measured voltage
+            // reads nominal — and this list, being a hand-transcription, kept
+            // asserting the value the enum happened to have.
+            OsppErrorCode::ELECTRICAL_SYSTEM,
             OsppErrorCode::PAYMENT_HARDWARE,
             OsppErrorCode::MECHANICAL_SYSTEM,
             OsppErrorCode::EMERGENCY_STOP,
@@ -696,7 +702,6 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::HARDWARE_GENERIC,
             OsppErrorCode::FLUID_SYSTEM,
             OsppErrorCode::CONSUMABLE_SYSTEM,
-            OsppErrorCode::ELECTRICAL_SYSTEM,
             OsppErrorCode::HEATING_SYSTEM,
             OsppErrorCode::SENSOR_FAILURE,
             OsppErrorCode::CSR_INVALID,
