@@ -18,9 +18,10 @@ that duplicates this package.
 
 | State | Where | One line |
 |-------|-------|----------|
-| OPEN | `Enums\ConfigurationKey::isMutable()` | `MessageSigningMode` is returned Dynamic; Chapter 08 sets it **Static** in bold, and this package's own `SigningMode` docblock agrees with the spec against its sibling |
+| CLOSED (unreleased, `main`) | `Enums\ConfigurationKey::isMutable()` | `MessageSigningMode` was returned Dynamic; Chapter 08 sets it **Static** in bold. Fixed, and `ConfigurationKeyTest` rewritten from the spec table |
 | OPEN | `Enums\ConfigurationKey::defaultValue()` + `ValueObjects\ProtocolVersion::default()` | both answer `0.2.1`; Chapter 08 has said `0.3.0` since spec v0.10.0 |
-| OPEN | `scripts/` + `.github/workflows/tests.yml` | three registries are gated against the spec and Chapter 08 is not — which is why both of the above survived four minor releases |
+| CLOSED (unreleased, `main`) | `scripts/check-config-registry.{sh,php}` | Chapter 08 now has the parity gate the other three registries had. NOT yet wired into CI — see below |
+| OPEN | `.github/workflows/tests.yml` | the config-registry job cannot be added until `ProtocolVersion` is fixed, because the gate is red on it |
 
 Measured across all 29 cases against `spec/08-configuration.md` at the ref in
 `.spec-ref` (v0.13.0): **two keys disagree, and no other field on any other key does.**
@@ -29,7 +30,14 @@ transcription slips, not a stale port.
 
 ---
 
-## OPEN — `isMutable()` calls `MessageSigningMode` Dynamic, and Chapter 08 sets it **Static** with the reasoning spelled out
+## CLOSED (unreleased, on `main`) — `isMutable()` called `MessageSigningMode` Dynamic, and Chapter 08 sets it **Static** with the reasoning spelled out
+
+**Fixed on `main`, not yet in a release.** `isMutable()` gained the seventh Static arm, and
+`ConfigurationKeyTest` was rewritten to transcribe the Static set FROM THE SPEC and to assert
+the complement rather than sample it. `sdk-ts` already had this right, so the fix CLOSES a
+cross-SDK disagreement rather than opening one — no lockstep needed for this half.
+
+The original entry, kept because the shape is the point:
 
 `spec/08-configuration.md:114`:
 
@@ -86,7 +94,31 @@ re-opens a cross-SDK disagreement.
 
 ---
 
-## OPEN — Chapter 08 is the one registry with no spec-parity gate
+## CLOSED (unreleased) — Chapter 08 had no spec-parity gate; it has one now, and two siblings turned out to be inert
+
+`scripts/check-config-registry.{sh,php}` is the Chapter 08 twin of
+`check-error-registry`: it parses the key tables, compares `type`, `default`, `access` and
+`mutability` per key IN BOTH DIRECTIONS, and refuses to report a pass if it parses fewer than
+25 rows — the empty-dataset-is-green trap the other gates already guard against. Proved
+against a reformatted table: 0 rows parsed, exit 1, no false pass.
+
+**It is not wired into CI yet**, and cannot be until `ProtocolVersion` is fixed: the gate is
+red on that one key, and a job that lands red is not a gate.
+
+**Found while building it — two of the three existing gates had never run.**
+`scripts/check-error-registry.sh` and `scripts/check-crypto-vectors.sh` were both committed
+in 0.14.0 with mode `100644`, and `.github/workflows/tests.yml` invokes them as
+`run: scripts/…`, which needs the exec bit. Every CI run since 0.14.0 failed both jobs with
+`Permission denied` — including the 0.14.0 release itself, which shipped red. Both gates pass
+on CONTENT (118/118 codes agree; the crypto corpus is byte-identical), so the fix is the mode
+and nothing else; all three scripts are now `100755`. `check-schemas.sh` is unaffected because
+its job inlines its steps rather than calling the script.
+
+That is the same class this file exists for, one level up: a gate that cannot execute is a
+document claiming a protection that does not exist.
+
+The original entry, whose first line was itself wrong — CI *declared* all three and could
+execute only one:
 
 `scripts/` holds three checks and CI runs all three:
 

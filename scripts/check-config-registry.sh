@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Verify that the SDK error registry (src/Enums/OsppErrorCode.php) agrees with
-# the spec registry table in spec/07-errors.md, at the ref pinned in .spec-ref.
+# Verify that the SDK configuration registry (src/Enums/ConfigurationKey.php) agrees
+# with the key tables in spec/08-configuration.md, at the ref pinned in .spec-ref.
 #
-# Unlike schemas/, the error registry is NOT vendored into this repo — it lives
-# only as a Markdown table upstream — so this gate always needs a spec checkout.
+# Unlike schemas/, the configuration registry is NOT vendored into this repo — it
+# lives only as Markdown tables upstream — so this gate always needs a spec checkout.
 #
 # Usage:
-#   scripts/check-error-registry.sh                        # clones the pinned ref
-#   SPEC_REPO=/local/path scripts/check-error-registry.sh  # uses a local checkout
+#   scripts/check-config-registry.sh                        # clones the pinned ref
+#   SPEC_REPO=/local/path scripts/check-config-registry.sh  # uses a local checkout
 #
-# Exit: 0 if every code agrees on errorText, severity and recoverable; 1 otherwise.
+# Exit: 0 if every key agrees on type, default, access and mutability; 1 otherwise.
 
 set -euo pipefail
 
@@ -26,8 +26,8 @@ fi
 
 if [[ -n "${SPEC_REPO:-}" ]]; then
   SPEC_ROOT="${SPEC_REPO}"
-  if [[ ! -f "${SPEC_ROOT}/spec/07-errors.md" ]]; then
-    echo "ERROR: SPEC_REPO=${SPEC_REPO} but ${SPEC_ROOT}/spec/07-errors.md not found" >&2
+  if [[ ! -f "${SPEC_ROOT}/spec/08-configuration.md" ]]; then
+    echo "ERROR: SPEC_REPO=${SPEC_REPO} but ${SPEC_ROOT}/spec/08-configuration.md not found" >&2
     exit 1
   fi
   echo "Comparing against local spec checkout at ${SPEC_ROOT} (.spec-ref=${SPEC_REF} — not enforced for local mode)"
@@ -41,4 +41,4 @@ else
   REF_LABEL="${SPEC_REF}"
 fi
 
-exec php "${REPO_ROOT}/scripts/check-error-registry.php" "${SPEC_ROOT}" "${REF_LABEL}"
+exec php "${REPO_ROOT}/scripts/check-config-registry.php" "${SPEC_ROOT}" "${REF_LABEL}"

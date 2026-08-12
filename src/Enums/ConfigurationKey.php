@@ -124,6 +124,13 @@ enum ConfigurationKey: string
         };
     }
 
+    /**
+     * Whether a ChangeConfiguration on this key takes effect NOW.
+     *
+     * `false` is 08-configuration.md's `Static`, which does not mean "unchangeable" —
+     * it means the change lands at the station's next boot. Seven keys are Static and
+     * all seven are listed; the `default` arm is Dynamic.
+     */
     public function isMutable(): bool
     {
         return match ($this) {
@@ -132,7 +139,18 @@ enum ConfigurationKey: string
             self::PROTOCOL_VERSION,
             self::FIRMWARE_VERSION,
             self::CERTIFICATE_SERIAL_NUMBER,
-            self::DIAGNOSTICS_UPLOAD_URL => false,
+            self::DIAGNOSTICS_UPLOAD_URL,
+            // The seventh, and the one this arm was missing. 08-configuration.md:114
+            // sets it **Static** in bold and gives the reason: the mode is bound to the
+            // session key, which is issued at boot, so a mid-session change leaves one
+            // peer signing and the other not — and verification fails closed while
+            // signing fails closed too, so the station goes silent in BOTH directions.
+            // A server trusting the old `true` here would dispatch that change mid
+            // session, and the outage would present as a station that had died.
+            //
+            // This enum was contradicting its own package: Enums\SigningMode's docblock
+            // has always said "The mode is `Static`". sdk-ts had it right throughout.
+            self::MESSAGE_SIGNING_MODE => false,
 
             default => true,
         };

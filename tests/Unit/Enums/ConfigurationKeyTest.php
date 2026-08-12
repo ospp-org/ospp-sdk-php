@@ -199,24 +199,72 @@ final class ConfigurationKeyTest extends TestCase
     // isMutable()
     // =========================================================================
 
+    /**
+     * The keys 08-configuration.md marks `Static`. TRANSCRIBED FROM THE SPEC TABLE,
+     * not read off `isMutable()` — which is the whole point of the list existing.
+     *
+     * The previous version of this test named six of them and passed for four minor
+     * releases while the enum was wrong, because the six it named were the six the
+     * enum happened to return `false` for. It was written from the implementation, so
+     * it could only ever confirm the implementation; the seventh key —
+     * `MessageSigningMode`, the one whose Static-ness the spec sets in bold and spends
+     * a paragraph defending — was absent from both, and the test could not see the gap
+     * it shared.
+     *
+     * If a key is added to or removed from Chapter 08's Static set, EDIT THIS LIST
+     * from the spec and let the assertions below fail until the enum follows. Do not
+     * derive it from `cases()`, and do not "sync" it with `isMutable()`.
+     *
+     * `scripts/check-config-registry.php` checks the same thing against the spec text
+     * directly and is the stronger guard; this test is what fails first, locally, and
+     * without a spec checkout.
+     *
+     * @var list<ConfigurationKey>
+     */
+    private const SPEC_STATIC_KEYS = [
+        ConfigurationKey::STATION_NAME,
+        ConfigurationKey::TIME_ZONE,
+        ConfigurationKey::PROTOCOL_VERSION,
+        ConfigurationKey::FIRMWARE_VERSION,
+        ConfigurationKey::CERTIFICATE_SERIAL_NUMBER,
+        ConfigurationKey::MESSAGE_SIGNING_MODE,
+        ConfigurationKey::DIAGNOSTICS_UPLOAD_URL,
+    ];
+
     #[Test]
     public function static_keys_are_not_mutable(): void
     {
-        self::assertFalse(ConfigurationKey::STATION_NAME->isMutable());
-        self::assertFalse(ConfigurationKey::TIME_ZONE->isMutable());
-        self::assertFalse(ConfigurationKey::PROTOCOL_VERSION->isMutable());
-        self::assertFalse(ConfigurationKey::FIRMWARE_VERSION->isMutable());
-        self::assertFalse(ConfigurationKey::CERTIFICATE_SERIAL_NUMBER->isMutable());
-        self::assertFalse(ConfigurationKey::DIAGNOSTICS_UPLOAD_URL->isMutable());
+        self::assertCount(7, self::SPEC_STATIC_KEYS, 'Chapter 08 marks seven keys Static');
+
+        foreach (self::SPEC_STATIC_KEYS as $key) {
+            self::assertFalse($key->isMutable(), "{$key->value} is Static in 08-configuration.md");
+        }
     }
 
     #[Test]
-    public function dynamic_keys_are_mutable(): void
+    public function every_other_key_is_mutable(): void
     {
-        self::assertTrue(ConfigurationKey::HEARTBEAT_INTERVAL_SECONDS->isMutable());
-        self::assertTrue(ConfigurationKey::MAX_SESSION_DURATION_SECONDS->isMutable());
-        self::assertTrue(ConfigurationKey::AUTHORIZATION_CACHE_ENABLED->isMutable());
-        self::assertTrue(ConfigurationKey::LOG_LEVEL->isMutable());
+        // The complement, asserted rather than sampled. Naming four Dynamic keys by
+        // hand is what let a Static key hide in the unnamed remainder — a key can only
+        // be missed here if it is missed in BOTH lists, and the count above forbids it.
+        foreach (ConfigurationKey::cases() as $key) {
+            if (in_array($key, self::SPEC_STATIC_KEYS, true)) {
+                continue;
+            }
+
+            self::assertTrue($key->isMutable(), "{$key->value} is Dynamic in 08-configuration.md");
+        }
+    }
+
+    #[Test]
+    public function message_signing_mode_is_static_and_the_package_agrees_with_itself(): void
+    {
+        // The regression this pair exists for. isMutable() returned true from its
+        // default arm while Enums\SigningMode's docblock said "The mode is `Static`",
+        // so the package contradicted itself across two files and neither was checked
+        // against the spec that settles it.
+        self::assertFalse(ConfigurationKey::MESSAGE_SIGNING_MODE->isMutable());
+        self::assertSame('Security', ConfigurationKey::MESSAGE_SIGNING_MODE->profile());
     }
 
     // =========================================================================
