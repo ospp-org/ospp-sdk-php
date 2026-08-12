@@ -7,6 +7,141 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.16.0] — 2026-08-13
+
+**SDK-pair release against spec `v0.15.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+Released at the same version as `@ospp/protocol` **0.16.0**, from the same spec pin.
+
+`.spec-ref` **v0.13.0 → v0.15.0** — a **two-release** jump, and only the first of the two
+carries anything. `v0.14.0` moved a schema and moved the corpus with it; `v0.15.0` touched
+neither, so for a vendoring SDK it is the pin and nothing else. The whole of the work below
+comes from a range this SDK passes *through* rather than lands on, which is the part that is
+easy to get wrong: bumping straight to the newest tag does not mean skipping the middle one.
+
+> **BREAKING for a consumer that validates against the vendored schemas: MeterValues with
+> an empty `values` object is now REJECTED.**
+>
+> `schemas/common/meter-values.schema.json` gained `"minProperties": 1`. `{"values": {}}`
+> validated for the whole life of this package and does not any more.
+>
+> **This SDK's own behaviour does not change.** `opis/json-schema` is `require-dev` here —
+> the package ships the schemas as artefacts and validates nothing at run time — so the
+> effect lands entirely in the consumer that compiles them. `csms-server` has
+> `opis/json-schema` in `require` and validates inbound MQTT payloads against this tree; it
+> will begin refusing a payload it used to accept **on upgrading this dependency, with no
+> code change of its own**. That is the intended outcome: `meter-values.md` §5 has always
+> said *"The `values` object **MUST** contain at least one field"*, and for the whole of that
+> time nothing enforced it. A station emitting `"values": {}` was already non-conforming and
+> was already being believed.
+>
+> The corresponding tightening in `@ospp/protocol` 0.16.0 is **not** deferred to a consumer —
+> that SDK compiles Ajv over its own vendored tree behind a public export, so there it is a
+> behaviour change on the public API the day it ships. Same schema, two blast radii.
+
+### Vendored
+
+- `schemas/` — re-vendored, byte-identical to spec `v0.15.0`. **86 files**, unchanged in
+  count; two moved:
+  - `common/meter-values.schema.json` — gained `"minProperties": 1`. The substantive change
+    of this release, and the only one with a consumer consequence.
+  - `mqtt/session-ended-event.schema.json` — `seqNo.description` only. The old text said the
+    counter *"matches the running seqNo of the last MeterValues"*; it now says the sequence
+    **continues** — the next value after the last, not a repeat of it. Wire-inert, but it
+    reversed which of two readings the schema endorsed, and the minority one had a receiver
+    seeing a repeat where it MUST verify an increment.
+- `tests/Fixtures/test-vectors/` — re-vendored. **160 valid + 157 invalid = 317**, byte-identical
+  to the tag's `conformance/test-vectors/`. Two moves, both consequences of `minProperties`:
+  - `valid/transaction/meter-values-event-minimal.json` carried `"values": {}` — the shape the
+    new schema forbids. **It was a valid vector encoding an invalid payload**, so a correct
+    schema re-vendor on its own turns the parity suite red on it. It now carries one reading.
+  - `invalid/transaction/meter-values-event-empty-values.json` — **new**, and it is the old
+    content of the file above, moved across the boundary. The rule is now falsifiable rather
+    than merely stated.
+- **Nothing in this repository checks that second bullet.** `schemas/` has a byte-identity
+  gate; the vendored corpus has none, in either SDK. See *The gap this release does not close*.
+
+### Changed
+
+- **`OsppErrorCode::COMMAND_PRE_EMPTED`'s docblock was narrower than the code it documents.**
+  It was written against spec `v0.11.1` and said `details.wouldBe` **MUST** carry the code the
+  station would have answered — unconditionally. `v0.15.0` widens `6008` to the two kinds of
+  pre-empt it always had, and on the second one `details.wouldBe` **MUST be absent**: a
+  *server-protective* refusal (the open command circuit breaker is the defined case) is not a
+  prediction about the station, and naming a code the station never gave is precisely the
+  borrowing the entry exists to forbid. `details.reason` is promoted SHOULD → MUST, because it
+  is the one member present on both. The docblock now carries both kinds and the fail-safe
+  default — **absent `wouldBe` means the command did not run, and no outcome may be assumed.**
+
+  No accessor and no gated column changed, so nothing in `src/` moved but the comment. Which is
+  the uncomfortable part: a docblock stating a MUST the specification has since relaxed is
+  wrong in the one direction that matters, and no gate in this repository can see it. The
+  registry parity gate parses columns 1–4 only — `code | errorText | Severity | Recoverable` —
+  and stops before Description and Recommended Action. That is deliberate and correct (§1.4
+  forbids emitting a registry Description verbatim), but it means the prose this SDK *does*
+  carry, in docblocks, is compared against nothing.
+
+### Fixed
+
+- **`tests/Fixtures/test-vectors/README.md` was stale by ten minor spec releases** — it
+  announced `**OSPP Version:** 0.5.0` and documented the vector naming convention as
+  `{action}.{variant}.json`, which the spec corrected to `{action}-{variant}.json` and which
+  no vector in the corpus has ever used. Re-vendored with the rest of the tree.
+
+  It is worth more than a housekeeping line, because it is the **measurement** of the gap: this
+  file drifted for ten releases inside a directory nothing diffs, and the only reason anybody
+  looked is that a different file in the same tree finally broke a test.
+
+### Not in this release
+
+- **No `src/` behaviour change, and none was needed.** This SDK models no per-message
+  error-code set, so `3012`/`3013` becoming permitted ReserveBay responses at `v0.14.0` is a
+  nil code change here. `5107` and `6008` — the two codes `v0.15.0` touches — changed only in
+  their **Description** and **Recommended Action** cells; `code | errorText | Severity |
+  Recoverable` are byte-identical at both tags, `recommendedAction()` transcribes neither code,
+  and there is deliberately no `errorDescription()` accessor at all. Verified, not assumed:
+  `scripts/check-error-registry.sh` reports **118/118 agreeing** against `v0.15.0`.
+- **The vendored crypto corpus needed no work.** `conformance/test-vectors/crypto/` is
+  byte-identical between `v0.13.0` and `v0.15.0`; all four gated files still match.
+
+### The gap this release does not close
+
+Both SDKs vendor two artefacts from the spec — the schema tree **and** the conformance
+corpus — and both CIs byte-diff only the first. So the schemas cannot drift and the vectors
+drift freely, which is exactly what happened, and the failure mode is inverted: a maintainer
+who does the *right* thing (`cp -r spec/schemas`, bump `.spec-ref`) gets a red suite pointing
+at a hardcoded number, with nothing anywhere saying the corpus was the other half of the job.
+This release walked that path deliberately and confirms it: re-vendoring `schemas/` alone puts
+`ConformanceVectorTest::theVendoredCorpusIsComplete` at *"Failed asserting that 157 is
+identical to 156"* — a count, naming no file, in a test whose name says *complete*.
+
+The two literals it asserts are still literals. They are updated here (`156` → `157`; `160`
+unchanged) and both now carry a comment saying what they are: a **second copy of a fact about
+the corpus, not a check on it**. Specified in the spec's `KNOWN-ISSUES.md`, and scoped but
+deliberately **not built** here — a `diff -rq` of the whole vendored tree against the spec
+clone, never a hand-maintained file list, plus a parsed count asserted `> 0`, because a gate
+that reads zero vectors must not report a pass.
+
+A third instance turned up while scoping it, and it is already live: `scripts/check-crypto-vectors.sh`
+gates its four files **from a hand-written list**, and the spec's crypto corpus has had a
+fifth, `mqtt-mac.json`, which is vendored in **neither** SDK. Both gates report OK. Not fixed
+here — nothing consumes that vector yet, and adding it is a change to the corpus rather than
+to this bump — but it is the same defect the list form always produces, and it is the reason
+the replacement must diff a tree.
+
+### Verification
+
+- `vendor/bin/phpunit` — **1192 tests, 6058 assertions**, green (from 1191/6056; the new
+  invalid vector is the one added test).
+- `vendor/bin/phpstan analyse --level=9 src/` — no errors.
+- `scripts/check-schemas.sh` — `schemas/` byte-identical to spec `v0.15.0`.
+- `scripts/check-error-registry.sh` — 118/118 against `v0.15.0`.
+- `scripts/check-config-registry.sh` — 29/29 against `v0.15.0`.
+- `scripts/check-crypto-vectors.sh` — 4/4 byte-identical against `v0.15.0`.
+- `diff -rq` of `tests/Fixtures/test-vectors/{valid,invalid}` against the tag — clean, by hand,
+  because no gate does it.
+
+---
+
 ## [0.15.0] — 2026-08-12
 
 **SDK-pair release against spec `v0.13.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).

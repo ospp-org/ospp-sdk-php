@@ -159,13 +159,30 @@ enum OsppErrorCode: int
     case RATE_LIMIT_EXCEEDED = 6006;
     case SERVICE_DEGRADED = 6007;
     /**
-     * The server refused to dispatch a command it could see the station would
-     * refuse, and stopped it locally. spec v0.11.1 07-errors.md §3.6.
+     * The server refused to dispatch a command and stopped it locally, so it never
+     * reached the station. spec v0.15.0 07-errors.md §3.6.
      *
-     * `details.wouldBe` MUST carry the code the station would have answered. Not
-     * the station's own code: 3016 proves the message reached the station, whereas
-     * a pre-empt proves only what the server believed, and the server's view can be
-     * stale. A server MUST NOT pre-empt a Reset carrying `force: true`.
+     * Not the station's own code: 3016 proves the message reached the station,
+     * whereas a pre-empt proves only what the server believed, and the server's view
+     * can be stale. A server MUST NOT pre-empt a Reset carrying `force: true`.
+     *
+     * Two kinds, discriminated by `details.reason` — REQUIRED, because it is the one
+     * member present on both occurrences:
+     *  1. Predicted refusal — the server sees the station would decline (a Reset with
+     *     sessions running). `details.wouldBe` MUST carry the code the station would
+     *     have answered (3016 for that Reset).
+     *  2. Server-protective — the server declines for a reason of its own, the open
+     *     command circuit breaker being the defined case. `details.wouldBe` MUST be
+     *     ABSENT: the station was never going to answer at all, and inventing a code
+     *     it never gave is the borrowing this entry exists to forbid.
+     *
+     * With `details.wouldBe` absent a receiver MUST treat the command as refused and
+     * NOT performed, and MUST NOT infer that it would have succeeded.
+     *
+     * Widened at spec v0.15.0. Before that the entry described only kind 1 and made
+     * `details.wouldBe` unconditionally REQUIRED, which the circuit-breaker path
+     * could not satisfy — it had been answering 6002 ACK_TIMEOUT, a code asserting
+     * the server SENT a command it had explicitly not dispatched.
      */
     case COMMAND_PRE_EMPTED = 6008;
 

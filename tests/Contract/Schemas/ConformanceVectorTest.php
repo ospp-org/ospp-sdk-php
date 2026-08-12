@@ -145,11 +145,18 @@ final class ConformanceVectorTest extends TestCase
     /**
      * The corpus must be the whole corpus. A truncated vendored copy would make
      * every test above pass vacuously.
+     *
+     * These two literals are a SECOND COPY of a fact about the corpus, not a check
+     * on it: nothing derives them from the vendored tree, so a human must bump them
+     * by hand on every new spec vector — and when they are forgotten the failure
+     * lands on the maintainer who did the re-vendor CORRECTLY. See KNOWN-ISSUES:
+     * the gate that should replace them counts the tree at run time and asserts only
+     * `> 0`, with byte-identity against the spec clone pinning WHICH vectors are here.
      */
     #[Test]
     public function theVendoredCorpusIsComplete(): void
     {
         self::assertSame(160, iterator_count(self::validVectors()));
-        self::assertSame(156, iterator_count(self::invalidVectors()));
+        self::assertSame(157, iterator_count(self::invalidVectors()));
     }
 }
