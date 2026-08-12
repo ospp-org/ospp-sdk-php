@@ -228,15 +228,18 @@ final class ProtocolVersionTest extends TestCase
     // default()
     // ---------------------------------------------------------------
 
+    // The name said ZeroOneZero while the body asserted 0.2.1: it was written for
+    // 0.1.0 and only the assertion was updated when the default moved. Named for
+    // the value now, not for a number, so the next move cannot leave it lying.
     #[Test]
-    public function defaultReturnsZeroOneZero(): void
+    public function defaultReturnsTheChapter08Default(): void
     {
         $version = ProtocolVersion::default();
 
         self::assertSame(0, $version->major);
-        self::assertSame(2, $version->minor);
-        self::assertSame(1, $version->patch);
-        self::assertSame('0.2.1', $version->value);
+        self::assertSame(3, $version->minor);
+        self::assertSame(0, $version->patch);
+        self::assertSame('0.3.0', $version->value);
     }
 
     #[Test]

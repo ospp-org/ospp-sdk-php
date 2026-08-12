@@ -61,12 +61,14 @@ final class MessageBuilderContractTest extends TestCase
         self::assertSame('Station', $stationEvent->source);
     }
 
+    // Named `_is_0_1_0` while asserting 0.2.1 — the number in the name outlived
+    // two bumps of the value under it. Named for the source of truth instead.
     #[Test]
-    public function default_protocolVersion_is_0_1_0(): void
+    public function default_protocolVersion_is_the_chapter_08_default(): void
     {
         $envelope = MessageBuilder::request('TestAction')->build();
 
-        self::assertSame('0.2.1', $envelope->protocolVersion->value);
+        self::assertSame('0.3.0', $envelope->protocolVersion->value);
     }
 
     #[Test]

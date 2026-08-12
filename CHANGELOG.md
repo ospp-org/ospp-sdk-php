@@ -7,6 +7,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.15.0] — 2026-08-12
+
+**SDK-pair release against spec `v0.13.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+Released at the same version as `@ospp/protocol` **0.15.0**, from the same spec pin.
+
+`.spec-ref` **unchanged at v0.13.0** — no schema moves in this release. `schemas/` is
+byte-identical to the same spec tag it was byte-identical to at 0.14.0.
+
+> **Behaviour change, narrow: the default wire `protocolVersion` moves `0.2.1` → `0.3.0`.**
+>
+> This affects only a consumer that takes the default — one that neither installs a
+> `ProtocolVersion::setDefaultResolver()` nor otherwise sets the version explicitly. Such a
+> consumer previously announced `0.2.1`, which spec Chapter 08 stopped sanctioning at spec
+> v0.10.0 and which the production fleet does not speak; it now announces the value Chapter 08
+> mandates. If you are pinned to a peer whose supported set is `{0.2.1}`, set the version
+> explicitly before upgrading — the SDK will no longer pick it for you.
+>
+> Both known consumers already override, so the practical blast radius of this release is
+> **zero**, and that is the uncomfortable part rather than the reassuring one: see below.
+
+### Fixed
+
+- **`ProtocolVersion` defaulted to `0.2.1` where Chapter 08 says `0.3.0`, in two places.**
+  `ValueObjects\ProtocolVersion::default()` and
+  `Enums\ConfigurationKey::PROTOCOL_VERSION->defaultValue()` are one fact stored twice, and
+  both were stale in the same direction since spec v0.10.0 — four minor releases. `sdk-ts`
+  carried the identical pair of defaults, so both are corrected in the same release pair;
+  fixing either alone would have opened a cross-SDK disagreement where there had been none.
+
+  **Why it survived four releases, which is the durable part.** Both consumers had already
+  routed around it, independently and correctly: `csms-server` installs a config-driven
+  resolver and sets `OSPP_PROTOCOL_VERSION=0.3.0`; `ts-station-simulator` carried a local
+  `WIRE_PROTOCOL_VERSION = '0.3.0'` whose docblock named "when the SDK's own default is
+  corrected, delete this" as its exit condition. A default every caller overrides is a
+  default nothing exercises, so no test, no deployment, and no wire capture could report it
+  wrong. The one thing it could still block was the gate that would have caught it — and it
+  blocked exactly that, for four releases, which is how a zero-impact defect ends up being
+  the most expensive one in the file.
+
+  The simulator's constant is deleted in its matching bump. A workaround that names its own
+  deletion condition *and then reaches it* is the intended shape; reaching it is the rare half.
+
+### Added
+
+- **`config-registry` CI job — Chapter 08 is now gated like the other three registries.**
+  `scripts/check-config-registry.sh` shipped in 0.14.0 but was deliberately left unwired,
+  because it was **red on `ProtocolVersion`**. It compares all 29 `ConfigurationKey` cases
+  against `spec/08-configuration.md` on `type`, `default`, `access` and `mutability`, in both
+  directions, and refuses to report a pass on fewer than 25 parsed rows — the
+  empty-dataset-is-green trap.
+
+  With the default fixed, the gate reports `all 29 keys agree` and the job is wired. **That
+  ordering is the point and is worth copying: fix the divergence, watch the gate go green on
+  its own, then wire it.** Wiring a red gate with the failing case suppressed leaves behind a
+  suppression that outlives everyone's memory of why it was added.
+
+  `schemas/`, `OsppErrorCode` and the crypto corpus were already gated against the spec.
+  Chapter 08 was the last registry in this package compared only against itself — and
+  `tests/Unit/Enums/ConfigurationKeyTest.php` did not fill that gap, because it was written
+  from the enum and so inherited the enum's blind spots. That is the general reason this is a
+  CI job against an upstream source rather than another assertion in `tests/`.
+
+- **A note on the exec bit, in the workflow, next to the thing it protects.** 0.14.0 committed
+  `check-error-registry.sh` and `check-crypto-vectors.sh` as `100644` while invoking them as
+  `run: scripts/…`, so both died `Permission denied` on every push and **0.14.0 shipped red**
+  with two gates that had never once executed. All four gate scripts are `100755`; the check
+  when adding a fifth is the MODE, not the file list.
+
+### Changed
+
+- `tests/Unit/ValueObjects/ProtocolVersionTest.php::defaultReturnsZeroOneZero` →
+  `defaultReturnsTheChapter08Default`, and
+  `tests/Contract/Envelope/MessageBuilderContractTest.php::default_protocolVersion_is_0_1_0` →
+  `default_protocolVersion_is_the_chapter_08_default`. Both names said `0.1.0` while both
+  bodies asserted `0.2.1`: the assertions were updated at the last bump and the names were
+  not. Renamed to the source of truth rather than to `0_3_0`, so the next move cannot leave
+  them lying either.
+
+---
+
 ## [0.14.0] — 2026-08-12
 
 **SDK-pair release against spec `v0.13.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).

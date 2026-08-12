@@ -134,3 +134,39 @@ jobs:
       - uses: actions/checkout@v4
       - name: Byte-identity check (tests/Contract/Crypto/fixtures/ ↔ spec conformance corpus)
         run: scripts/check-crypto-vectors.sh
+
+  # The fourth registry. schemas/ was gated byte-for-byte, OsppErrorCode field-by-
+  # field, the crypto corpus since 0.14.0 — and Chapter 08, which is the one that
+  # says what a station ANSWERS, was not gated at all. Two keys drifted in that gap
+  # and neither was caught by a test, because both tests had been written from the
+  # enum: `ConfigurationKeyTest` enumerated six Static keys where Chapter 08 marks
+  # seven, and reproduced the omission instead of finding it. A test written from
+  # the implementation inherits the implementation's blind spots. Only an upstream
+  # source does not, which is the whole reason this job exists rather than another
+  # assertion in tests/.
+  #
+  # This job could not exist until 0.15.0. The gate was written during 0.14.0 and
+  # deliberately left unwired, because it was RED on `ProtocolVersion` — `0.2.1`
+  # against Chapter 08's `0.3.0` — and a job that lands red is not a gate, it is a
+  # broken window that teaches everyone to ignore the CI column. 0.15.0 fixes the
+  # default in both SDKs, so the gate goes green, so it can finally be wired. That
+  # ordering is the point: fix first, then gate, never gate-and-suppress.
+  #
+  # NB `scripts/check-config-registry.sh` MUST stay mode 100755. `check-error-
+  # registry.sh` and `check-crypto-vectors.sh` were both committed 100644 in 0.14.0
+  # and invoked the same `run: scripts/…` way, so both died `Permission denied` on
+  # every push — 0.14.0 shipped with two gates that had never once executed, and the
+  # CI column was green because a job that cannot start reports nothing. Check the
+  # MODE, not the file list, when adding the fifth one.
+  config-registry:
+    name: Config registry vs spec Chapter 08
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json, openssl
+      - run: composer install --no-interaction --prefer-dist
+      - name: Compare src/Enums/ConfigurationKey.php against spec/08-configuration.md
+        run: scripts/check-config-registry.sh

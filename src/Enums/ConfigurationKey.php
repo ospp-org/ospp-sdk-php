@@ -80,7 +80,7 @@ enum ConfigurationKey: string
             self::RECONNECT_BACKOFF_MAX => 30,
             self::STATION_NAME => '',
             self::TIME_ZONE => 'UTC',
-            self::PROTOCOL_VERSION => '0.2.1',
+            self::PROTOCOL_VERSION => '0.3.0',
             self::BOOT_RETRY_INTERVAL => 30,
             self::CONNECTION_LOST_GRACE_PERIOD => 300,
             self::METER_VALUES_INTERVAL => 60,

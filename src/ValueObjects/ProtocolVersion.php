@@ -67,9 +67,16 @@ final class ProtocolVersion implements \JsonSerializable, \Stringable
      *
      * The returned value is the spec-mandated wire `protocolVersion` field
      * (per `spec/02-transport.md` and `spec/08-configuration.md` `ProtocolVersion`
-     * configuration-key default), NOT the SDK package version. Spec v0.4.0
-     * deliberately did not bump the wire field; future spec minor cycles
-     * will revisit per-message envelope version discrimination.
+     * configuration-key default), NOT the SDK package version.
+     *
+     * It was `0.2.1` from 0.3.0 through 0.14.0, and that was correct only until
+     * spec v0.10.0 moved Chapter 08 to `0.3.0`. Nothing noticed for four minor
+     * releases because both consumers already bypassed this value — csms-server
+     * sets `OSPP_PROTOCOL_VERSION`, ts-station-simulator carried its own constant
+     * — so the wrong default was never on a wire anyone was watching. A default
+     * that is only ever correct because everyone overrides it is not a default;
+     * it is a trap for the first caller who does not. `check-config-registry`
+     * (CI, since 0.15.0) now compares this against Chapter 08 on every push.
      *
      * Frameworks may override via {@see self::setDefaultResolver()}.
      */
@@ -77,7 +84,7 @@ final class ProtocolVersion implements \JsonSerializable, \Stringable
     {
         $version = self::$defaultResolver !== null
             ? (self::$defaultResolver)()
-            : '0.2.1';
+            : '0.3.0';
 
         return self::fromString($version);
     }

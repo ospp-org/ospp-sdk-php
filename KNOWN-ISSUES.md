@@ -18,15 +18,23 @@ that duplicates this package.
 
 | State | Where | One line |
 |-------|-------|----------|
-| CLOSED (unreleased, `main`) | `Enums\ConfigurationKey::isMutable()` | `MessageSigningMode` was returned Dynamic; Chapter 08 sets it **Static** in bold. Fixed, and `ConfigurationKeyTest` rewritten from the spec table |
-| OPEN | `Enums\ConfigurationKey::defaultValue()` + `ValueObjects\ProtocolVersion::default()` | both answer `0.2.1`; Chapter 08 has said `0.3.0` since spec v0.10.0 |
-| CLOSED (unreleased, `main`) | `scripts/check-config-registry.{sh,php}` | Chapter 08 now has the parity gate the other three registries had. NOT yet wired into CI — see below |
-| OPEN | `.github/workflows/tests.yml` | the config-registry job cannot be added until `ProtocolVersion` is fixed, because the gate is red on it |
+| CLOSED in **0.15.0** | `Enums\ConfigurationKey::isMutable()` | `MessageSigningMode` was returned Dynamic; Chapter 08 sets it **Static** in bold. Fixed, and `ConfigurationKeyTest` rewritten from the spec table |
+| CLOSED in **0.15.0** | `Enums\ConfigurationKey::defaultValue()` + `ValueObjects\ProtocolVersion::default()` | both answered `0.2.1`; Chapter 08 has said `0.3.0` since spec v0.10.0. Both now answer `0.3.0`, in lockstep with `@ospp/protocol` 0.15.0 |
+| CLOSED in **0.15.0** | `scripts/check-config-registry.{sh,php}` | Chapter 08 now has the parity gate the other three registries had — **and it is wired into CI**, which is the half that was missing |
+| CLOSED in **0.15.0** | `.github/workflows/tests.yml` | the `config-registry` job now exists. It could not until the default was fixed: the gate was red on it, and a job that lands red is not a gate |
 
 Measured across all 29 cases against `spec/08-configuration.md` at the ref in
-`.spec-ref` (v0.13.0): **two keys disagree, and no other field on any other key does.**
-That is the useful shape of this finding — the table is otherwise exact, so these are two
-transcription slips, not a stale port.
+`.spec-ref` (v0.13.0): before 0.15.0, **two keys disagreed, and no other field on any
+other key did.** That was the useful shape of the finding — the table was otherwise
+exact, so these were two transcription slips, not a stale port. After 0.15.0 the gate
+reports `all 29 keys agree on type, default, access and mutability`, and reports it on
+every push rather than in a session that went looking.
+
+**Nothing in this file is closed by a claim; each row above is closed by a control.**
+The `isMutable()` and `defaultValue()` rows are closed by the same `config-registry` job,
+not by the edits that fixed them — the edits are what made the job green, and the job is
+what stops the next one. That distinction is the entire lesson of the 0.14.0 exec-bit
+finding recorded below.
 
 ---
 
@@ -76,7 +84,12 @@ local table in favour of this one, which is the direction that repo is being pus
 
 ---
 
-## OPEN — `ProtocolVersion` still defaults to `0.2.1`, in two places, where Chapter 08 says `0.3.0`
+## CLOSED in 0.15.0 — `ProtocolVersion` defaulted to `0.2.1`, in two places, where Chapter 08 says `0.3.0`
+
+Both now answer `'0.3.0'`, and `@ospp/protocol` (TypeScript) 0.15.0 shipped the identical
+change in the same release pair, so no cross-SDK disagreement was opened.
+
+The original entry:
 
 - `ConfigurationKey::PROTOCOL_VERSION->defaultValue()` returns `'0.2.1'`
 - `ValueObjects\ProtocolVersion::default()` returns `'0.2.1'` when no resolver is installed
@@ -92,9 +105,20 @@ version two minors behind the one its peer speaks.
 `sdk-ts` carries the same default and the same staleness, so fixing one without the other
 re-opens a cross-SDK disagreement.
 
+**What made this survive four minor releases is worth keeping.** Both consumers of this
+package had independently routed around it — `csms-server` through the env var above,
+`ts-station-simulator` through a local `WIRE_PROTOCOL_VERSION` constant whose docblock
+named "when the SDK's own default is corrected" as its deletion condition. Every caller
+overriding a default means the default is never exercised, so no test, no deployment and
+no wire capture could report it wrong. **Blast radius zero is not the same as harmless:**
+it meant the only thing this defect could still block was the gate that would have caught
+it, and it blocked exactly that for four releases. The simulator's constant is deleted in
+its 0.15.0 bump; a workaround that names its own exit condition and then actually reaches
+it is the outcome to aim for, and is rarer than writing one.
+
 ---
 
-## CLOSED (unreleased) — Chapter 08 had no spec-parity gate; it has one now, and two siblings turned out to be inert
+## CLOSED in 0.15.0 — Chapter 08 had no spec-parity gate; it has one now, it is wired, and two siblings turned out to be inert
 
 `scripts/check-config-registry.{sh,php}` is the Chapter 08 twin of
 `check-error-registry`: it parses the key tables, compares `type`, `default`, `access` and
@@ -102,8 +126,12 @@ re-opens a cross-SDK disagreement.
 25 rows — the empty-dataset-is-green trap the other gates already guard against. Proved
 against a reformatted table: 0 rows parsed, exit 1, no false pass.
 
-**It is not wired into CI yet**, and cannot be until `ProtocolVersion` is fixed: the gate is
-red on that one key, and a job that lands red is not a gate.
+**Wired in 0.15.0** as the `config-registry` job, once `ProtocolVersion` was fixed. It could
+not be wired before that: the gate was red on that one key, and a job that lands red is not a
+gate — it is a broken window that teaches the team to stop reading the CI column. The order
+matters and is the reusable part: fix the divergence, watch the gate go green on its own, then
+wire it. Never wire a red gate with the failing case suppressed, because the suppression
+outlives everyone's memory of why it was added.
 
 **Found while building it — two of the three existing gates had never run.**
 `scripts/check-error-registry.sh` and `scripts/check-crypto-vectors.sh` were both committed
