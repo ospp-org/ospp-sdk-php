@@ -7,6 +7,109 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.17.0] — 2026-08-13
+
+**SDK-pair release against spec `v0.16.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+Released at the same version as `@ospp/protocol` **0.17.0**, from the same spec pin.
+
+`.spec-ref` **v0.15.0 → v0.16.0**, and this is the cheap kind of bump: **nothing needs
+re-vendoring.** `v0.16.0` changes no schema and no conformance vector — the only files that
+moved under `schemas/` and `conformance/test-vectors/` are two README version banners, and
+the byte-identity gate excludes `README.md` while the crypto gate names its four files
+explicitly. Measured rather than assumed: all four spec-facing gates were re-run against the
+`v0.16.0` tree before the pin moved, and all four are green. A release that does not force a
+re-vendor is worth saying out loud, because the ordering that a re-vendor *does* force —
+schemas, then vectors, then hardcoded totals, then the pin — is expensive and is not needed
+here.
+
+> **BREAKING, for a consumer that string-compares `ConfigurationKey::…->profile()`:
+> the four Offline / BLE keys now answer `OfflineBLE` where they answered `Offline`.**
+>
+> `OfflineModeEnabled`, `MaxOfflineTransactions`, `OfflinePassMaxAge` and `RevocationEpoch`.
+> The other four profiles are unchanged: `Core`, `Transaction`, `Security`,
+> `DeviceManagement` were already spelled the way the spec now requires.
+>
+> **This is an API break and NOT a protocol break, and the distinction is load-bearing.**
+> The profile is metadata that never reaches the wire. No schema in `schemas/` declares a
+> `profile` property at all; `schemas/mqtt/get-configuration-response.schema.json` sets
+> `additionalProperties: false` over exactly `key`, `value` and `readonly`, so a profile
+> field could not be sent even deliberately. `ConfigurationKey` is referenced in three files
+> in this package and none of them is under `src/Envelope/`, `src/Actions/` or `src/Crypto/`;
+> `->profile()` had two call sites before this release and both were tests. **No byte on any
+> MQTT or BLE payload changes, no canonical form changes, no MAC or signature input changes.**
+> A station and a server on either side of this upgrade interoperate exactly as before.
+>
+> **`csms-server`, the only known consumer of this package, does not read it.**
+> `Ospp\Protocol\Enums\ConfigurationKey` is imported nowhere in that repository — its
+> `App\Modules\DeviceManagement\Config\ConfigRegistry` is a separate hand-maintained table
+> that happens to spell the same profile `'Offline'`, and is unaffected by this change
+> because it never consulted the enum. That local table is now the drifted one, against the
+> spec rather than against this SDK.
+
+### Changed
+
+- **`ConfigurationKey::profile()` returns the spec's normative Profile ID.** Spec `v0.16.0`
+  §1.5 gains a **Profile ID** column — `Core`, `Transaction`, `Security`, `OfflineBLE`,
+  `DeviceManagement` — and states that an implementation exposing a key's profile as a
+  program value MUST use it exactly. Until that column existed there was only a display
+  label to copy, and `Offline / BLE` does not survive being made an identifier: this package
+  chose `Offline`, `@ospp/protocol` chose `OfflineBLE`, and the same table's `Device
+  Management` produced `DeviceManagement` here and `DeviceMgmt` there. Four spellings of two
+  profiles across two SDKs, none of them wrong against anything, because there was nothing to
+  be wrong against. Each SDK changes exactly one value in this release.
+
+- **`scripts/check-schemas.sh` is `100755`.** It was `100644` in the git index while the
+  0.15.0 notes claimed all four gate scripts were `100755`. Harmless today — the schemas CI
+  job inlines its steps rather than calling the script — but it is the same latent defect
+  that killed two gates at 0.13.0, armed and waiting for the day someone wires it as
+  `run: scripts/check-schemas.sh`. The claim is now true.
+
+- **docs:** `README.md` described `ConfigurationKey` as *"41 keys with metadata"*. It has 29,
+  and has since the enum was cut down.
+
+### Added
+
+- **`scripts/check-config-registry.php` compares the profile.** The gate has compared this
+  enum against Chapter 08 since 0.15.0 on `Type`, `Default`, `Access` and `Mutability`, and
+  was structurally blind to the fifth property: **the profile is not in the same table.**
+  §§2--6 carry no profile column — a key's profile is expressed there by which *section* the
+  row sits in — so a gate built by parsing those rows sees four properties and cannot see
+  this one. It ran green against spec `v0.16.0` with the `Offline` drift live. The profile is
+  now read from §1.5 and compared per key, which is what §1.5 means when it says "an SDK gate
+  compares its own registry to the Profile ID column".
+
+  Three properties, the same as the sibling ratchets:
+
+  - **Thresholds on each side before any comparison.** §1.5 is a *different table* from the
+    §§2--6 rows, so the 25-row floor those already cleared says nothing about it: §1.5 could
+    reformat, yield nothing, and leave the gate reporting a clean pass on four properties
+    while checking zero keys for the fifth. It has its own floors — 5 profile rows, 25 keys
+    named across them — plus one on the SDK side.
+  - **Zero matched pairs is a failure, never a pass.** Every threshold above can be cleared
+    by two tables that each parse fully and name *disjoint* key sets: both sides full, the
+    intersection empty, nothing compared and nothing reported. The count of pairs actually
+    compared is now printed on success, so the number the gate is asserting over is visible
+    rather than inferred from silence.
+  - **It refuses rather than reports success on too few rows**, and names the parser to fix.
+
+  RED-tested four ways, each confirmed to exit 1: the real drift (reports exactly the four
+  Offline keys); spec `v0.15.0`, where the column does not exist yet (0 profile rows —
+  **this gate cannot run against a spec older than v0.16.0, which is why the pin and the gate
+  move in one commit**); two tables naming disjoint keys (0 pairs compared); and a misspelled
+  Profile ID upstream (reported once as a vocabulary problem, not only as four per-key lines).
+
+### Not in this release
+
+- **No range validation.** Spec `v0.16.0` declares the Chapter 08 Range column normative
+  (§1.6) and widens `HeartbeatIntervalSeconds` from `30--3600` to `10--3600`. This enum
+  models no range — it never has — so there is nothing here to correct and nothing for the
+  gate to compare. The widened floor matters to whatever validates a ChangeConfiguration
+  value, which in this architecture is downstream of this package.
+- **Nothing for the Device Management profile becoming capability-conditional.** `v0.16.0`
+  makes those four keys REQUIRED only when a station declares
+  `capabilities.deviceManagementSupported`. This enum records which profile a key belongs to,
+  not whether that profile is required, so the change has no surface here.
+
 ## [0.16.0] — 2026-08-13
 
 **SDK-pair release against spec `v0.15.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).

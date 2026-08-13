@@ -44,7 +44,7 @@ final class ConfigurationKeyTest extends TestCase
     #[Test]
     public function offline_profile_has_4_keys(): void
     {
-        $count = $this->countByProfile('Offline');
+        $count = $this->countByProfile('OfflineBLE');
         self::assertSame(4, $count);
     }
 
@@ -61,7 +61,7 @@ final class ConfigurationKeyTest extends TestCase
         $sum = $this->countByProfile('Core')
             + $this->countByProfile('Transaction')
             + $this->countByProfile('Security')
-            + $this->countByProfile('Offline')
+            + $this->countByProfile('OfflineBLE')
             + $this->countByProfile('DeviceManagement');
 
         self::assertSame(29, $sum);

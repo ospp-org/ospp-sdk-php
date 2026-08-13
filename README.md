@@ -35,7 +35,7 @@
   │              │ FirmwareUpdateStatus, DiagnosticsStatus, ReservationStatus, BootNotificationStatus, BootReason,               │
   │              │ NetworkConnectionType, TransactionEventStatus, ChangeConfigResultStatus, DataTransferStatus,                  │
   │              │ TriggerMessageStatus, CertificateType, ResetType, SecurityEventType, StationConnectivity,                    │
-  │              │ BleServiceStatus, PricingType, LogLevel, SessionEndReason, ConfigurationKey (41 keys with metadata)            │
+  │              │ BleServiceStatus, PricingType, LogLevel, SessionEndReason, ConfigurationKey (29 keys with metadata)            │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ State        │ Transition tables for Bay (7 states), Session (6 states), Firmware (10 states), Diagnostics (5 states),        │
   │ Machines     │ Reservation (5 states)                                                                                         │

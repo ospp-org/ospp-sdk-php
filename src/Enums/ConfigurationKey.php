@@ -37,7 +37,7 @@ enum ConfigurationKey: string
     case CERTIFICATE_RENEWAL_THRESHOLD_DAYS = 'CertificateRenewalThresholdDays';
     case CERTIFICATE_RENEWAL_ENABLED = 'CertificateRenewalEnabled';
 
-    // Offline Profile (4 keys)
+    // Offline / BLE Profile (4 keys) -- Profile ID `OfflineBLE`
     case OFFLINE_MODE_ENABLED = 'OfflineModeEnabled';
     case MAX_OFFLINE_TRANSACTIONS = 'MaxOfflineTransactions';
     case OFFLINE_PASS_MAX_AGE = 'OfflinePassMaxAge';
@@ -156,6 +156,19 @@ enum ConfigurationKey: string
         };
     }
 
+    /**
+     * The key's profile, as the **Profile ID** of spec/08-configuration.md §1.5 --
+     * the normative machine identifier, never the display label.
+     *
+     * §1.5 states the two columns separately because the labels do not survive
+     * being made identifiers: `Offline / BLE` carries a space and a slash, and
+     * every implementation that needed a program value invented its own spelling
+     * of it. This method returned `Offline` until the column existed to compare
+     * against. The display labels, for reference, are: Core, Transaction,
+     * Security, `Offline / BLE`, `Device Management`.
+     *
+     * Checked against the spec by scripts/check-config-registry.php.
+     */
     public function profile(): string
     {
         return match ($this) {
@@ -186,7 +199,7 @@ enum ConfigurationKey: string
             self::OFFLINE_MODE_ENABLED,
             self::MAX_OFFLINE_TRANSACTIONS,
             self::OFFLINE_PASS_MAX_AGE,
-            self::REVOCATION_EPOCH => 'Offline',
+            self::REVOCATION_EPOCH => 'OfflineBLE',
 
             self::FIRMWARE_UPDATE_ENABLED,
             self::DIAGNOSTICS_UPLOAD_URL,

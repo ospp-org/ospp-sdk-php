@@ -6,15 +6,27 @@ declare(strict_types=1);
  * Gate: the SDK configuration registry vs the SPEC configuration registry.
  *
  * Compares every case of ConfigurationKey against the key tables in the spec's
- * `spec/08-configuration.md`, on the four properties the spec declares per key —
- * `Type`, `Default`, `Access`, `Mutability` — plus the key set itself, in both
- * directions.
+ * `spec/08-configuration.md`, on the five properties the spec declares per key —
+ * `Type`, `Default`, `Access`, `Mutability` from §§2--6, and the **Profile ID**
+ * from §1.5 — plus the key set itself, in both directions.
  *
  * `Range` and `Description` are deliberately NOT checked. The enum models neither:
  * range lives downstream in whatever validates a ChangeConfiguration value, and
  * description is prose that §1.4's sibling rule in Chapter 07 would forbid emitting
  * verbatim anyway. Nothing here has an upstream to compare to, so nothing here is
  * claimed.
+ *
+ * **The profile comes from a different table than the other four**, which is why it
+ * was missed. §§2--6 have no profile column at all — a key's profile is expressed
+ * there by which SECTION it sits in — so a gate that parses those rows sees every
+ * other property and is structurally blind to this one. §1.5 is where the profile is
+ * stated per key, and until spec v0.16.0 it stated only a display label: `Offline /
+ * BLE` and `Device Management`, neither of which survives being made an identifier.
+ * Each implementation that needed a program value invented a spelling — this package
+ * chose `Offline`, `sdk-ts` chose `OfflineBLE` and `DeviceMgmt` — and nothing
+ * compared them to anything, so three spellings of two profiles coexisted across two
+ * SDKs for as long as the field existed. v0.16.0 adds the normative **Profile ID**
+ * column; this is the gate §1.5 names when it says one exists.
  *
  * ---
  *
@@ -75,6 +87,29 @@ if ($md === false) {
 const ROW = '/^\|\s*`([A-Za-z]+)`\s*\|\s*\*{0,2}(\w+)\*{0,2}\s*\|([^|]*)\|\s*(R|RW|W)\s*\|\s*\*{0,2}(Static|Dynamic)\*{0,2}\s*\|/';
 
 /**
+ * A §1.5 profile row: `| **Display Label** | `ProfileID` | key, key, ... | Required |`.
+ *
+ * Parsed ONLY inside §1.5. §§1.2, 1.3 and 1.4 are also leading-emphasis tables in
+ * this chapter and a looser pattern reaches them; the section bound is what keeps
+ * them out, not the pattern. The header row survives neither — `Profile ID` carries
+ * a space and cannot match column 2 — but it is skipped by name as well, because a
+ * header that started matching would enter the map as a profile.
+ */
+const PROFILE_SECTION = '/^###\s+1\.5\b/';
+const PROFILE_SECTION_END = '/^#{2,3}\s/';
+const PROFILE_ROW = '/^\|\s*\*{0,2}([A-Za-z][A-Za-z \/-]*?)\*{0,2}\s*\|\s*`?([A-Za-z]+|--)`?\s*\|([^|]*)\|/';
+
+/**
+ * The Profile IDs this SDK expects §1.5 to carry.
+ *
+ * Not the comparison — the comparison is per key, below. This is the vocabulary
+ * check: if the spec renames or adds a profile, every key in it drifts at once and
+ * the per-key output would be 4 or 9 lines of the same fact. Naming the set makes
+ * that one line, and makes a spec-side rename impossible to absorb silently.
+ */
+const EXPECTED_PROFILE_IDS = ['Core', 'DeviceManagement', 'OfflineBLE', 'Security', 'Transaction'];
+
+/**
  * The Default cell as a comparable scalar.
  *
  * `--` means the spec states no default (read-only keys the station fills in).
@@ -128,6 +163,79 @@ if (count($spec) < 25) {
     exit(1);
 }
 
+// --- §1.5: the profile of each key, by normative Profile ID --------------------
+//
+// Scoped to the section. A row outside §1.5 that happened to match would enter the
+// map as a profile and could only make this gate weaker, never louder.
+
+/** @var array<string, string> $specProfile key => Profile ID */
+$specProfile = [];
+/** @var array<string, string> $profileIds Profile ID => display label */
+$profileIds = [];
+
+$inside = false;
+foreach (preg_split('/\r?\n/', $md) as $line) {
+    if (preg_match(PROFILE_SECTION, $line) === 1) {
+        $inside = true;
+
+        continue;
+    }
+
+    if ($inside && preg_match(PROFILE_SECTION_END, $line) === 1) {
+        break;
+    }
+
+    if (! $inside || preg_match(PROFILE_ROW, $line, $m) !== 1) {
+        continue;
+    }
+
+    $label = trim($m[1]);
+    $id = trim($m[2]);
+
+    // The header, and the Vendor-Specific row — which states `--` because a vendor
+    // key has no standard profile and this SDK models no vendor key.
+    if ($label === 'Profile' || $id === '--') {
+        continue;
+    }
+
+    $profileIds[$id] = $label;
+
+    foreach (preg_split('/\s*,\s*/', trim($m[3])) as $key) {
+        $key = trim($key, '` ');
+        if ($key !== '') {
+            $specProfile[$key] = $id;
+        }
+    }
+}
+
+// Threshold on the spec side, before any comparison. The §1.5 table is a DIFFERENT
+// table from the §§2--6 rows already parsed above, so the floor those rows cleared
+// says nothing about this one: §1.5 could reformat, yield nothing, and leave the
+// gate reporting a clean pass on four properties while silently checking zero keys
+// for the fifth. That is the same empty-dataset-is-green trap, one table over.
+if (count($profileIds) < 5) {
+    fwrite(STDERR, sprintf(
+        "ERROR: parsed only %d profile row(s) from §1.5 of spec/08-configuration.md — the\n"
+        ."profile table format has probably changed. Refusing to report a pass; fix the\n"
+        ."parser in scripts/check-config-registry.php.\n",
+        count($profileIds),
+    ));
+    exit(1);
+}
+
+if (count($specProfile) < 25) {
+    fwrite(STDERR, sprintf(
+        "ERROR: §1.5 named %d key(s) across its profiles, against %d rows in §§2--6 — the\n"
+        ."Keys column has probably changed shape. Refusing to report a pass.\n",
+        count($specProfile),
+        count($spec),
+    ));
+    exit(1);
+}
+
+$unknownIds = array_diff(array_keys($profileIds), EXPECTED_PROFILE_IDS);
+$missingIds = array_diff(EXPECTED_PROFILE_IDS, array_keys($profileIds));
+
 /**
  * The enum's answer, normalised to the spec's vocabulary.
  *
@@ -148,7 +256,7 @@ function sdkDefault(string|int|bool|null $value): ?string
     return (string) $value;
 }
 
-/** @var array<string, array{type: string, default: ?string, access: string, mutability: string}> $sdk */
+/** @var array<string, array{type: string, default: ?string, access: string, mutability: string, profile: string}> $sdk */
 $sdk = [];
 foreach (ConfigurationKey::cases() as $case) {
     $sdk[$case->value] = [
@@ -157,11 +265,43 @@ foreach (ConfigurationKey::cases() as $case) {
         'access' => $case->access(),
         // The enum answers a bool; the table names the two states.
         'mutability' => $case->isMutable() ? 'Dynamic' : 'Static',
+        'profile' => $case->profile(),
     ];
+}
+
+// Threshold on the SDK side. `cases()` cannot return an empty array for a non-empty
+// enum, so this cannot fire today — it is here because the assertion the gate makes
+// is "N keys were compared", and a future refactor that filters this list has to
+// break the gate rather than shrink its scope quietly.
+if (count($sdk) < 25) {
+    fwrite(STDERR, sprintf(
+        "ERROR: the SDK enum yielded only %d key(s). Refusing to report a pass on a\n"
+        ."registry that small.\n",
+        count($sdk),
+    ));
+    exit(1);
 }
 
 /** @var list<string> $problems */
 $problems = [];
+
+foreach ($unknownIds as $id) {
+    $problems[] = "§1.5 carries Profile ID '{$id}', which this SDK does not know";
+}
+foreach ($missingIds as $id) {
+    $problems[] = "this SDK expects Profile ID '{$id}', which §1.5 no longer carries";
+}
+
+// §1.5's own guarantee, checked rather than assumed: an ID that is not a bare
+// alphanumeric word cannot be used as the program value §1.5 requires it to be, and
+// this gate would then be comparing against something no implementation can adopt.
+foreach (array_keys($profileIds) as $id) {
+    if (ctype_alnum($id) !== true) {
+        $problems[] = "Profile ID '{$id}' is not usable as a program identifier";
+    }
+}
+
+$profilesCompared = 0;
 
 ksort($spec);
 foreach ($spec as $key => $s) {
@@ -177,6 +317,18 @@ foreach ($spec as $key => $s) {
         if ($o[$field] !== $s[$field]) {
             $problems[] = "{$key}: {$field} spec={$s[$field]} sdk={$o[$field]}";
         }
+    }
+
+    // A key in §§2--6 that §1.5 does not place in a profile is a spec defect, not a
+    // key to skip: skipping it is how a key drops out of this comparison without
+    // changing the count of problems.
+    if (! isset($specProfile[$key])) {
+        $problems[] = "{$key}: in §§2--6, but §1.5 places it in no profile";
+    } elseif ($o['profile'] !== $specProfile[$key]) {
+        $problems[] = "{$key}: profile spec={$specProfile[$key]} sdk={$o['profile']}";
+        $profilesCompared++;
+    } else {
+        $profilesCompared++;
     }
 
     if ($o['default'] !== $s['default']) {
@@ -196,7 +348,29 @@ foreach ($sdk as $key => $o) {
     }
 }
 
-printf("spec %s: %d keys    SDK enum: %d keys\n", $refLabel, count($spec), count($sdk));
+// Zero compared pairs is a failure, never a pass. Every threshold above can be
+// cleared by a §1.5 that parses cleanly and a §§2--6 that parses cleanly while the
+// two name DISJOINT key sets — each side full, the intersection empty, no key
+// compared and no problem raised. This is the assertion the gate actually makes, so
+// it is the one that has to be stated rather than inferred from the absence of
+// output.
+if ($profilesCompared === 0) {
+    fwrite(STDERR,
+        "ERROR: zero key/profile pairs were compared. §1.5 and §§2--6 parsed but name\n"
+        ."disjoint key sets, so the profile check ran against nothing. Refusing to report\n"
+        ."a pass; fix the parser in scripts/check-config-registry.php.\n",
+    );
+    exit(1);
+}
+
+printf(
+    "spec %s: %d keys, %d profiles    SDK enum: %d keys    profiles compared: %d\n",
+    $refLabel,
+    count($spec),
+    count($profileIds),
+    count($sdk),
+    $profilesCompared,
+);
 
 if ($problems !== []) {
     fwrite(STDERR, sprintf(
@@ -209,14 +383,21 @@ if ($problems !== []) {
     }
     fwrite(STDERR,
         "\nFix: change the SDK to match the spec. Chapter 08 is the source of truth for\n"
-        ."type, default, access and mutability. If the SPEC is what is wrong, fix it there\n"
-        ."first and re-pin .spec-ref — do not \"correct\" it here.\n"
-        ."\nA fix to isMutable() or defaultValue() must also update\n"
+        ."type, default, access and mutability (§§2--6) and for the profile (§1.5, the\n"
+        ."Profile ID column — NOT the display label beside it). If the SPEC is what is\n"
+        ."wrong, fix it there first and re-pin .spec-ref — do not \"correct\" it here.\n"
+        ."\nA fix to isMutable(), defaultValue() or profile() must also update\n"
         ."tests/Unit/Enums/ConfigurationKeyTest.php, which enumerates those answers by hand\n"
         ."and will otherwise keep asserting the old one.\n",
     );
     exit(1);
 }
 
-printf("OK — all %d keys agree with spec %s on type, default, access and mutability\n", count($spec), $refLabel);
+printf(
+    "OK — all %d keys agree with spec %s on type, default, access and mutability,\n"
+    ."and all %d agree with §1.5 on the normative Profile ID\n",
+    count($spec),
+    $refLabel,
+    $profilesCompared,
+);
 exit(0);
