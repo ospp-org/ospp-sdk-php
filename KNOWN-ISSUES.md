@@ -22,6 +22,8 @@ that duplicates this package.
 | CLOSED in **0.15.0** | `Enums\ConfigurationKey::defaultValue()` + `ValueObjects\ProtocolVersion::default()` | both answered `0.2.1`; Chapter 08 has said `0.3.0` since spec v0.10.0. Both now answer `0.3.0`, in lockstep with `@ospp/protocol` 0.15.0 |
 | CLOSED in **0.15.0** | `scripts/check-config-registry.{sh,php}` | Chapter 08 now has the parity gate the other three registries had — **and it is wired into CI**, which is the half that was missing |
 | CLOSED in **0.15.0** | `.github/workflows/tests.yml` | the `config-registry` job now exists. It could not until the default was fixed: the gate was red on it, and a job that lands red is not a gate |
+| CLOSED in **0.17.0** | `Enums\ConfigurationKey::profile()` | answered `Offline` where spec §1.5's new **Profile ID** column says `OfflineBLE`. The gate could not have caught it — it read only §§2--6, which carry no profile column at all |
+| **OPEN** | `scripts/check-schemas.sh` | mode corrected to `100755` in 0.17.0, on a script **nothing invokes**. A repair no run can confirm — see below |
 
 Measured across all 29 cases against `spec/08-configuration.md` at the ref in
 `.spec-ref` (v0.13.0): before 0.15.0, **two keys disagreed, and no other field on any
@@ -173,3 +175,48 @@ The crypto corpus makes the precedent explicit; `check-crypto-vectors.sh`'s own 
 says this package "had no crypto-corpus gate at all before 0.14.0 — schemas were checked
 against the spec and the crypto vectors were not", and that canonical form is why that
 stopped being acceptable. Chapter 08 is now the last table in that position.
+
+---
+
+## OPEN — a corrected file mode on a script nothing invokes is a repair no run can confirm
+
+Found at **v0.17.0**, 2026-08-13, while verifying that the new `config-registry` gate was
+actually executable in CI rather than merely green.
+
+`scripts/check-schemas.sh` was `100644` in the git index. The 0.15.0 notes stated that
+*"All four gate scripts are `100755`"*, and that sentence was false when it was written.
+0.17.0 changed the mode to `100755`, which makes the sentence true.
+
+**That fix is unfalsifiable in this repository, and that is the finding.** Nothing invokes
+`check-schemas.sh` — not CI, not a composer script. The `schemas` job in
+`.github/workflows/tests.yml` performs the same byte-identity comparison with its steps
+written inline, so the check itself runs on every push; the *script* is a local convenience
+mirror of it. Every other gate here proved its own mode in the 0.17.0 run by producing
+output. This one produced none, because it was never called.
+
+**Why it matters, stated as the trap rather than the defect.** The next person to wire this
+script into CI as `run: scripts/check-schemas.sh` will find a `100755` in the index and
+reasonably conclude the mode was verified. It was not. It was *asserted* — the same class of
+claim as the 0.15.0 sentence it replaces, one level less wrong. The 0.13.0 incident recorded
+above is precisely what happens when a mode is believed rather than exercised: two gates
+shipped `100644`, were invoked as bare `run: scripts/…`, and died `Permission denied` on
+every run with the CI column green.
+
+The same shape exists in `@ospp/sdk-ts`: its `scripts/check-schemas.sh` is `100755`, is
+referenced by no npm script, and is invoked by no CI job, for the same reason — that repo's
+`schemas` job also inlines the diff.
+
+**Options, none taken here:**
+
+1. **Wire it and delete the inline steps.** One definition of the check instead of two, and
+   the mode becomes load-bearing and therefore proven on every run. This is the option that
+   closes the entry; it is not taken in 0.17.0 because rewriting a green CI job during a
+   release is how a release breaks a gate.
+2. **Delete the script.** The inline steps are the real gate; a mirror that drifts from them
+   is worse than no mirror. Costs the `SPEC_REPO=` local-checkout path, which the inline
+   steps do not offer and which is genuinely used when working offline against a local spec.
+3. **Leave it and stop claiming.** Keep the script as a documented local-only tool and never
+   again write a sentence about all gate scripts being executable. Cheapest, and the only one
+   that requires this entry to stay open.
+
+The mode is `100755` either way; nothing in 0.17.0 depends on it being right.
