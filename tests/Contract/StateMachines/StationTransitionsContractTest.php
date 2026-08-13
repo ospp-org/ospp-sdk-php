@@ -154,12 +154,31 @@ final class StationTransitionsContractTest extends TestCase
     }
 
     #[Test]
-    public function sendsAnythingElseUnsolicited(): void
+    public function originatesOnlyStandingRepairMessagesWhileRestricted(): void
     {
-        self::assertFalse(StationState::BOOTING->maySendUnsolicited());
-        self::assertFalse(StationState::PENDING->maySendUnsolicited());
-        self::assertFalse(StationState::REJECTED->maySendUnsolicited());
-        self::assertTrue(StationState::OPERATIONAL->maySendUnsolicited());
+        // §1.4: BootNotification retries are a MUST in both restricted states.
+        self::assertTrue(StationState::BOOTING->mayOriginate('BootNotification'));
+        self::assertTrue(StationState::PENDING->mayOriginate('BootNotification'));
+        self::assertTrue(StationState::REJECTED->mayOriginate('BootNotification'));
+
+        // The second standing-repair message, and the row this release added.
+        // Only `Pending` — `Booting` and `Rejected` hold no session key, and
+        // SignCertificate is in the signed 44.
+        self::assertTrue(StationState::PENDING->mayOriginate('SignCertificate'));
+        self::assertFalse(StationState::BOOTING->mayOriginate('SignCertificate'));
+        self::assertFalse(StationState::REJECTED->mayOriginate('SignCertificate'));
+
+        // Everything else reports on the station's work, and stays forbidden.
+        foreach (['Heartbeat', 'StatusNotification', 'MeterValues', 'TransactionEvent', 'SecurityEvent'] as $action) {
+            self::assertFalse(StationState::BOOTING->mayOriginate($action), $action);
+            self::assertFalse(StationState::PENDING->mayOriginate($action), $action);
+            self::assertFalse(StationState::REJECTED->mayOriginate($action), $action);
+            self::assertTrue(StationState::OPERATIONAL->mayOriginate($action), $action);
+        }
+
+        // Neither is a §1.4 state; both answer false, as before.
+        self::assertFalse(StationState::NOT_PROVISIONED->mayOriginate('BootNotification'));
+        self::assertFalse(StationState::DISCONNECTED->mayOriginate('BootNotification'));
     }
 
     #[Test]

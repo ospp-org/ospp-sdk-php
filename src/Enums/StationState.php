@@ -47,9 +47,13 @@ enum StationState: string
      * service — an operator approval is outstanding, or a `3018
      * TOPOLOGY_MISMATCH` needs repair.
      *
-     * A RESTRICTED state: the station answers commands and sends nothing
-     * unsolicited. It DOES hold a session key — the response that put it here
-     * carries one — because every command it answers is signed.
+     * A RESTRICTED state: the station answers commands, and originates nothing
+     * but BootNotification retries and a SignCertificate renewal — the two
+     * messages that repair its own standing rather than report on its work
+     * (§1.4, {@see self::mayOriginate()}). It DOES hold a session key — the
+     * response that put it here carries one — because every command it answers
+     * is signed, and because that key is what makes the SignCertificate
+     * possible here and impossible in `Rejected`.
      */
     case PENDING = 'Pending';
 
@@ -116,15 +120,50 @@ enum StationState: string
     }
 
     /**
-     * §1.4 row: *Sends anything else unsolicited (EVENT, or a REQUEST it
-     * originates).*
+     * §1.4: *"A restricted station may originate exactly those messages that
+     * repair its own standing with the server."*
      *
-     * Only `Operational` MAY. The BootNotification retry is not "anything else"
-     * — it is the one message a restricted station MUST send.
+     * BootNotification restores the station's registration; SignCertificate
+     * restores the credential without which it cannot connect at all. Nothing
+     * else qualifies — every other originated message reports on the station's
+     * *work*, and a restricted station has not been cleared to do that work.
+     *
+     * These are wire `action` values, not message IDs, because that is what the
+     * envelope carries.
      */
-    public function maySendUnsolicited(): bool
+    public const STANDING_REPAIR_ACTIONS = ['BootNotification', 'SignCertificate'];
+
+    /**
+     * §1.4: may a station in this state originate `$action`?
+     *
+     * This replaces `maySendUnsolicited()`, which asked the question without the
+     * one input that decides it. §1.4 is message-dependent — `Pending` may
+     * originate SignCertificate and may not originate Heartbeat — and a
+     * parameterless boolean cannot carry a message-dependent answer. A second
+     * boolean beside the first would not have helped: the first would have gone
+     * on returning `false` for a `Pending` SignCertificate.
+     *
+     * `Operational` may originate anything. A restricted state may originate the
+     * standing-repair messages only, and only where it holds the session key
+     * those messages must be signed with: SignCertificate is one of the 44 signed
+     * message types (Chapter 06 §5.6) and a sender with no key MUST refuse to
+     * send rather than send unsigned (§5.7), so `Booting` and `Rejected` cannot
+     * send it however this method is called. That is why the specification adds
+     * no written scope for it, and says not to.
+     *
+     * `NotProvisioned` and `Disconnected` answer `false`, as the method this
+     * replaces did. That is the §1.4 answer and not a transport claim: a
+     * disconnected station is not forbidden to originate, it has no channel to
+     * originate on.
+     */
+    public function mayOriginate(string $action): bool
     {
-        return $this === self::OPERATIONAL;
+        return match ($this) {
+            self::OPERATIONAL => true,
+            self::PENDING => in_array($action, self::STANDING_REPAIR_ACTIONS, true),
+            self::BOOTING, self::REJECTED => $action === 'BootNotification',
+            self::NOT_PROVISIONED, self::DISCONNECTED => false,
+        };
     }
 
     /**
