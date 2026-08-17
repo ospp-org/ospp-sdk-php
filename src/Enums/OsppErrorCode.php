@@ -272,6 +272,11 @@ enum OsppErrorCode: int
             self::INSUFFICIENT_STORAGE,
             self::UPLOAD_FAILED,
             self::INVALID_CATALOG,
+            // v0.22.0: 5024 moved Warning -> Error when the partial application it
+            // mandated was withdrawn. It refuses the whole catalog now, so it is not
+            // an advisory. Reached this enum through `default => WARNING`, which is
+            // why nothing here had to name it before.
+            self::UNSUPPORTED_SERVICE,
             self::CATALOG_TOO_LARGE,
             self::CONFIGURATION_KEY_READONLY,
             self::INVALID_CONFIGURATION_VALUE,

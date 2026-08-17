@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.22.0 — 2026-08-18
+
+**Three-repository release against spec `v0.22.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+The spec's contract moved — a schema tightening and an error-registry change — so all three
+repositories carry this number. `.spec-ref` moves **v0.20.2 → v0.22.0**, skipping `v0.21.0`,
+which was a spec-only reversal neither SDK ever carried.
+
+> ### ⚠ Two breaking changes, one of which reaches code that never mentions the error code.
+
+### Changed — the pricing conditional is now enforced, and a price-less catalog item is refused
+
+`schemas/common/service-item.schema.json` gained `if`/`then`: a `PerMinute` service requires
+`priceCreditsPerMinute` and **MUST NOT** carry `priceCreditsFixed` or `priceLocalFixed`; `Fixed`
+is the mirror. Before this, a service with a declared `pricingType` and **no price at all**
+validated clean, and the spec's own "valid" conformance vector
+`update-service-catalog-request-minimal.json` was exactly that payload.
+
+Nothing in `src/` had to change for this: the rule arrives by vendoring. What *did* have to move
+in the same commit is the vector — a schema tightening whose corpus is not updated with it turns
+the SDK's own conformance suite red on a payload that is no longer valid. Measured here before
+committing: schema without vector = **1 failed**, and the failure names that file.
+
+`schemas/ble/available-services.schema.json` gained the same conditional.
+
+### Changed — `5024 UNSUPPORTED_SERVICE` severity `Warning` → `Error`
+
+The spec withdrew the partial application this code mandated: a station now refuses the **whole**
+catalog rather than dropping the entry it cannot run. `OsppErrorCode` is updated to match.
+
+**This is the change to look at if you branch on severity rather than on the code.** The code's
+number, name and `recoverable` are all unchanged, so a consumer switching on `5024` sees nothing;
+a consumer routing by `Severity` sees this move from an advisory to an error. Each SDK's
+`check-error-registry` gate caught it against the spec — it was not found by reading.
+
+### Unchanged, and verified so
+
+This SDK validates the BLE `offline/` corpus; `sdk-ts` does not, because its `SchemaValidator`
+maps MQTT keys only. So `schemas/ble/available-services.schema.json` reaches **this** SDK alone,
+and the proof is that with the schemas copied and the vectors not yet moved, this suite failed on
+**two** vectors — `device-management/update-service-catalog-request-minimal.json` and
+`offline/available-services-minimal.json` — where `sdk-ts` failed on only the first.
+
+---
+
 ## 0.20.0 — 2026-08-17
 
 **SDK-pair release against spec `v0.20.2`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md),

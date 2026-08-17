@@ -516,6 +516,9 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::INSUFFICIENT_STORAGE,
             OsppErrorCode::UPLOAD_FAILED,
             OsppErrorCode::INVALID_CATALOG,
+            // v0.22.0: moved here from the WARNING list below. 5024 no longer means
+            // "one entry ignored, the rest applied" — it refuses the whole catalog.
+            OsppErrorCode::UNSUPPORTED_SERVICE,
             OsppErrorCode::CATALOG_TOO_LARGE,
             OsppErrorCode::CONFIGURATION_KEY_READONLY,
             OsppErrorCode::INVALID_CONFIGURATION_VALUE,
@@ -570,7 +573,6 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::VERSION_ALREADY_INSTALLED,
             OsppErrorCode::INVALID_TIME_WINDOW,
             OsppErrorCode::NO_DIAGNOSTICS_AVAILABLE,
-            OsppErrorCode::UNSUPPORTED_SERVICE,
             OsppErrorCode::CLOCK_ERROR,
             OsppErrorCode::OPERATION_IN_PROGRESS,
             OsppErrorCode::ACK_TIMEOUT,
