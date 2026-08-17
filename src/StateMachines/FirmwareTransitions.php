@@ -8,18 +8,31 @@ use Ospp\Protocol\Enums\FirmwareUpdateStatus;
 
 final class FirmwareTransitions
 {
-    /** @var array<string, list<string>> */
+    /**
+     * The thirteen edges of spec/05-state-machines.md §6.3.
+     *
+     * The table there has fourteen ROWS: `Verifying -> Failed` is listed twice,
+     * once for a checksum mismatch and once for an invalid signature, "because
+     * the two have different actions and different error codes, not because they
+     * are two transitions."
+     *
+     * `Failed` is NOT terminal. §6.3: "`Failed` has exactly one outgoing edge,
+     * `Failed -> Idle`; it is **not** terminal, and a machine that treats it as
+     * terminal can run one firmware update and never a second."
+     *
+     * @var array<string, list<string>>
+     */
     private const TRANSITIONS = [
         'idle' => ['downloading'],
         'downloading' => ['downloaded', 'failed'],
-        'downloaded' => ['verifying', 'failed'],
+        'downloaded' => ['verifying'],
         'verifying' => ['verified', 'failed'],
         'verified' => ['installing'],
         'installing' => ['installed', 'failed'],
-        'installed' => ['rebooting', 'failed'],
+        'installed' => ['rebooting'],
         'rebooting' => ['activated', 'failed'],
         'activated' => [],
-        'failed' => [],
+        'failed' => ['idle'],
     ];
 
     public function canTransition(FirmwareUpdateStatus $from, FirmwareUpdateStatus $to): bool

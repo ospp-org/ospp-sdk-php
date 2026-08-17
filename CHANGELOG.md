@@ -7,6 +7,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.20.0 — 2026-08-17
+
+**SDK-pair release against spec `v0.20.2`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md),
+*SDK-pair releases against a spec tag*). Released at the same version as `@ospp/protocol`
+**0.20.0**, from the same spec pin. `.spec-ref` moves **v0.19.0 → v0.20.2**.
+
+**This release changes behaviour.** The firmware update state machine in this package had
+two transitions the specification does not list and was missing one it requires.
+
+### Fixed — the firmware update FSM had 14 edges; §6.3 has 13
+
+`spec/05-state-machines.md` §6.3 lists **fourteen rows and thirteen edges**. `Verifying ->
+Failed` appears twice, once for a checksum mismatch and once for an invalid signature,
+"because the two have different actions and different error codes, not because they are two
+transitions."
+
+This package had fourteen `(from, to)` pairs. The count matched; the set did not.
+
+| Edge | Was | §6.3 | Effect |
+|------|-----|------|--------|
+| `downloaded -> failed` | permitted | **not listed** | removed |
+| `installed -> failed` | permitted | **not listed** | removed |
+| `failed -> idle` | **refused** | listed ("Rollback complete") | added |
+
+**The missing edge is the one that mattered.** §6.3: *"`Failed` has exactly one outgoing edge,
+`Failed -> Idle`; it is **not** terminal, and a machine that treats it as terminal can run one
+firmware update and never a second."* With `failed => []`, this package's machine was
+single-use: a station whose first update failed could never be offered another, because no
+transition out of `failed` existed to offer.
+
+`sdk-ts` had all thirteen and none of the two. Both SDKs were green, each against its own
+transcription of the same table — see *Added* below.
+
+### Fixed — `FirmwareUpdateStatus::isTerminal()` called `Failed` terminal
+
+The same wrong belief lived in a second file, with its own tests pinning it. `isTerminal()`
+now returns `true` for `ACTIVATED` only.
+
+`isActive()` **answers exactly as before** — the seven in-flight states, `DOWNLOADING` through
+`REBOOTING`. It was previously *derived* (`! isTerminal() && !== IDLE`), so correcting
+`isTerminal()` alone would have silently made `FAILED` active. It is now enumerated, because
+the two predicates do not partition the same way: `Failed` is not terminal, and it is not in
+flight either — it is rolling back.
+
+```diff
+- if ($status->isTerminal()) { $this->closeUpdate($update); }   // fired on Failed too
++ if ($status->isTerminal()) { $this->closeUpdate($update); }   // fires on Activated only
+```
+
+**Callers that treated `isTerminal()` as "this update is over" must now test
+`isTerminal() || $status === FirmwareUpdateStatus::FAILED`,** or better, test what they
+actually mean. `isActive()` is unchanged and remains the right predicate for "in flight".
+
+### Added — `FirmwareCanonicalTableContractTest`, mirrored in `sdk-ts`
+
+The firmware machine had no shared vector list. Each SDK asserted its own transcription of
+§6.3, so the two could disagree indefinitely and both stay green — which is what happened.
+`BayCanonicalTableContractTest` already solved this for the bay machine; this follows that
+pattern rather than inventing a second one. The pair list is transcribed from §6.3 and is the
+same list `sdk-ts/tests/state-machines/FirmwareCanonicalTable.test.ts` asserts.
+
+**It does not assert a cardinal, and that is deliberate.** The old tests asserted
+`transitionCount() === 14` in two files, and 14 is the **row** count of §6.3's table. A count
+is the one assertion that cannot say *which* edge moved: swapping a real edge for a phantom
+leaves it unchanged. §6.3 now warns about this directly — "a conformance check that asserts a
+transition *count* must assert 13; one that counts the rows of this table gets 14 and then has
+to invent an edge to reach it."
+
+The new test sweeps the full 10×10 matrix and compares each cell against the named set, so it
+fails in **both** directions. Verified by construction: against the pre-fix table it fails on
+exactly `downloaded>failed`, `installed>failed` and `failed>idle`; against a machine that
+permits every pair it fails on the negative sweep while all thirteen positive cases still
+pass — which is precisely the blindness a positive-only vector list has.
+
+### Changed
+
+- `.spec-ref`: **v0.19.0 → v0.20.2**. No schema changed between those tags. Two conformance
+  vectors did, and both are re-vendored: `valid/device-management/firmware-status-notification-full.json`
+  (`progress` 72 → 0) and the new `invalid/device-management/update-firmware-request-http-url.json`
+  (a non-TLS `firmwareUrl`, rejected by the unchanged `^https://` pattern). The vendored
+  corpus is now byte-identical to `v0.20.2`.
+- `ConformanceVectorTest`: invalid-vector count **157 → 158**, for the vector above.
+
+### Consumers
+
+`csms-server` pins `^0.19.0`, which Composer resolves as `>=0.19.0 <0.20.0` — it will **not**
+pick this up without an explicit constraint bump. It delegates its `FirmwareUpdateFSM` wholly
+to `FirmwareTransitions`, so it inherits all three edge corrections, and
+`tests/Unit/Modules/DeviceManagement/StateMachines/FirmwareUpdateFSMTest.php` asserts
+`transitionCount() === 14` — that assertion is the defect's copy in the consumer and must
+become a set assertion, not a bump to 13.
+
+---
+
 ## 0.19.0 — 2026-08-14
 
 **SDK-pair release against spec `v0.19.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md),

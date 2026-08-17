@@ -157,6 +157,8 @@ final class ConformanceVectorTest extends TestCase
     public function theVendoredCorpusIsComplete(): void
     {
         self::assertSame(160, iterator_count(self::validVectors()));
-        self::assertSame(157, iterator_count(self::invalidVectors()));
+        // 158 at spec v0.20.2, which added invalid/device-management/
+        // update-firmware-request-http-url.json.
+        self::assertSame(158, iterator_count(self::invalidVectors()));
     }
 }

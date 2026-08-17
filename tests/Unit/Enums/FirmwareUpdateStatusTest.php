@@ -34,14 +34,18 @@ final class FirmwareUpdateStatusTest extends TestCase
     // --- isTerminal ---
 
     #[Test]
-    public function is_terminal_returns_true_for_activated_and_failed(): void
+    public function is_terminal_returns_true_only_for_activated(): void
     {
         self::assertTrue(FirmwareUpdateStatus::ACTIVATED->isTerminal());
-        self::assertTrue(FirmwareUpdateStatus::FAILED->isTerminal());
     }
 
+    /**
+     * spec/05-state-machines.md §6.3: "`Failed` has exactly one outgoing edge,
+     * `Failed -> Idle`; it is **not** terminal, and a machine that treats it as
+     * terminal can run one firmware update and never a second."
+     */
     #[Test]
-    public function is_terminal_returns_false_for_non_terminal_states(): void
+    public function is_terminal_returns_false_for_every_state_except_activated(): void
     {
         $nonTerminal = [
             FirmwareUpdateStatus::IDLE,
@@ -52,11 +56,15 @@ final class FirmwareUpdateStatusTest extends TestCase
             FirmwareUpdateStatus::INSTALLING,
             FirmwareUpdateStatus::INSTALLED,
             FirmwareUpdateStatus::REBOOTING,
+            FirmwareUpdateStatus::FAILED,
         ];
 
         foreach ($nonTerminal as $status) {
             self::assertFalse($status->isTerminal(), "{$status->value} should not be terminal");
         }
+
+        // Exhaustive: nothing outside the two lists above exists.
+        self::assertCount(1 + count($nonTerminal), FirmwareUpdateStatus::cases());
     }
 
     // --- isActive ---

@@ -94,18 +94,24 @@ final class FirmwareUpdateStatusContractTest extends TestCase
         FirmwareUpdateStatus::fromNotificationStatus('');
     }
 
+    /**
+     * `Activated` is the only terminal state.
+     *
+     * This asserted `Failed` was terminal too. spec/05-state-machines.md §6.3:
+     * "`Failed` has exactly one outgoing edge, `Failed -> Idle`; it is **not**
+     * terminal, and a machine that treats it as terminal can run one firmware
+     * update and never a second."
+     */
     #[Test]
-    public function isTerminal_count_is_exactly_2(): void
+    public function isTerminal_is_true_for_activated_and_nothing_else(): void
     {
-        $terminal = array_filter(
-            FirmwareUpdateStatus::cases(),
-            fn (FirmwareUpdateStatus $s) => $s->isTerminal(),
-        );
-        self::assertCount(2, $terminal);
-
-        $terminalSet = array_values($terminal);
-        self::assertContains(FirmwareUpdateStatus::ACTIVATED, $terminalSet);
-        self::assertContains(FirmwareUpdateStatus::FAILED, $terminalSet);
+        foreach (FirmwareUpdateStatus::cases() as $status) {
+            self::assertSame(
+                $status === FirmwareUpdateStatus::ACTIVATED,
+                $status->isTerminal(),
+                "{$status->value}->isTerminal()",
+            );
+        }
     }
 
     #[Test]

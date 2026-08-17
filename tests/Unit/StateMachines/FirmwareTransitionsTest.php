@@ -18,62 +18,49 @@ final class FirmwareTransitionsTest extends TestCase
         $this->machine = new FirmwareTransitions();
     }
 
-    #[Test]
-    public function transitionCountReturnsFourteen(): void
-    {
-        self::assertSame(14, $this->machine->transitionCount());
-    }
+    // The valid-edge list that used to live here was positive-only: it asserted
+    // that fourteen named pairs were permitted and nothing about what was not.
+    // A machine answering `true` to every pair would have passed it. It also
+    // carried two pairs §6.3 does not list, and omitted `failed -> idle`.
+    // FirmwareCanonicalTableContractTest now owns the edge set and sweeps the
+    // full matrix, which fails in both directions.
 
     #[Test]
-    public function canTransitionForAllValidTransitions(): void
+    public function activatedIsTheOnlyTerminalState(): void
     {
-        $validTransitions = [
-            [FirmwareUpdateStatus::IDLE, FirmwareUpdateStatus::DOWNLOADING],
-            [FirmwareUpdateStatus::DOWNLOADING, FirmwareUpdateStatus::DOWNLOADED],
-            [FirmwareUpdateStatus::DOWNLOADING, FirmwareUpdateStatus::FAILED],
-            [FirmwareUpdateStatus::DOWNLOADED, FirmwareUpdateStatus::VERIFYING],
-            [FirmwareUpdateStatus::DOWNLOADED, FirmwareUpdateStatus::FAILED],
-            [FirmwareUpdateStatus::VERIFYING, FirmwareUpdateStatus::VERIFIED],
-            [FirmwareUpdateStatus::VERIFYING, FirmwareUpdateStatus::FAILED],
-            [FirmwareUpdateStatus::VERIFIED, FirmwareUpdateStatus::INSTALLING],
-            [FirmwareUpdateStatus::INSTALLING, FirmwareUpdateStatus::INSTALLED],
-            [FirmwareUpdateStatus::INSTALLING, FirmwareUpdateStatus::FAILED],
-            [FirmwareUpdateStatus::INSTALLED, FirmwareUpdateStatus::REBOOTING],
-            [FirmwareUpdateStatus::INSTALLED, FirmwareUpdateStatus::FAILED],
-            [FirmwareUpdateStatus::REBOOTING, FirmwareUpdateStatus::ACTIVATED],
-            [FirmwareUpdateStatus::REBOOTING, FirmwareUpdateStatus::FAILED],
-        ];
+        self::assertSame(
+            [],
+            $this->machine->allowedTransitions(FirmwareUpdateStatus::ACTIVATED),
+            'activated should have no allowed transitions',
+        );
 
-        foreach ($validTransitions as [$from, $to]) {
-            self::assertTrue(
-                $this->machine->canTransition($from, $to),
-                "Expected transition {$from->value} -> {$to->value} to be valid",
+        foreach (FirmwareUpdateStatus::cases() as $target) {
+            self::assertFalse(
+                $this->machine->canTransition(FirmwareUpdateStatus::ACTIVATED, $target),
+                "activated should not transition to {$target->value}",
             );
         }
     }
 
+    /**
+     * spec/05-state-machines.md §6.3: "`Failed` has exactly one outgoing edge,
+     * `Failed -> Idle`; it is **not** terminal, and a machine that treats it as
+     * terminal can run one firmware update and never a second."
+     */
     #[Test]
-    public function terminalStatesHaveNoTransitions(): void
+    public function failedIsNotTerminalAndRollsBackToIdle(): void
     {
-        $terminalStates = [FirmwareUpdateStatus::ACTIVATED, FirmwareUpdateStatus::FAILED];
+        self::assertSame(
+            [FirmwareUpdateStatus::IDLE],
+            $this->machine->allowedTransitions(FirmwareUpdateStatus::FAILED),
+        );
 
-        foreach ($terminalStates as $terminal) {
-            $allowed = $this->machine->allowedTransitions($terminal);
+        foreach (FirmwareUpdateStatus::cases() as $target) {
             self::assertSame(
-                [],
-                $allowed,
-                "Terminal state {$terminal->value} should have no allowed transitions",
+                $target === FirmwareUpdateStatus::IDLE,
+                $this->machine->canTransition(FirmwareUpdateStatus::FAILED, $target),
+                "failed -> {$target->value}",
             );
-        }
-
-        // Verify canTransition returns false for all possible targets from terminal states
-        foreach ($terminalStates as $terminal) {
-            foreach (FirmwareUpdateStatus::cases() as $target) {
-                self::assertFalse(
-                    $this->machine->canTransition($terminal, $target),
-                    "Terminal state {$terminal->value} should not transition to {$target->value}",
-                );
-            }
         }
     }
 
@@ -120,8 +107,8 @@ final class FirmwareTransitionsTest extends TestCase
             self::assertArrayHasKey($key, $table, "Transition table missing key: {$key}");
         }
 
-        // Terminal states have empty transition lists
+        // `activated` is the only terminal state; `failed` rolls back to `idle`.
         self::assertSame([], $table['activated']);
-        self::assertSame([], $table['failed']);
+        self::assertSame(['idle'], $table['failed']);
     }
 }

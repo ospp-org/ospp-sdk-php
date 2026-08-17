@@ -18,11 +18,11 @@ final class FirmwareTransitionsContractTest extends TestCase
         $this->transitions = new FirmwareTransitions();
     }
 
-    #[Test]
-    public function transition_count_is_exactly_14(): void
-    {
-        self::assertSame(14, $this->transitions->transitionCount());
-    }
+    // The edge set — and the size of it — is pinned by
+    // FirmwareCanonicalTableContractTest against spec §6.3. It is deliberately
+    // not restated as a cardinal here: this file asserted `14`, which is the
+    // ROW count of §6.3's table rather than its edge count, and the two phantom
+    // edges that reached that total were what the assertion protected.
 
     #[Test]
     public function self_transitions_are_never_allowed(): void
@@ -35,26 +35,10 @@ final class FirmwareTransitionsContractTest extends TestCase
         }
     }
 
-    #[Test]
-    public function complete_10x10_transition_matrix(): void
-    {
-        $valid = 0;
-        $invalid = 0;
-
-        foreach (FirmwareUpdateStatus::cases() as $from) {
-            foreach (FirmwareUpdateStatus::cases() as $to) {
-                if ($this->transitions->canTransition($from, $to)) {
-                    $valid++;
-                } else {
-                    $invalid++;
-                }
-            }
-        }
-
-        self::assertSame(14, $valid, 'Expected exactly 14 valid transitions');
-        self::assertSame(86, $invalid, 'Expected exactly 86 invalid transitions');
-        self::assertSame(100, $valid + $invalid, 'Total pairs should be 100 (10x10)');
-    }
+    // The 10x10 sweep also lived here, as a 14-valid / 86-invalid tally. A tally
+    // over the matrix cannot say WHICH pair moved — swapping a real edge for a
+    // phantom leaves both numbers unchanged. FirmwareCanonicalTableContractTest
+    // sweeps the same matrix and compares each cell against the named edge set.
 
     #[Test]
     public function happy_path_8_consecutive_transitions(): void
