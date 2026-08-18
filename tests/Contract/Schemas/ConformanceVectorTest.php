@@ -156,9 +156,18 @@ final class ConformanceVectorTest extends TestCase
     #[Test]
     public function theVendoredCorpusIsComplete(): void
     {
-        self::assertSame(160, iterator_count(self::validVectors()));
-        // 158 at spec v0.20.2, which added invalid/device-management/
+        // 163 at spec v0.23.0: +3 valid (diagnostics-notification-failed,
+        // diagnostics-notification-uploaded, get-diagnostics-response-rejected —
+        // the Failed, Uploaded and Rejected shapes, none of which had a positive
+        // vector). 160 at v0.22.0.
+        self::assertSame(163, iterator_count(self::validVectors()));
+        // 166 at spec v0.23.0: +8 invalid — four arming the new `progress` and
+        // `errorText` conditionals of diagnostics-notification.schema.json, three
+        // entering the `if`/`then` branches of get-diagnostics-response and
+        // set-maintenance-mode-response that NO vector had ever entered, and
+        // get-diagnostics-request-http-url, the mirror of the firmware negative.
+        // 158 at v0.20.2, which added invalid/device-management/
         // update-firmware-request-http-url.json.
-        self::assertSame(158, iterator_count(self::invalidVectors()));
+        self::assertSame(166, iterator_count(self::invalidVectors()));
     }
 }

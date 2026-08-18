@@ -6,6 +6,7 @@ namespace Ospp\Protocol\Tests\Integration;
 
 use Ospp\Protocol\Enums\BayStatus;
 use Ospp\Protocol\Enums\EffectedBy;
+use Ospp\Protocol\Enums\DiagnosticsState;
 use Ospp\Protocol\Enums\DiagnosticsStatus;
 use Ospp\Protocol\Enums\FirmwareUpdateStatus;
 use Ospp\Protocol\Enums\ReservationStatus;
@@ -110,16 +111,34 @@ final class StateMachineEnumConsistencyTest extends TestCase
         self::assertSame($enumValues, $tableKeys);
     }
 
+    // The two diagnostics tests that lived here asserted that
+    // DiagnosticsTransitions and DiagnosticsStatus::allowedTransitions() were the
+    // same table, keyed by the same enum. Both assertions were true and both were
+    // holding the wrong thing in place.
+    //
+    // spec/05-state-machines.md §8.5 divides them: DiagnosticsTransitions is the
+    // STATION's machine over DiagnosticsState (idle/collecting/uploading/uploaded/
+    // failed, seven edges, nothing terminal); DiagnosticsStatus is a SERVER's record
+    // of one requested upload, which legitimately carries `pending` and whose
+    // outcomes ARE terminal because a row is closed by its outcome. Requiring them
+    // to be identical is what kept `pending` inside the machine and kept the
+    // outcomes terminal there, and §8.5 forbids the comparison outright: "a
+    // conformance test MUST NOT assert a transition of the server's record against
+    // §8.3."
+    //
+    // The station machine is pinned by DiagnosticsCanonicalTableContractTest. What
+    // survives here is the property that still holds — the machine's table is keyed
+    // by exactly the states of its own enum.
+
     #[Test]
-    public function DiagnosticsTransitions_keys_match_DiagnosticsStatus_values(): void
+    public function DiagnosticsTransitions_keys_match_DiagnosticsState_values(): void
     {
         $transitions = new DiagnosticsTransitions();
-        $table = $transitions->getTransitionTable();
-        $tableKeys = array_keys($table);
+        $tableKeys = array_keys($transitions->getTransitionTable());
 
         $enumValues = array_map(
-            fn (DiagnosticsStatus $status) => $status->value,
-            DiagnosticsStatus::cases(),
+            fn (DiagnosticsState $state) => $state->value,
+            DiagnosticsState::cases(),
         );
 
         sort($tableKeys);
@@ -129,33 +148,29 @@ final class StateMachineEnumConsistencyTest extends TestCase
     }
 
     #[Test]
-    public function DiagnosticsTransitions_matches_DiagnosticsStatus_allowedTransitions(): void
+    public function DiagnosticsState_and_DiagnosticsStatus_are_deliberately_different(): void
     {
-        $transitions = new DiagnosticsTransitions();
+        // The guard against re-merging them. If a later change makes the record
+        // enum and the station enum agree on membership, one of the two has lost
+        // the distinction §8.5 draws, and this fails before a table can follow.
+        $stationStates = array_map(
+            fn (DiagnosticsState $s) => $s->value,
+            DiagnosticsState::cases(),
+        );
+        $recordStates = array_map(
+            fn (DiagnosticsStatus $s) => $s->value,
+            DiagnosticsStatus::cases(),
+        );
 
-        foreach (DiagnosticsStatus::cases() as $status) {
-            $transitionClassAllowed = $transitions->allowedTransitions($status);
-            $enumMethodAllowed = $status->allowedTransitions();
-
-            $transitionValues = array_map(
-                fn (DiagnosticsStatus $s) => $s->value,
-                $transitionClassAllowed,
-            );
-
-            $enumValues = array_map(
-                fn (DiagnosticsStatus $s) => $s->value,
-                $enumMethodAllowed,
-            );
-
-            sort($transitionValues);
-            sort($enumValues);
-
-            self::assertSame(
-                $enumValues,
-                $transitionValues,
-                "DiagnosticsTransitions and DiagnosticsStatus::allowedTransitions() disagree for status '{$status->value}'",
-            );
-        }
+        self::assertNotSame(
+            $recordStates,
+            $stationStates,
+            '§8.5: the station machine and the server record are different objects',
+        );
+        self::assertContains('pending', $recordStates, 'the record has the pre-response interval');
+        self::assertNotContains('pending', $stationStates, 'the station does not');
+        self::assertContains('idle', $stationStates, 'the station has an idle state');
+        self::assertNotContains('idle', $recordStates, 'a record row is never idle');
     }
 
     #[Test]

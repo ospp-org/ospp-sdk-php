@@ -7,6 +7,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.23.0 — 2026-08-18
+
+**Three-repository release against spec `v0.23.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+`.spec-ref` moves **v0.22.0 → v0.23.0**.
+
+> ### ⚠ This SDK's diagnostics state machine was wrong, and nothing here could have said so.
+
+Until spec `0.23.0` there was no diagnostics section in `05-state-machines.md`. This SDK read the
+four status words of `diagnostics-status.md` as a **server record** and got five states with six
+edges, starting at `pending`, with `uploaded` and `failed` terminal. `sdk-ts` read the same words
+as a **station** and got five states with seven edges, starting at `Idle`, refusing `Idle -> Failed`,
+with both outcomes returning to `Idle`. The two disagreed on three edges. Both suites were green,
+each pinning its own answer — this one asserted `PENDING -> FAILED` is permitted, the other asserts
+`['Idle','Failed']` is refused — and neither could cite a table. No CHANGELOG on either side
+mentioned it.
+
+Spec §8 now derives the machine from what the station does between two obligations it already had,
+and §8.5 states where this SDK's sixth edge belongs.
+
+### Added — `DiagnosticsState`, the station's machine
+
+`src/Enums/DiagnosticsState.php`: `idle`, `collecting`, `uploading`, `uploaded`, `failed`. **Nothing
+is terminal** — §8.3, "a station that treats it as terminal can run one diagnostics upload and never
+a second," which is the identical defect `FirmwareTransitions` closed at `0.20.0` and that was never
+carried across to diagnostics.
+
+It carries the **wire ↔ machine bridge**, which neither SDK had in either direction:
+`fromNotificationStatus()` maps the four schema enum values onto states, `toNotificationStatus()`
+goes back and returns `null` for `idle`, and `isReportable()` names the one state §8.4 says no
+notification carries. There is deliberately **no** way to produce `idle` from a wire value: §8.4 —
+"`Uploaded -> Idle` and `Failed -> Idle` have no wire trigger, and a server must not wait for one."
+
+### Changed — breaking: `DiagnosticsTransitions` is retyped and its table replaced
+
+It now operates on `DiagnosticsState`, not `DiagnosticsStatus`, and carries the seven edges of §8.3.
+Three changes, each with its own consequence:
+
+* `pending` is gone from the machine. It was never a station state.
+* `pending -> failed` is gone with it. There is no `idle -> failed`, and §8.3 makes the absence
+  load-bearing: a station that cannot start answers the command `Rejected` and never enters the
+  machine, so a `Failed` that is the **first** notification of an accepted operation is
+  non-conforming.
+* `uploaded` and `failed` return to `idle`. The machine is no longer single-use.
+
+Any consumer calling `canTransition(DiagnosticsStatus, DiagnosticsStatus)` will not compile.
+
+### Changed — `DiagnosticsStatus` keeps its six edges, and is documented as what it is
+
+Nothing about its behaviour moves. It is a **server's record of one requested upload** (§8.5), which
+legitimately carries `pending`, whose `pending -> failed` is the station answering `Rejected`, and
+whose outcomes **are** terminal because a row is closed by its outcome. The reference server stores
+exactly these five values and is unaffected.
+
+### Changed — the two tests that held the wrong table in place
+
+`StateMachineEnumConsistencyTest` asserted that `DiagnosticsTransitions` and
+`DiagnosticsStatus::allowedTransitions()` were the same table. Both assertions were true, and both
+were the reason `pending` stayed inside the machine and the outcomes stayed terminal. §8.5 forbids
+the comparison outright: "a conformance test MUST NOT assert a transition of the server's record
+against §8.3." What replaces it is a guard against **re-merging** them — if the two enums ever agree
+on membership again, that fails before a table can follow.
+
+`DiagnosticsTransitionsTest` and `DiagnosticsTransitionsContractTest` lose their count-based forms:
+`transitionCount() === 6`, a positive-only six-pair list, and a 6/19 tally over the 5×5 matrix. A
+tally cannot say **which** pair moved, and every one of those numbers was internally consistent
+while the table was wrong. This is the same deletion `FirmwareTransitions`' tests took at `0.20.0`.
+
+### Added — `DiagnosticsCanonicalTableContractTest`
+
+The single home of the table, on the model of the bay and firmware ones, and the third of the three.
+It pins the seven `(from, to)` pairs as a named set, sweeps all 25 ordered pairs so a pair asserted
+neither way cannot exist, checks map-against-function, asserts `isTerminal() ⟺ no outgoing edge`,
+walks three consecutive uploads including one that fails, and reads the wire enum **out of the
+vendored schema** rather than a literal, so a spec change to it fails here.
+
+Verified non-vacuous before committing. Restoring the old terminal outcomes → **9 failures**;
+re-adding `idle -> failed` → **5**; adding the `uploading -> uploading` self-edge §8.4 forbids →
+**5**; breaking one arm of the bridge → **2**.
+
+### Changed — vendored corpus and schema, in one commit
+
+`schemas/mqtt/diagnostics-notification.schema.json` gains conditionals: `progress` only on
+`Uploading`, `errorText` REQUIRED on `Failed` and forbidden elsewhere. The vector corpus moves with
+it — **160 → 163 valid, 158 → 166 invalid** — because a schema tightening whose corpus is not
+updated in the same commit turns this SDK's own conformance suite red on payloads that are no longer
+valid. Three of the eight new negatives enter the `if`/`then` branches of `get-diagnostics-response`
+and `set-maintenance-mode-response`, which **no vector had ever entered**: both `allOf` blocks could
+have been deleted with the whole vendored corpus still passing.
+
+Suite: **1230 tests, 6295 assertions**, phpstan level 9 clean.
+
+---
+
 ## 0.22.0 — 2026-08-18
 
 **Three-repository release against spec `v0.22.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
