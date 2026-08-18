@@ -11,9 +11,10 @@ use PHPUnit\Framework\TestCase;
 final class ConfigurationKeyTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_29_cases(): void
+    public function it_has_exactly_28_cases(): void
     {
-        self::assertCount(29, ConfigurationKey::cases());
+        // 28 since spec 0.23.0 withdrew DiagnosticsUploadUrl; 29 before it.
+        self::assertCount(28, ConfigurationKey::cases());
     }
 
     // =========================================================================
@@ -49,14 +50,14 @@ final class ConfigurationKeyTest extends TestCase
     }
 
     #[Test]
-    public function device_management_profile_has_4_keys(): void
+    public function device_management_profile_has_3_keys(): void
     {
         $count = $this->countByProfile('DeviceManagement');
-        self::assertSame(4, $count);
+        self::assertSame(3, $count);
     }
 
     #[Test]
-    public function profile_counts_sum_to_29(): void
+    public function profile_counts_sum_to_28(): void
     {
         $sum = $this->countByProfile('Core')
             + $this->countByProfile('Transaction')
@@ -64,7 +65,7 @@ final class ConfigurationKeyTest extends TestCase
             + $this->countByProfile('OfflineBLE')
             + $this->countByProfile('DeviceManagement');
 
-        self::assertSame(29, $sum);
+        self::assertSame(28, $sum);
     }
 
     // =========================================================================
@@ -95,7 +96,6 @@ final class ConfigurationKeyTest extends TestCase
         self::assertSame('string', ConfigurationKey::CERTIFICATE_SERIAL_NUMBER->type());
         self::assertSame('string', ConfigurationKey::MESSAGE_SIGNING_MODE->type());
         self::assertSame('string', ConfigurationKey::OFFLINE_PASS_PUBLIC_KEY->type());
-        self::assertSame('string', ConfigurationKey::DIAGNOSTICS_UPLOAD_URL->type());
         self::assertSame('string', ConfigurationKey::LOG_LEVEL->type());
     }
 
@@ -228,13 +228,12 @@ final class ConfigurationKeyTest extends TestCase
         ConfigurationKey::FIRMWARE_VERSION,
         ConfigurationKey::CERTIFICATE_SERIAL_NUMBER,
         ConfigurationKey::MESSAGE_SIGNING_MODE,
-        ConfigurationKey::DIAGNOSTICS_UPLOAD_URL,
     ];
 
     #[Test]
     public function static_keys_are_not_mutable(): void
     {
-        self::assertCount(7, self::SPEC_STATIC_KEYS, 'Chapter 08 marks seven keys Static');
+        self::assertCount(6, self::SPEC_STATIC_KEYS, 'Chapter 08 marks six keys Static');
 
         foreach (self::SPEC_STATIC_KEYS as $key) {
             self::assertFalse($key->isMutable(), "{$key->value} is Static in 08-configuration.md");

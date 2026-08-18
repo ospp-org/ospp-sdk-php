@@ -86,6 +86,25 @@ Verified non-vacuous before committing. Restoring the old terminal outcomes → 
 re-adding `idle -> failed` → **5**; adding the `uploading -> uploading` self-edge §8.4 forbids →
 **5**; breaking one arm of the bridge → **2**.
 
+### Removed — breaking: `ConfigurationKey::DIAGNOSTICS_UPLOAD_URL`
+
+Spec `0.23.0` withdrew the key. It had no reachable consumer: `uploadUrl` is REQUIRED on every
+GetDiagnostics so nothing fell back to it, no processing rule read it, and no error code reported
+the disabled state its documented `''` default claimed — measured across the reference server, this
+SDK, `sdk-ts` and the station simulator. **29 cases → 28**, Device Management **4 → 3**, Static keys
+**7 → 6**.
+
+**This was missed on the first push and CI caught it.** `scripts/check-config-registry.sh` is a
+separate CI job that clones the spec at `.spec-ref`; `composer test` does not run it, so a green
+local suite said nothing about it. The gate failed with *"DiagnosticsUploadUrl: in the SDK enum,
+MISSING from the spec"* — which is the gate doing exactly its job.
+
+**The cost is operational and lands on servers, not on this package.** An unknown key is answered
+`NotSupported`, and `change-configuration.md` §6 rule 2 makes the batch atomic — one `NotSupported`
+entry discards *every other key in the same ChangeConfiguration*. A server still carrying this key
+in a push set finds the whole batch ineffective against a `0.23.0` station while the identical batch
+still applies on `0.22.0`.
+
 ### Changed — vendored corpus and schema, in one commit
 
 `schemas/mqtt/diagnostics-notification.schema.json` gains conditionals: `progress` only on
@@ -96,7 +115,8 @@ valid. Three of the eight new negatives enter the `if`/`then` branches of `get-d
 and `set-maintenance-mode-response`, which **no vector had ever entered**: both `allOf` blocks could
 have been deleted with the whole vendored corpus still passing.
 
-Suite: **1230 tests, 6295 assertions**, phpstan level 9 clean.
+Suite: **1230 tests, 6290 assertions**, phpstan level 9 clean, and all four drift gates green —
+`check-config-registry`, `check-error-registry`, `check-crypto-vectors`, `check-schemas`.
 
 ---
 

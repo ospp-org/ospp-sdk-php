@@ -43,9 +43,17 @@ enum ConfigurationKey: string
     case OFFLINE_PASS_MAX_AGE = 'OfflinePassMaxAge';
     case REVOCATION_EPOCH = 'RevocationEpoch';
 
-    // Device Management Profile (4 keys)
+    // Device Management Profile (3 keys)
+    //
+    // DIAGNOSTICS_UPLOAD_URL was withdrawn by spec 0.23.0 and its case removed here.
+    // It had no reachable consumer: `uploadUrl` is REQUIRED on every GetDiagnostics
+    // so nothing fell back to it, no processing rule read it, and no error code
+    // described the disabled state its documented `''` default claimed. Removing the
+    // case is BREAKING for any consumer naming it. See CHANGELOG for the cost, which
+    // lands on servers: an unknown key is answered `NotSupported` and the
+    // ChangeConfiguration batch is atomic, so a push set still carrying it loses the
+    // whole batch against a 0.23.0 station.
     case FIRMWARE_UPDATE_ENABLED = 'FirmwareUpdateEnabled';
-    case DIAGNOSTICS_UPLOAD_URL = 'DiagnosticsUploadUrl';
     case LOG_LEVEL = 'LogLevel';
     case AUTO_REBOOT_ENABLED = 'AutoRebootEnabled';
 
@@ -59,7 +67,6 @@ enum ConfigurationKey: string
             self::CERTIFICATE_SERIAL_NUMBER,
             self::MESSAGE_SIGNING_MODE,
             self::OFFLINE_PASS_PUBLIC_KEY,
-            self::DIAGNOSTICS_UPLOAD_URL,
             self::LOG_LEVEL => 'string',
 
             self::AUTHORIZATION_CACHE_ENABLED,
@@ -102,7 +109,6 @@ enum ConfigurationKey: string
             self::OFFLINE_PASS_MAX_AGE => 3600,
             self::REVOCATION_EPOCH => 0,
             self::FIRMWARE_UPDATE_ENABLED => true,
-            self::DIAGNOSTICS_UPLOAD_URL => '',
             self::LOG_LEVEL => 'Info',
             self::AUTO_REBOOT_ENABLED => false,
             self::FIRMWARE_VERSION,
@@ -128,8 +134,9 @@ enum ConfigurationKey: string
      * Whether a ChangeConfiguration on this key takes effect NOW.
      *
      * `false` is 08-configuration.md's `Static`, which does not mean "unchangeable" —
-     * it means the change lands at the station's next boot. Seven keys are Static and
-     * all seven are listed; the `default` arm is Dynamic.
+     * it means the change lands at the station's next boot. Six keys are Static and
+     * all six are listed; the `default` arm is Dynamic. It was seven until spec 0.23.0
+     * withdrew `DiagnosticsUploadUrl`.
      */
     public function isMutable(): bool
     {
@@ -139,8 +146,7 @@ enum ConfigurationKey: string
             self::PROTOCOL_VERSION,
             self::FIRMWARE_VERSION,
             self::CERTIFICATE_SERIAL_NUMBER,
-            self::DIAGNOSTICS_UPLOAD_URL,
-            // The seventh, and the one this arm was missing. 08-configuration.md:114
+            // The sixth, and the one this arm was missing. 08-configuration.md:114
             // sets it **Static** in bold and gives the reason: the mode is bound to the
             // session key, which is issued at boot, so a mid-session change leaves one
             // peer signing and the other not — and verification fails closed while
@@ -202,7 +208,6 @@ enum ConfigurationKey: string
             self::REVOCATION_EPOCH => 'OfflineBLE',
 
             self::FIRMWARE_UPDATE_ENABLED,
-            self::DIAGNOSTICS_UPLOAD_URL,
             self::LOG_LEVEL,
             self::AUTO_REBOOT_ENABLED => 'DeviceManagement',
         };
