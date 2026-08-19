@@ -143,31 +143,27 @@ final class ConformanceVectorTest extends TestCase
     }
 
     /**
-     * The corpus must be the whole corpus. A truncated vendored copy would make
-     * every test above pass vacuously.
+     * The corpus must be non-empty. A truncated vendored copy would make every
+     * test above pass vacuously — there would simply be no cases to run.
      *
-     * These two literals are a SECOND COPY of a fact about the corpus, not a check
-     * on it: nothing derives them from the vendored tree, so a human must bump them
-     * by hand on every new spec vector — and when they are forgotten the failure
-     * lands on the maintainer who did the re-vendor CORRECTLY. See KNOWN-ISSUES:
-     * the gate that should replace them counts the tree at run time and asserts only
-     * `> 0`, with byte-identity against the spec clone pinning WHICH vectors are here.
+     * This WAS `assertSame(163, …)` and `assertSame(166, …)`. Those two literals
+     * were a SECOND COPY of a fact about the corpus rather than a check on it:
+     * nothing derived them from the vendored tree, so a human bumped them by hand
+     * on every spec sync, and when they were forgotten the failure landed on the
+     * maintainer who did the re-vendor CORRECTLY.
+     *
+     * 0.26.0 replaces them with the pair the old comment asked for. The
+     * `vector-corpus` CI job (scripts/check-vector-corpus.sh) diffs valid/ and
+     * invalid/ against the spec clone at `.spec-ref`, so WHICH vectors are here is
+     * pinned byte-for-byte — including a vector added upstream and never vendored,
+     * which no count in this file could ever have seen. What is left here is the
+     * anti-vacuity floor, and it is deliberately NOT a count: a count would
+     * re-create exactly what was removed.
      */
     #[Test]
-    public function theVendoredCorpusIsComplete(): void
+    public function theVendoredCorpusIsNotEmpty(): void
     {
-        // 163 at spec v0.23.0: +3 valid (diagnostics-notification-failed,
-        // diagnostics-notification-uploaded, get-diagnostics-response-rejected —
-        // the Failed, Uploaded and Rejected shapes, none of which had a positive
-        // vector). 160 at v0.22.0.
-        self::assertSame(163, iterator_count(self::validVectors()));
-        // 166 at spec v0.23.0: +8 invalid — four arming the new `progress` and
-        // `errorText` conditionals of diagnostics-notification.schema.json, three
-        // entering the `if`/`then` branches of get-diagnostics-response and
-        // set-maintenance-mode-response that NO vector had ever entered, and
-        // get-diagnostics-request-http-url, the mirror of the firmware negative.
-        // 158 at v0.20.2, which added invalid/device-management/
-        // update-firmware-request-http-url.json.
-        self::assertSame(166, iterator_count(self::invalidVectors()));
+        self::assertGreaterThan(0, iterator_count(self::validVectors()));
+        self::assertGreaterThan(0, iterator_count(self::invalidVectors()));
     }
 }
