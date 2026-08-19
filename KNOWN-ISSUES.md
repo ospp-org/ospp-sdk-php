@@ -23,7 +23,8 @@ that duplicates this package.
 | CLOSED in **0.15.0** | `scripts/check-config-registry.{sh,php}` | Chapter 08 now has the parity gate the other three registries had — **and it is wired into CI**, which is the half that was missing |
 | CLOSED in **0.15.0** | `.github/workflows/tests.yml` | the `config-registry` job now exists. It could not until the default was fixed: the gate was red on it, and a job that lands red is not a gate |
 | CLOSED in **0.17.0** | `Enums\ConfigurationKey::profile()` | answered `Offline` where spec §1.5's new **Profile ID** column says `OfflineBLE`. The gate could not have caught it — it read only §§2--6, which carry no profile column at all |
-| **OPEN** | `scripts/check-schemas.sh` | mode corrected to `100755` in 0.17.0, on a script **nothing invokes**. A repair no run can confirm — see below |
+| PARTLY CLOSED in **0.26.0** | `scripts/check-schemas.sh` | mode corrected to `100755` in 0.17.0, on a script **nothing invokes**. `GateScriptsAreExecutableTest` now reds on any wrong mode, so the repair is confirmable; the script still has no caller — see below |
+| **OPEN** | `.github/workflows/tests.yml` `schemas` job | it inlines its own copy of `check-schemas.sh`'s diff. Two definitions of one check; closing it is options 1--2 below |
 
 Measured across all 29 cases against `spec/08-configuration.md` at the ref in
 `.spec-ref` (v0.13.0): before 0.15.0, **two keys disagreed, and no other field on any
@@ -178,10 +179,28 @@ stopped being acceptable. Chapter 08 is now the last table in that position.
 
 ---
 
-## OPEN — a corrected file mode on a script nothing invokes is a repair no run can confirm
+## PARTLY CLOSED in 0.26.0 — a corrected file mode on a script nothing invokes is a repair no run can confirm
 
 Found at **v0.17.0**, 2026-08-13, while verifying that the new `config-registry` gate was
 actually executable in CI rather than merely green.
+
+> **0.26.0 — the unfalsifiable half is closed; the duplication half is not.**
+>
+> `tests/Contract/GateScriptsAreExecutableTest.php` reads `git ls-files -s scripts/*.sh` and
+> fails on any mode that is not `100755`. A wrong mode now reds a run, on every gate script,
+> whether or not anything invokes it — which is a **fourth** option the list below did not
+> contain and the cheapest of the four. What is still true: `check-schemas.sh` has no caller,
+> the `schemas` job still inlines its own copy of the diff, and options 1 and 2 remain the
+> only ways to close that.
+>
+> **The class bit a third time while the sixth gate was being added, and this is why the test
+> reads the index rather than the filesystem.** This repository has `core.fileMode = false`.
+> A local `chmod 755` on `scripts/check-vector-corpus.sh` was therefore **invisible to git**:
+> the bit sat on disk, `ls -l` showed `-rwxr-xr-x`, and the file entered the index `100644`
+> anyway. `sdk-ts` has `core.fileMode = true` and recorded `100755` from the same `chmod`, so
+> the two repositories disagreed about a file written from one template in one session. The
+> fix is `git update-index --chmod=+x`; `chmod` alone does nothing here, and any check that
+> asks the filesystem will agree with the `chmod` and miss the defect.
 
 `scripts/check-schemas.sh` was `100644` in the git index. The 0.15.0 notes stated that
 *"All four gate scripts are `100755`"*, and that sentence was false when it was written.

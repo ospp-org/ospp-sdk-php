@@ -170,3 +170,28 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - name: Compare src/Enums/ConfigurationKey.php against spec/08-configuration.md
         run: scripts/check-config-registry.sh
+
+  # The FIFTH registry, and the one that decides what this SDK accepts and
+  # refuses. schemas/ has been byte-gated since 0.8.0, the crypto corpus since
+  # 0.14.0, OsppErrorCode and ConfigurationKey field-by-field — and the 334-file
+  # conformance corpus had NOTHING. It was re-vendored by hand on every spec sync
+  # and nothing compared the result to upstream.
+  #
+  # The failure it closes is silent by construction: ConformanceVectorTest
+  # validates whatever vectors are present against whatever schemas are present,
+  # so a vector edited in place leaves the whole suite green. Measured, not
+  # asserted: flipping ONE BYTE in valid/core/boot-notification-response-full.json
+  # left 1239/1239 tests passing and turned this job red.
+  #
+  # NB mode. `scripts/check-vector-corpus.sh` is committed 100755 and invoked the
+  # same `run: scripts/…` way as its three siblings. check-error-registry.sh and
+  # check-crypto-vectors.sh were both committed 100644 in 0.14.0 and died
+  # `Permission denied` on every push — two gates that had never once executed,
+  # with a green CI column, because a job that cannot start reports nothing.
+  vector-corpus:
+    name: Conformance corpus byte-identity gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Byte-identity check (tests/Fixtures/test-vectors/ ↔ spec conformance corpus)
+        run: scripts/check-vector-corpus.sh
