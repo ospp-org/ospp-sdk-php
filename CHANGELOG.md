@@ -7,6 +7,138 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.25.0 — 2026-08-19
+
+**SDK-pair release against spec `v0.24.1`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md),
+*SDK-pair releases against a spec tag*). `.spec-ref` **does not move** — it stays `v0.24.1`,
+the contract did not change, and the spec is not re-tagged to chase an SDK number.
+
+**Both SDKs ship code in this release.** Neither side is here only to hold the number: the same
+bridge lands in `ospp-sdk-php` and `sdk-ts`, and the same mutations were injected into both to
+prove each one's gate discriminates. This is not a lockstep-alignment release and the entry would
+say so if it were.
+
+> ### ⚠ The firmware machine had no bridge to the wire, and its gap is the widest in the chapter.
+
+`0.23.0` gave the diagnostics machine a wire ↔ machine bridge in both SDKs. The firmware machine
+never got one, and deferring it was the risk: the two SDKs would each have grown a shape for it,
+and this is the machine where the shapes could not have agreed.
+
+Ten states, and a FirmwareStatusNotification carries **five** of them
+(`05-state-machines.md` §6.6). The other five are **not one kind of thing**, and that is what
+made this bridge different from the diagnostics one rather than a copy of it:
+
+* **Four are unobservable.** §6.6: *"Four states have no notification value at all and are, from
+  the server's side, unobservable… a server that models the station's ten states will hold four
+  of them that nothing on the wire can ever set."* They are `Idle`, `Verifying`, `Verified`,
+  `Rebooting`.
+* **`Activated` is the fifth, and it is reported** — §6.6 maps it to BootNotification [MSG-001],
+  *"not FirmwareStatusNotification"*.
+
+So `! isReportable()` has **five** members and `! isObservable()` has **four**, and the
+difference between them is exactly one state. The diagnostics bridge had one non-reportable state
+(`idle`) and no such difference to carry, so a single predicate answered both questions there
+(§8.4). Here a single predicate answers one of them wrong whichever way it is written: a server
+that treats `Activated` as unobservable throws away the only report a completed update ever gets,
+and one that treats the four as observable waits for messages the protocol never sends.
+
+### Added — `FirmwareUpdateStatus`: the half of the bridge that was missing
+
+This enum already had `fromNotificationStatus()`. It had nothing in the other direction and no way
+to ask what a state's relationship to the wire even was.
+
+* `toNotificationStatus()` — the machine → wire direction, `null` for the five states no
+  FirmwareStatusNotification carries. Null for `Activated` too, and that is not a hole.
+* `isReportable()` — derived from it, so the two cannot disagree.
+* `isObservable()` / `observedBy()` — the predicate the diagnostics bridge never needed.
+  `observedBy()` returns an `Actions\OsppAction` constant rather than a literal, so a rename of
+  the action cannot leave the mapping pointing at a message that no longer exists.
+
+### Added — `FirmwareTransitions`: the conforming notification sequence is not a walk of §6.3
+
+This is the part that would have cost a consumer money, and it has no counterpart in the
+diagnostics bridge at all. There, every edge of §8.3 runs between two states the wire carries, so
+what a server observes IS a walk of the table and `canTransition()` answers directly.
+
+Here three of the thirteen edges run **through** unobservable states, so the wire **skips**:
+
+```
+station:  Downloaded -> Verifying -> Verified -> Installing
+server:   Downloaded ------------------------> Installing
+```
+
+`Downloaded -> Installing` is not in §6.3 and **MUST NOT** be added to it — §6.6's silent interval
+is where the SHA-256 and the ECDSA P-256 verification run over the whole image. A consumer that
+fed the two arriving statuses into `canTransition()` refused the update at the moment it started
+installing. The same shape hides two more: `Downloaded -> Failed` (a checksum mismatch or a
+`5112` invalid signature, reported from a state the server never saw the station enter),
+`Installed -> Failed` (the watchdog, through `Rebooting`), and `Failed -> Downloading` — the
+rollback edge, which like §8.4's `Uploaded -> Idle` has **no wire trigger and must not be waited
+for**.
+
+* `observableTargets()` — the reportable states reachable by a path whose **intermediate** states
+  are all unobservable. `Activated` is neither returned nor traversed: it is observable, so a
+  server is told about it and must not have it inferred.
+* `applyNotification()` — advances a server's mirror from one arriving notification. A repeat of
+  the state already held is a **progress report, not a transition**: `firmware-status.md` §5 rules
+  1--2 ask for one every 10% of `Downloading` and at four milestones of `Installing`, and §6.3 has
+  a self-edge for neither. Same rule §8.4 states for the repeated `Uploading` stream, same
+  resolution.
+
+**A successful update ends in silence on this message.** `observableTargets(INSTALLED)` is
+`[FAILED]` and nothing else — the success branch is `Installed -> Rebooting -> Activated`, and
+the news arrives as a BootNotification. A server waiting for a firmware status to tell it the
+update completed waits forever.
+
+### Gate — the pair SET, and no cardinal
+
+`FirmwareCanonicalTableContractTest` gains the bridge half, in the same file that already owns
+this machine's edges. §6.3's closing paragraph — *"a conformance check that asserts a transition
+count must assert 13; one that counts the rows of this table gets 14"* — governs the new pairs
+too, and for the same reason: **a count cannot say WHICH pair moved.**
+
+* The wire enum is read out of the vendored
+  `schemas/mqtt/firmware-status-notification.schema.json`, not restated, so a spec change to it
+  fails in the gate instead of being absorbed by a literal in it.
+* All **50** `(held state × arriving status)` combinations are swept, each asserted one way or
+  the other, so a pair that is neither permitted nor refused cannot exist. The sweep carries its
+  own denominator: a run that iterated nothing fails.
+* The pair list is the SAME list the `sdk-ts` mirror of this file asserts.
+
+**Proved by mutation, in both SDKs.** Three defects were injected into each package and each
+package's gate was confirmed RED for the right reason, then reverted:
+conflating `isObservable()` with `isReportable()` (2 failures, both naming `activated`);
+advancing with `canTransition()` instead of the observable closure (4 failures, naming
+`downloaded -> installing` and `failed -> downloading`); and admitting a silent state into the wire
+enum (2 failures, naming `verifying`). A green suite either side of that is what the last two
+releases' worth of cross-SDK disagreements were missing.
+
+### Not changed here — two open items upstream, in `spec/profiles/device-management/firmware-status.md`
+
+Reported, not fixed: both are the specification's, and this file records only divergences where
+the spec is unambiguous and this package does not follow it.
+
+* **`errorText` is unconditional on the firmware notification.** §5 rule 4 makes it a MUST on
+  `Failed`, but `firmware-status-notification.schema.json` neither requires it there nor forbids
+  it elsewhere. The diagnostics twin has **both** halves schema-enforced since `0.23.0`
+  (`diagnostics-status.md` §5 rule 5, and its schema carries the two `if/then` clauses).
+* **The progress rule is weaker there.** §5 rule 3 permits `progress` *"omitted **or set to
+  `0`**"* on `Downloaded`, `Installed` and `Failed` — two spellings of the same absence, where
+  `diagnostics-status.md` §5 rule 4 permits one (*"MUST be omitted"*) and the schema enforces it
+  with `progress: false`. The firmware schema constrains `progress` on no status at all.
+
+### Note — `0.24.1` shipped in both SDKs with no CHANGELOG entry in either
+
+`v0.24.1` is tagged here (`9a71dfd`) and on `sdk-ts` (`a1e3536`), and neither repository's
+CHANGELOG has a heading for it — the entries below jump from `0.23.0` to this release. By
+ADR-001's own definition that release is **not complete**: *"the CHANGELOG entry exists in both
+SDKs under the same version header, naming the spec tag implemented."* What it contained, for the
+record: `.spec-ref` **v0.23.0 → v0.24.1**, one `ConfigurationKey` default moved to follow spec
+`0.24.1`, and the one conformance vector that moved with it. No entry is back-dated here; the hole
+is named rather than papered over.
+
+---
+
 ## 0.23.0 — 2026-08-18
 
 **Three-repository release against spec `v0.23.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
