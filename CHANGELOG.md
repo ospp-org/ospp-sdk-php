@@ -7,6 +7,172 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.26.0 — 2026-08-20
+
+**SDK-pair release against spec `v0.25.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+`.spec-ref` moves `v0.24.1` → `v0.25.0`.
+
+> ### The version lines have crossed, and the gap widens here on purpose.
+>
+> This release is `0.26.0` and it pins spec `v0.25.0`. The previous one was `0.25.0` pinning
+> `v0.24.1`. The two numbers are offset, the offset is not fixed, and **neither is derived from
+> the other** — [`VERSIONING.md`](https://github.com/ospp-org/spec/blob/main/VERSIONING.md#the-two-lines-have-crossed-and-they-will-not-uncross)
+> says so at the tag. Do not read `0.26.0` as "spec 0.26"; read `.spec-ref`, which is the only
+> source of truth and is enforced byte-for-byte rather than ordinally.
+>
+> Swept at this release, in this repository: **nothing compares the two numbers.** No gate in
+> `scripts/`, no job in `.github/workflows/tests.yml`, no assertion in `tests/` reads a spec
+> version and compares it to this package's. The spec swept the same question at `v0.25.0` and
+> found the same answer, and wrote a **MUST NOT** against introducing one. Verified here rather
+> than inherited from that sentence.
+
+### Added — the corpus that decides what this SDK accepts had no gate
+
+`schemas/` has been byte-gated since 0.8.0, the crypto corpus since 0.14.0, `OsppErrorCode`
+field-by-field since 0.14.0 and `ConfigurationKey` since 0.15.0. The **conformance corpus** — 334
+files at spec `v0.25.0` — had nothing. It was re-vendored by hand on every sync and its
+correctness rested on the maintainer having copied the right tree.
+
+The blindness is structural. `ConformanceVectorTest` validates whatever vectors are present
+against whatever schemas are present, so a vector edited in place is locally consistent and
+upstream-wrong at the same time. **Measured, not argued:** flipping ONE BYTE of
+`valid/core/boot-notification-response-full.json` left **1239/1239 tests passing** and turned the
+new gate red, naming the file.
+
+`scripts/check-vector-corpus.sh` + the `vector-corpus` CI job. Four mutations, each required to
+name the offender:
+
+| mutation | gate says |
+|---|---|
+| one byte changed | `DRIFT: valid/`, file named |
+| vector deleted | `Only in <spec>`, file named |
+| vector added | `Only in <vendored>`, file named |
+| duplicate crypto copy corrupted | `DRIFT: crypto/…`, file named |
+
+That fourth surface was covered by nothing. `tests/Fixtures/test-vectors/crypto/` holds a second
+copy of two files the crypto gate pins under `tests/Contract/Crypto/fixtures/`. **No test reads
+it and no gate checked it.** It is compared against the *gated* copy rather than the spec, so the
+spec pin stays in one script and transitivity does the rest.
+
+Scope is a whole-directory diff on `valid/` and `invalid/`, deliberately: this SDK vendors the
+complete sets, so the directory form also catches a vector deleted here or added upstream — which
+a hand-maintained file list cannot, and which no count could ever have seen.
+
+### Added — `GateScriptsAreExecutableTest`, because the mode class bit a third time
+
+`.github/workflows/tests.yml` has carried the note *"Check the MODE, not the file list, when
+adding the fifth one"* since 0.15.0. **A note is not a control, and this release adds the sixth.**
+
+It bit during this very commit. **This repository has `core.fileMode = false`**, so `chmod 755` on
+the new gate script was *invisible to git*: the bit sat on disk, `ls -l` read `-rwxr-xr-x`, and the
+file entered the index **100644** anyway — one `run: scripts/…` away from `Permission denied`
+before its first line. `sdk-ts` has `core.fileMode = true` and recorded `100755` from the identical
+`chmod`, so two repositories disagreed about one file written from one template in one session.
+
+The test reads `git ls-files -s scripts/*.sh` — **the index, not the filesystem**, because on a
+`core.fileMode = false` clone the filesystem agrees with the `chmod` and misses the defect. It
+carries a denominator and a conformant control: the `.php` helpers are invoked through the
+interpreter, are correctly `100644`, and prove the matcher can see the reading it refuses. Verified
+by mutation: setting the new script back to `100644` reds the test and names the fix.
+
+### Changed — sync to spec `v0.25.0`
+
+**Three schema files moved, not two.** The third is a loosening and is the easy one to miss:
+
+- `mqtt/firmware-status-notification.schema.json` — `progress` is now `false` on `Downloaded`,
+  `Installed` and `Failed`; `errorText` is REQUIRED on `Failed` and forbidden on the other four.
+  Three `allOf` branches, the shape `diagnostics-notification.schema.json` has carried since
+  `0.23.0`. Rule 3 had said *"omitted **or set to `0`**"* — two spellings of one absence differing
+  only in bytes.
+- `mqtt/update-service-catalog-response.schema.json` — the `Accepted` arm now requires
+  `previousCatalogVersion`.
+- `common/offline-pass.schema.json` — `allowedServiceTypes` leaves `required`. Step one of a
+  two-step withdrawal; accepted-and-ignored.
+
+**Corpus: +5 invalid, 2 valid changed, 0 removed. 163 valid + 171 invalid = 334.** Measured
+against the vendored tree, not inherited from the spec's verification report — which reports 334
+vector checks in its Category 8, and the two agree.
+
+`valid/…/update-service-catalog-response-minimal.json` gains `"previousCatalogVersion": ""`. The
+empty string is the legitimate value for a station that has never held a catalog, which is why the
+vector is given the member rather than demoted to `invalid/`.
+
+**Mutation proof, run in both SDKs** with the `v0.24.1` schema injected under the `v0.25.0` corpus.
+`opis/json-schema` here and `ajv` there discriminate **identically, by name**:
+
+| injected | result |
+|---|---|
+| old firmware schema | 3 negatives stop being refused — the same 3 in both |
+| old catalog schema | 1 negative stops being refused — the same 1 in both |
+| old offline-pass schema | **neither SDK notices**; both stay fully green |
+
+The third row is **intent, not a hole**. `06-security.md` §6.1.1 states that every vector keeps the
+member deliberately: it sits inside the signed body, so removing it means re-signing the fixture
+for no gain, and the corpus moves in step two with the deletion. Step one is accepted-and-ignored,
+so a pass carrying it MUST still validate — green is the correct reading. On this side the
+loosening is carried by the byte gate alone; `sdk-ts` also has a type-level control for it, because
+it hand-writes payload types and this package does not.
+
+### Changed — the corpus count literals are replaced, not bumped
+
+`assertSame(163, …)` and `assertSame(166, …)` were a **second copy of a fact about the corpus**
+rather than a check on it: nothing derived them from the vendored tree, so a human bumped them on
+every sync and, when forgotten, the failure landed on whoever re-vendored *correctly*. That test's
+own comment asked for exactly what now replaces them. The `vector-corpus` gate pins WHICH vectors
+are here byte-for-byte; what remains is an anti-vacuity floor, and it is deliberately **not** a
+count.
+
+### Not changed — three items from `v0.25.0` with no surface here, each measured
+
+- **`5103 STORAGE_ERROR` joins StartService's permitted set** (§4.2). **No per-message
+  permitted-code model exists in this SDK.** §4.2 is a table nothing here transcribes, so there is
+  nothing to add it to.
+- **SecurityEvent `type` selection becomes two-step** (named → `51xx` → `5xxx`). **This SDK does
+  not map code to type.** `SecurityEventType` carries the twelve names and nothing derives one from
+  an `OsppErrorCode`. The rule it replaces was the one that answered `5112` three times and eight
+  Critical codes not at all — and this package implemented none of the three.
+- **`5111 BUFFER_FULL` moves Warning → Critical in the profile table.** `severity()` **already**
+  answers `CRITICAL` for it. It reads the §3 registry, which said Critical in both places;
+  `start-service.md` §7 was the lone dissenter and this package never read it. No change, and the
+  reason it is a non-event is worth keeping: the value was right because the source was right.
+
+### Fixed — a missing changelog entry, named rather than backdated
+
+**`0.24.1` was tagged, released and published with no changelog entry in either SDK.** It is
+written below, dated as it was released and marked as reconstructed here.
+
+`sdk-ts` had already **named** the hole in its own `0.25.0` entry without filling it — this
+package named it nowhere. That note also miscounts what the release contained: it says *"one
+`ConfigKey` default moved"*, and **two** did, here and there. `MaxOfflineTransactions` 50 → 1000
+**and** `OfflinePassMaxAge` 3600 → 86400. Both are corrected in the entry below and in `sdk-ts`'s.
+
+Measured across both repositories, `git tag` against `^## ` headings — **four tagged releases in
+this package have no entry**, and three of them remain unwritten:
+
+| version | tagged | entry |
+|---|---|---|
+| `0.24.1` | 2026-08-18 | **written below at 0.26.0** |
+| `0.6.2` | 2026-06-22 | still missing |
+| `0.6.1` | 2026-06-21 | still missing |
+| `0.6.0` | 2026-06-20 | still missing |
+
+`sdk-ts` has the same gap at `0.24.1`, `0.6.0` and `0.6.1` — it does have a `0.6.2` entry. The
+0.6.x three are **named and left unwritten** rather than reconstructed from commit subjects two
+months after the fact: an entry invented now would read exactly like one written then, and that is
+the property worth not losing. `0.21.0` and `0.24.0` are **not** gaps — neither was ever tagged in
+either SDK, and neither changelog claims them.
+
+### KNOWN-ISSUES
+
+The v0.17.0 file-mode entry moves to **PARTLY CLOSED**. The unfalsifiable half is closed — a wrong
+mode now reds a run whether or not anything invokes the script, which is a **fourth** option its
+list did not contain and the cheapest of the four. The duplication half stays **OPEN**:
+`check-schemas.sh` still has no caller and the `schemas` job still inlines its own copy of the diff.
+
+**Suite: 1246 tests, 6477 assertions.** phpstan level 9 clean. All six CI jobs green.
+
+---
+
 ## 0.25.0 — 2026-08-19
 
 **SDK-pair release against spec `v0.24.1`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md),
@@ -136,6 +302,46 @@ SDKs under the same version header, naming the spec tag implemented."* What it c
 record: `.spec-ref` **v0.23.0 → v0.24.1**, one `ConfigurationKey` default moved to follow spec
 `0.24.1`, and the one conformance vector that moved with it. No entry is back-dated here; the hole
 is named rather than papered over.
+
+---
+
+## 0.24.1 — 2026-08-18
+
+> **Entry reconstructed at `0.26.0`, from the tag and its diff.** This release was tagged, pushed
+> and published with **no changelog entry in either SDK**, and the gap was found by comparing
+> `git tag` against the `^## ` headings in this file. The date above is the date `v0.24.1` was
+> tagged — a fact — and this note is here so the entry is not mistaken for one written at the
+> time. Nothing below is inferred: the release is four files and they are quoted.
+
+**SDK-pair release against spec `v0.24.1`.** `.spec-ref` moves `v0.24.0` → `v0.24.1`.
+
+### Changed
+
+- **Two configuration defaults moved, and they moved together.** `spec/08-configuration.md`
+  raised `MaxOfflineTransactions` from `50` to the bottom of its new `1000--10000` range, and
+  `OfflinePassMaxAge` from `3600` to `86400`. `ConfigurationKey::defaultValue()` follows both:
+
+  ```
+  MAX_OFFLINE_TRANSACTIONS  50   -> 1000
+  OFFLINE_PASS_MAX_AGE      3600 -> 86400
+  ```
+
+  The first is what spec `0.24.1` exists for: `0.24.0` had raised the registry range past the
+  values its own corpus carried, so three sites went on depicting `50` — a value a conformant
+  station must now refuse with `5109 INVALID_CONFIGURATION_VALUE`.
+
+- **One conformance vector moved with them.**
+  `valid/core/boot-notification-response-full.json` carried `"MaxOfflineTransactions": "50"` in its
+  `configuration` block — a server pushing a value below the new floor. It becomes `"1000"`.
+
+  Nothing in this package enforced that pairing at the time. The vector was re-vendored by hand and
+  it happened to be done correctly; the `vector-corpus` gate that makes it a checked property
+  arrives in `0.26.0`.
+
+### Not changed
+
+No code outside `ConfigurationKey`, no schema, no state machine. `0.24.0` was never tagged in
+either SDK — the pins step `v0.23.0` → `v0.24.1` — so this is the only `0.24.x` release here.
 
 ---
 
