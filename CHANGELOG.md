@@ -7,6 +7,153 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.27.0 — 2026-08-30
+
+**SDK-pair release against spec `v0.27.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+`.spec-ref` moves `v0.25.0` → `v0.27.0`, **skipping `v0.26.0`** — that tag exists upstream and no
+SDK release ever pinned it, so two spec minors are taken up at once.
+
+> ### The two numbers are equal this time, and that is a coincidence, not an alignment.
+>
+> This release is `0.27.0` and it pins spec `v0.27.0`. **Do not read the first from the second.**
+> The previous release was `0.26.0` pinning `v0.25.0`; the one before it `0.25.0` pinning `v0.24.1`.
+> The offset has been +1 minor twice and is **0** here, only because this SDK absorbs two spec
+> minors in one release. It will move again the next time either line releases for a reason the
+> other has no part in.
+>
+> [`VERSIONING.md`](https://github.com/ospp-org/spec/blob/main/VERSIONING.md#the-two-lines-have-crossed-and-they-will-not-uncross)
+> says the two lines "are permanently offset and the offset is not fixed". As of this release the
+> first half of that sentence is **false** and the second is why. That is worth saying plainly,
+> because the sentence exists to warn against a *reading* trap — "the numbers were close enough for
+> long enough that a reader could treat them as corresponding, and a reader who does will pair an
+> SDK with the wrong contract and get a green build for it" — and equal numbers are the most
+> dangerous form of that trap, not the safest. Here the inference happens to land right. It is
+> still an inference, and it was wrong at the last two releases.
+>
+> The number was chosen from this package's own line — a spec take-up bumps a MINOR, as at `0.18.0`
+> which changed no code — and not from the spec's. Picking `0.28.0` to preserve a gap would have
+> been deriving one number from the other just as much as picking `0.27.0` to close one.
+>
+> **`.spec-ref` remains the only source of truth**, and it is enforced byte-for-byte rather than
+> ordinally. Swept again at this release: **nothing compares the two numbers.** No gate in
+> `scripts/`, no job in `.github/workflows/tests.yml`, no assertion in `tests/` reads a spec version
+> and compares it to this package's. The widened corpus gate below now diffs a vendored file that
+> *contains* the spec's version banner — that is byte-identity against the spec tree, not an ordinal
+> comparison of two version lines, and it reads nothing from `composer.json`. The spec's **MUST
+> NOT** against introducing a comparison is intact.
+
+### Changed — sync to spec `v0.27.0`
+
+**Nothing on the wire moved across either minor.** Measured against the vendored tree rather than
+inherited from the spec's own *"no SDK re-vendor is required"*:
+
+| Artefact | `v0.25.0` | `v0.26.0` | `v0.27.0` |
+|---|---|---|---|
+| schema files | 86 | 86, byte-identical | 86, byte-identical |
+| conformance vectors | 163 valid + 171 invalid | identical | identical |
+| error codes | 118 | 118, same `errorText`/severity/`recoverable` | 118, same |
+| configuration keys | 28 | 28, same type/default/access/mutability/profile | 28, same |
+
+Upstream, `git diff --stat v0.25.0..v0.27.0 -- schemas/ conformance/test-vectors/` is **two README
+banner lines and nothing else**. `OsppErrorCode`, `ConfigurationKey`, every value object, every
+state machine and every schema are untouched by this release.
+
+`v0.26.0` closed six obligations no implementation could satisfy — the server-originated
+SecurityEvent form, Heartbeat's four impossible error codes, the topology comparison's unnamed
+referent, a `programNumber` drift routed to a code that cannot carry it, `1006`'s single prescribed
+action for two paths, and a decommissioning cause the spec had already declared out of scope. Every
+one is resolved in **prose**, by scoping or by naming a referent. Not one widened a schema, and the
+one closed-set change in either minor — `2015` added to AuthorizeOfflinePass's row in the §4.1
+action→code map — has no surface here, because this SDK models no such map.
+
+### Fixed — the corpus gate was itself the hand-maintained list it warns against
+
+`scripts/check-vector-corpus.sh` looped `for bucket in valid invalid`. Two names, written by hand,
+and everything else in the vendored directory was outside the comparison. What was outside it was
+`README.md`, which the spec re-stamps with its own version on every release.
+
+The vendored copy read **`OSPP Version: 0.15.0`** against an upstream `0.27.0` — twelve minors of
+drift — and pointed at `schemas/mqtt/mqtt-envelope.schema.json`, a path that exists in neither this
+repository nor the spec; it is `schemas/common/`. The gate printed `OK — vendored conformance
+corpus byte-identical to spec` on every run since it was built, and its own header three lines above
+the loop already said not to do this: *"Do NOT narrow this to a hand-maintained file list — a list
+is a second place to forget, and it fails silently by going green."* So does the spec's KNOWN-ISSUES
+entry that asked for this gate, in the sentence that specified it.
+
+Now one `diff -rq --exclude=crypto` over the whole directory. `crypto/` is the single exclusion,
+stated as an argument rather than by omission — this repo vendors 2 of the spec's 4 and
+`scripts/check-crypto-vectors.sh` already pins them by name.
+
+**What the widening buys is discrimination, not tidiness.** That README is the only vendored artefact
+in this corpus that moves when the spec *version* moves and the vectors do not — and the vectors did
+not move across either minor. So until this release **no gate in this repository could tell one
+`.spec-ref` value from another**: the marker was carried by the commit alone. Measured on identical
+inputs, the vendored README at `v0.27.0` against the spec tree extracted at `v0.25.0`:
+
+- **old gate** — `rc=0`, `OK — vendored conformance corpus byte-identical to spec v0.27.0`. A false
+  claim, made by name.
+- **new gate** — `rc=1`, `Files .../README.md and .../README.md differ`.
+
+A marker bumped without a re-vendor, and a re-vendor without a marker bump, were both green before
+and are both red now. `sdk-ts` was given the same two runs and answers identically; it had never
+vendored the file at all, so its message is `Only in <spec>: README.md` rather than `differ`. Each
+mutation was reverted after measuring.
+
+### Unchanged, and deliberately — the two revocation settings
+
+Spec `v0.27.0` makes certificate-revocation checking at the broker a **MUST**
+([`06-security.md` §2.1.1](https://github.com/ospp-org/spec/blob/main/spec/06-security.md#211-revocation-checking))
+and names two settings that bound it:
+
+| Setting | Type | Default | Range |
+|---|---|---|---|
+| `CertificateRevocationMaxAgeSeconds` | integer | `86400` | `3600`–`604800` |
+| `CertificateRevocationGraceSeconds` | integer | `3600` | `0`–`86400` |
+
+They are **broker configuration and deliberately outside the Chapter 08 registry**. §1.1 defines
+that registry as the *station's* key-value store and §1.5 makes every key of a required profile a
+station conformance obligation; no station holds either setting, no OSPP message carries either, and
+a station asked for one could answer only `NotSupported`. Registering them would oblige every
+station to implement a key it cannot act on. **`ConfigurationKey` stays at 28 cases.**
+
+Proven rather than asserted, because a boundary held by prose is held by nothing.
+`CertificateRevocationMaxAgeSeconds` was added to the enum with consistent metadata — 29 cases,
+`type()`, `defaultValue()`, `access()` and `profile()` all answering, so that the only thing left to
+fail was the spec comparison — and `scripts/check-config-registry.sh` exited `1` with
+`CertificateRevocationMaxAgeSeconds: in the SDK enum, MISSING from the spec`. The existing gate
+already refuses the boundary in both directions; a dedicated guard would have been a second place to
+forget. The mutation was reverted.
+
+### Unchanged — `1004 CERTIFICATE_ERROR` keeps four causes, and the fifth was refused on purpose
+
+`v0.27.0` defines **two distinct revocation refusals** and routes them to different places:
+
+| Condition | Broker refuses at | Station sees |
+|---|---|---|
+| The certificate **is** revoked | the TLS handshake | `1004` with `details.cause: "revoked"` — keep credentials, stay off, alert |
+| Revocation status **cannot be established** and the grace has expired | the MQTT CONNECT, non-zero CONNACK (`0x87` RECOMMENDED) | a reason code — log it and retry with backoff |
+
+The second gets **no fifth `details.cause`**: it is a property of the broker rather than of the
+certificate, and it refuses before any OSPP message exists in either direction. The spec's reasoning
+is that routing it through `1004` — whose non-expired branches are `recoverable: false` and say
+*stay off the broker and alert the operator* — would take a fleet off on a transient list outage and
+leave it off, the outage the grace period exists to prevent, produced by the mechanism meant to
+prevent it.
+
+Nothing follows for this SDK, and that is a measurement rather than an assumption: it models no
+`details.cause` discriminator and no CONNACK reason code, so there is no set here to keep closed and
+no mapping that could send a non-zero CONNACK to `1004`. `1004` remains `Critical`,
+`recoverable: false`, and all 118 rows still agree with the spec field by field.
+
+### Gates
+
+All five green against spec `v0.27.0`: schemas (86 files), conformance corpus (163 + 171 + README),
+crypto corpus (4 files), error registry (118 codes), config registry (28 keys, 5 profiles, 28
+profile comparisons). phpunit **1246 tests / 6477 assertions**, phpstan level 9 clean — both
+identical to the pre-sync baseline.
+
+---
+
 ## 0.26.0 — 2026-08-20
 
 **SDK-pair release against spec `v0.25.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
