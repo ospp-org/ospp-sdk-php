@@ -31,7 +31,7 @@
   ┌──────────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
   │    Module    │                                                  Description                                                   │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ Enums        │ MessageType, SessionSource, BayStatus, SessionStatus, Severity, SigningMode, OsppErrorCode (114 codes),        │
+  │ Enums        │ MessageType, SessionSource, BayStatus, SessionStatus, Severity, SigningMode, OsppErrorCode (118 codes),        │
   │              │ FirmwareUpdateStatus, DiagnosticsStatus, ReservationStatus, BootNotificationStatus, BootReason,               │
   │              │ NetworkConnectionType, TransactionEventStatus, ChangeConfigResultStatus, DataTransferStatus,                  │
   │              │ TriggerMessageStatus, CertificateType, ResetType, SecurityEventType, StationConnectivity,                    │

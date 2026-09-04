@@ -10,6 +10,24 @@ jobs:
           php-version: '8.3'
           extensions: json, openssl
       - run: composer install --no-interaction --prefer-dist
+      # tests/Contract/RecommendedActionGateTest.php runs the recommendedAction
+      # gate against synthetic, deliberately-broken copies of the spec registry —
+      # including the case that proves the gate does NOT assert the byte-identity
+      # 07-errors.md §1.4 forbids. It needs a real registry to mutate, and without
+      # SPEC_REPO it SKIPS. Seven skips read exactly like seven passes in the run
+      # summary, so the test fails outright under CI when this is missing rather
+      # than quietly stopping. Shallow clone at the pinned ref; no network cost
+      # beyond the one every other gate job here already pays.
+      - name: Clone spec at pinned ref (for the gate mutation tests)
+        run: |
+          set -euo pipefail
+          ref="$(tr -d '[:space:]' < .spec-ref)"
+          if ! [[ "$ref" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9._-]+)?$ ]]; then
+            echo "ERROR: .spec-ref value '$ref' does not match SemVer tag pattern" >&2
+            exit 1
+          fi
+          git clone --quiet --depth 1 --branch "$ref" https://github.com/ospp-org/spec.git /tmp/spec-source
+          echo "SPEC_REPO=/tmp/spec-source" >> "$GITHUB_ENV"
       - run: vendor/bin/phpunit
       - run: vendor/bin/phpstan analyse --level=9 src/
 
@@ -120,6 +138,33 @@ jobs:
       - run: composer install --no-interaction --prefer-dist
       - name: Compare src/Enums/OsppErrorCode.php against spec/07-errors.md
         run: scripts/check-error-registry.sh
+
+  # The sibling of error-registry, on the column that gate does not read.
+  #
+  # check-error-registry.sh compares errorText, severity and recoverable and stops
+  # there, so `recommendedAction()` answering 11 of 118 codes and returning null
+  # for the other 107 sat behind a green column for as long as the accessor
+  # existed. The 11 was read once as the registry being incomplete; §3 gives an
+  # action for 118 of 118 rows with no empty cell, so it was a transcription hole
+  # here, not a gap upstream.
+  #
+  # This gate checks COVERAGE and STRUCTURE and never compares an action to its
+  # cell: §1.4 permits translation and shortening and concludes that a conformance
+  # test MUST NOT assert byte-identity. See the script header for the eight
+  # properties it asserts instead, and tests/Contract/RecommendedActionGateTest.php
+  # for the mutation that proves no diff is hiding in it.
+  recommended-action:
+    name: Recommended action coverage vs §3 registry
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json, openssl
+      - run: composer install --no-interaction --prefer-dist
+      - name: Compare OsppErrorCode::recommendedAction() against spec/07-errors.md §3
+        run: scripts/check-recommended-action.sh
 
   # This SDK had no crypto-corpus gate at all: schemas/ was checked against the
   # spec and the crypto vectors were not. canonical-form.json is why that stopped

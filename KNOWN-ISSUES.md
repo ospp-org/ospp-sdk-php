@@ -25,6 +25,8 @@ that duplicates this package.
 | CLOSED in **0.17.0** | `Enums\ConfigurationKey::profile()` | answered `Offline` where spec §1.5's new **Profile ID** column says `OfflineBLE`. The gate could not have caught it — it read only §§2--6, which carry no profile column at all |
 | PARTLY CLOSED in **0.26.0** | `scripts/check-schemas.sh` | mode corrected to `100755` in 0.17.0, on a script **nothing invokes**. `GateScriptsAreExecutableTest` now reds on any wrong mode, so the repair is confirmable; the script still has no caller — see below |
 | **OPEN** | `.github/workflows/tests.yml` `schemas` job | it inlines its own copy of `check-schemas.sh`'s diff. Two definitions of one check; closing it is options 1--2 below |
+| CLOSED in **0.28.0** | `Enums\OsppErrorCode::recommendedAction()` | answered **11 of 118** registry codes and `null` for the other 107. §3 has an action for 118 of 118 with no empty cell, so the gap was here. All 118 transcribed; `check-recommended-action` keeps it shut |
+| **OPEN** | `Enums\OsppErrorCode::recommendedAction()` | the new gate catches a *structural* drift and **cannot** catch a semantic one. Measured, not assumed — see below. §1.4 is what makes it uncloseable by a gate |
 
 Measured across all 29 cases against `spec/08-configuration.md` at the ref in
 `.spec-ref` (v0.13.0): before 0.15.0, **two keys disagreed, and no other field on any
@@ -38,6 +40,62 @@ The `isMutable()` and `defaultValue()` rows are closed by the same `config-regis
 not by the edits that fixed them — the edits are what made the job green, and the job is
 what stops the next one. That distinction is the entire lesson of the 0.14.0 exec-bit
 finding recorded below.
+
+---
+
+## OPEN in 0.28.0 — the recommendedAction gate catches a structural drift and cannot catch a semantic one, and §1.4 is why
+
+Raised **2026-09-04, in `0.28.0`**, while building `scripts/check-recommended-action.php`
+— by injecting the defect this release repairs back into both SDKs and watching what the
+gate did with it.
+
+**The repair first, so the residue is in proportion.** `recommendedAction()` answered
+**11 of the 118** registry codes and returned `null` for the other 107. That 11 had been
+read once as the spec registry being incomplete; it is not — `07-errors.md` §3 gives a
+*Recommended Action* for **118 of 118** rows and **no cell is empty**. The hole was on
+this side. All 118 are transcribed as of 0.28.0, and `check-recommended-action` fails the
+build if one goes missing again. That half is closed and stays closed.
+
+**What is still open, stated as the boundary rather than as a bug.** Of the 11 arms that
+existed, **two had drifted from the registry**, and they drifted in two different ways:
+
+| Code | What happened | Conforming? | Caught by the new gate? |
+|---|---|---|---|
+| `4020` | reworded to fit the 500-char bound; says exactly what the cell says | **yes** — §1.4 permits shortening | n/a, and a byte gate would have **falsely failed** it |
+| `4010` | says an absent `details.phase` means `retry`; the cell says `retry` on REST but **`renewal`** on SignCertificate [MSG-022] | **no** — opposite recoveries, since `renewal` regenerates the keypair and `retry` must not | **no** |
+
+`4010` is the finding. Both arms keep every protocol token the cell names — `details.phase`,
+`4015` — and both address the same parties, so **every structural property survives while
+the instruction is wrong**. The injection was run on both SDKs: with the stale `4010` text
+restored, both gates exit **0**. With the same text minus its discriminator, both exit **1**
+and name it. The two mirrors agree in both directions; what they agree on is that this class
+is invisible to them.
+
+**Why it cannot be gated away.** §1.4 says a server **MAY** translate a `recommendedAction`
+and **MAY** shorten it, and concludes: *"Byte-identity is not achievable in any case, since
+translation is expressly permitted, so a conformance test **MUST NOT** assert it."* A
+semantic drift inside preserved structure is a difference in what the prose MEANS. Any check
+that could see it would have to compare the prose — which is the assertion the section
+forbids. So this is not an unfinished gate; it is the part of the problem a gate is not
+allowed to hold. The 4010 defect was found by reading, and its successor will be too.
+
+**The mitigation that is available, and what forfeits it.** All 118 arms are currently the
+registry cell under one mechanical rule — flatten `[label](url)` to `label`, collapse
+whitespace — so at this release drift is impossible by construction rather than by
+inspection. **Re-transcribing rather than hand-editing at each spec sync preserves that**,
+and it is the whole of the discipline. The moment an arm is deliberately reworded, that arm
+leaves the protection and rejoins the class above: `4020` is what that looks like, and it was
+harmless; `4010` is what it looks like when it is not.
+
+**Not an option: adding a byte comparison with an exemption list.** It was considered and
+rejected. It would close this by requiring identity of every arm not explicitly excused,
+which reintroduces the forbidden assertion behind a list — and the list becomes the place a
+translation goes to be argued about. The gate checks coverage and structure. What an arm says
+is read by people.
+
+**`@ospp/sdk-ts` carries the identical finding and has no KNOWN-ISSUES.md to record it in**
+— it never has, in 89 commits. Its half is recorded in the header of
+`scripts/check-recommended-action.ts` and in its 0.28.0 changelog entry.
 
 ---
 

@@ -7,6 +7,186 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.28.0 — 2026-09-04
+
+**SDK-pair release against spec `v0.29.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+`.spec-ref` moves **v0.27.0 → v0.29.0**, taking up **two** spec minors. `v0.28.0` was
+vendored on `main` after the last release and never tagged, so it ships here.
+
+> ### The numbers cross again, and this release is where the last one's coincidence ends.
+>
+> This release is `0.28.0` and it pins spec `v0.29.0`. The previous release was `0.27.0`
+> pinning `v0.27.0` — equal numbers, and its own note said plainly that the equality was a
+> coincidence and would not survive. It did not: the offset is **−1** here.
+>
+> The number was taken from this package's own line — `0.27.0` plus a MINOR, because a spec
+> take-up bumps a minor even when it changes no code — and not from the spec's. Choosing
+> `0.29.0` to match the pin would have been deriving one number from the other, which is the
+> exact reading trap [`VERSIONING.md`](https://github.com/ospp-org/spec/blob/main/VERSIONING.md#the-two-lines-have-crossed-and-they-will-not-uncross)
+> exists to warn against. **`.spec-ref` remains the only source of truth.**
+>
+> Swept again at this release: **nothing compares the two numbers.** No script in `scripts/`,
+> no job in `.github/workflows/`, no assertion in `tests/` reads a spec version and compares
+> it ordinally to this package's. The one new gate below reads `.spec-ref` to find a spec
+> checkout and never looks at a version at all. The spec's **MUST NOT** against introducing
+> such a comparison is intact.
+
+### Added — `recommendedAction()` answers all 118 registry codes, not 11
+
+`OsppErrorCode::recommendedAction()` returned a value for **11** codes and `null` for the
+other **107**. That 11 had been read once as the spec registry being incomplete. It is not,
+and the measurement says so at three consecutive tags:
+
+| spec tag | §3 rows | rows with an EMPTY *Recommended Action* cell |
+|---|---|---|
+| `v0.27.0` | 118 | **0** |
+| `v0.28.0` | 118 | **0** |
+| `v0.29.0` | 118 | **0** |
+
+The registry has been complete throughout. The hole was a **transcription hole on this side
+of the wire**, and nothing could see it: `check-error-registry` compares `errorText`,
+`severity` and `recoverable` and stops at the column before this one, so 107 nulls sat
+behind a green column for as long as the accessor existed.
+
+All 118 are now transcribed. The rule is mechanical and stated so it can be repeated: take
+the registry cell, flatten each Markdown link `[label](url)` to `label`, collapse runs of
+whitespace. Nothing else. It was not invented for this release — it was **derived by
+measuring the 11 arms that already existed**, 9 of which were byte-identical to their cell
+under exactly that rule.
+
+Every cell fits the wire bound as written (longest **494** of Appendix C's 500), so no
+shortening was needed anywhere and none was done. §1.4's *"A registry cell MUST fit the wire
+bound"* holds **118 of 118** at `v0.29.0`.
+
+**The signature is now `string`, not `?string`.** With all 118 arms present the match is
+exhaustive and `default => null` became unreachable — phpstan level 9 is what pointed this
+out. An unreachable safety net is not a net; it is a null in the type that no execution can
+produce, and every caller emitting the REST Error Object (§2.4), where the field is
+**REQUIRED**, was being made to handle it. A case added without an arm now raises
+`\UnhandledMatchError` at the call, and cannot reach a release: two gates red on it first.
+
+### Added — `scripts/check-recommended-action.{php,sh}` and the `recommended-action` CI job
+
+The gate that keeps the hole shut. **It is not a diff, and it must not be one** — that is
+the whole of its design, and §1.4 is explicit:
+
+> Byte-identity is not achievable in any case, since translation is expressly permitted, so
+> a conformance test **MUST NOT** assert it.
+
+A gate written as a diff would break the section it exists to enforce. It would also be
+wrong in practice, and both halves of that were **measured on the 11 arms that already
+existed**, which had drifted in two opposite ways:
+
+| Code | What it did | Conforming under §1.4? | A diff would have |
+|---|---|---|---|
+| `4020` | reworded to fit the 500-char bound; says exactly what the cell says | **yes** — shortening is permitted | **falsely failed** it |
+| `4010` | said an absent `details.phase` means `retry` full stop | **no** — see *Fixed* below | caught it, indistinguishably from the false red |
+
+A gate that cannot tell those two apart is not a gate. So this one asserts only properties
+that **survive a translation**: coverage, no orphans, the 1..500 wire bound, distinctness
+(how a generic substitution actually presents — it collapses many codes onto one string),
+the placeholder §1.4 names by hand, the `details.<member>` discriminator a branching entry
+must carry, a four-digit code the cell cross-references, and the **count of addressed
+parties**.
+
+**That last one was wrong in the first draft, and measuring is what found it.** It required
+the literal label: `Station:` in the cell had to be `Station:` in the arm. Run against a
+Romanian rendering of `4018` that keeps every protocol token, it **failed** — a conformance
+test rejecting a translation, which is exactly the forbidden thing, arriving through a check
+that never mentions bytes. Counting addressed *segments* instead passes the same translation
+and still fails when a part is dropped. `Server/Operator:` is one segment, not two; `5017`
+and `5024` are the rows that decide it.
+
+`tests/Contract/RecommendedActionGateTest.php` proves the property rather than asserting it,
+by mutating the **spec** side and leaving the shipped arm alone: a cell rewritten end to end
+in another language leaves the gate green, and a gate with any byte comparison in it cannot.
+Five further mutations red it, each naming its own rule. Anti-vacuity is a test of its own —
+an emptied registry must exit 1 with `parsed only 0 rows`, never *"all 0 codes agree"* — and
+because the whole file **skips** without a spec checkout, and skips read as passes in a run
+summary, it now **fails outright under `CI`** when `SPEC_REPO` is unset. The `test` job
+clones the spec for it.
+
+### Fixed — `4010 CSR_INVALID` named the wrong recovery on the renewal path
+
+The cell says an absent `details.phase` means `retry` on REST, but on `SignCertificate`
+[MSG-022] it is **always absent and means `renewal`**. This SDK said `retry` unconditionally.
+Those are opposite instructions: `renewal` regenerates the keypair and CSR, `retry` must not
+(a fresh key there is answered `4015`, which is not recoverable). A station following this
+SDK through a certificate renewal would have refused to regenerate and stayed stuck.
+
+Re-transcribed from the `v0.29.0` cell. **The new gate does not catch this class** — the
+stale text kept every token and every addressed party, so every structural property survived
+while the instruction was wrong. Verified by injecting it back into both SDKs: both exit 0.
+Remove its discriminator instead and both exit 1 and name it. That boundary is recorded as an
+**OPEN** entry in `KNOWN-ISSUES.md`, with the reason it cannot be gated away: seeing it would
+mean comparing the prose, and §1.4 forbids that.
+
+### Changed — sync to spec `v0.29.0`
+
+**Nothing on the wire moved across either minor.** Measured by re-vendoring the whole of
+`schemas/` and both vector buckets from the `v0.29.0` tree and letting `git` report what
+changed — not by reading the spec's release notes:
+
+| Artefact | `v0.27.0` | `v0.28.0` | `v0.29.0` |
+|---|---|---|---|
+| schema files | 86 | 86, byte-identical | 86, byte-identical |
+| conformance vectors | 163 valid + 171 invalid | identical | identical |
+| error codes | 118 | 118 | 118, same `text`/`severity`/`recoverable` |
+| config keys | 28 | 28 | 28, same type/default/access/mutability/profile |
+
+Exactly **three files** move in this repository, and two of them are the spec re-stamping its
+own version banner:
+
+- `.spec-ref` — `v0.28.0` → `v0.29.0`
+- `tests/Fixtures/test-vectors/README.md` — the corpus banner, `0.28.0` → `0.29.0`
+- `tests/Contract/Crypto/fixtures/canonical-form.json` — **one line**, and no vector value:
+  `specSection` changes from `06-security.md §4.8.1 (lines 677-688)` to
+  `§4.8.1 (Algorithm), §4.8.2 (worked example)`. The `vectors` array hashes identically at
+  both tags (17 vectors, same SHA-256), so the file's ORACLE is untouched — a line-number
+  citation was replaced by a section citation.
+
+`schemas/README.md` is the only artefact under the spec's `schemas/` that changed, and it is
+the one file this SDK does not vendor — the single known exclusion, and it stays excluded.
+
+### Unreleased work that ships here
+
+The tamper-rejection conformance suite landed on `main` after `0.27.0` and was never tagged:
+38 tests over 12 vendored vectors and 8 crypto surfaces, proving this SDK **refuses** a
+tampered signature rather than only verifying one it produced itself. `check-crypto-vectors.sh`
+was widened in the same commit from four hardcoded `check` lines to an iteration over the
+vendored directory — an inclusion list fails silently in exactly one direction, which is how
+the vendored `test-vectors/README.md` reached `OSPP Version 0.15.0` against a spec at `0.27.0`
+with its own gate printing `OK` on every run.
+
+### Verified at this release
+
+- **12 gates green**, 6 in each SDK, against a local `v0.29.0` checkout.
+- **1291 tests, 6624 assertions** (`paratest -p 28`); phpstan level 9 clean.
+- **6 mutations** run against both SDKs' gates, which answered all six **identically** —
+  including the one that must stay green.
+- File modes: this repository has `core.fileMode = false`, so `chmod` alone is invisible to
+  git. `scripts/check-recommended-action.sh` entered the index via
+  `git update-index --chmod=+x` and `GateScriptsAreExecutableTest` confirms `100755`.
+
+### For the server
+
+Measured read-only in `csms-server` at the time of writing: `composer.json` constrains
+`ospp/protocol` at **`^0.27.0`** and `composer.lock` holds **`v0.27.0`**. A caret on a `0.x`
+version **locks the MINOR**, so `^0.27.0` cannot resolve `0.28.0` — this is a block, not a
+lag, and no `composer update` will move it. The order is **dependency first, then the test
+that measures it**: change the constraint to `^0.28.0`, `composer update ospp/protocol`, and
+only then add the assertion that `recommendedAction()` answers all 118 codes — written the
+other way round it fails for the wrong reason and reads as an SDK defect.
+
+`csms-server` has no `package.json` and does not consume `@ospp/protocol`, so the TypeScript
+half of this release does not reach it.
+
+**No configuration key moves in this release** — no key is added, removed or renamed, and no
+type, default, range, access or mutability changes. The config registry is 28 keys before and
+after, and `check-config-registry` confirms it against Chapter 08 at `v0.29.0`.
+
+---
+
 ## 0.27.0 — 2026-08-30
 
 **SDK-pair release against spec `v0.27.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
