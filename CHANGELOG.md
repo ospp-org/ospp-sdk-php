@@ -7,6 +7,168 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.29.0 — 2026-09-04
+
+**SDK-pair release against spec `v0.31.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+`.spec-ref` moves **v0.29.0 → v0.31.0**, taking up **two** spec minors.
+
+> ### Five spec releases moved zero schema bytes. That run ended here.
+>
+> `v0.26.0` through `v0.29.0` moved **no** vendored schema and **no** vendored vector, so the
+> cascade for four consecutive syncs was a one-line marker bump and the byte-identity gates
+> could not have told you either way. `v0.30.0` and `v0.31.0` move schemas, so this sync is a
+> **full re-vendor** and both identity gates were **RED** on arrival. That is them working.
+>
+> Measured against the spec at both tags rather than read from its release notes:
+>
+> | | moved | denominator |
+> |---|---|---|
+> | schemas | **3** | 86 |
+> | conformance vectors | **0** | 334 |
+> | crypto vectors | **0** | 5 in spec (this SDK vendors a subset) |
+> | config keys | **+1** | 28 → 29 |
+> | error codes | **0** | 118 |
+>
+> The vector corpus moved **zero bytes of vector**, and the corpus gate still went **RED** —
+> on `test-vectors/README.md`, whose banner reads `OSPP Version: 0.29.0` upstream at `0.31.0`.
+> That file is in the diff deliberately: it is the only artefact in the corpus that moves with
+> the spec *version* rather than with the vectors, and it is what makes the gate discriminate
+> one `.spec-ref` value from another. A corpus gate that stayed green here would be the
+> pre-`v0.27.0` gate, which reported `OK` through twelve minors of README drift.
+
+> ### The numbers cross wider, and that is the design.
+>
+> This release is `0.29.0` and it pins spec `v0.31.0` — an offset of **−2**. The offset is not
+> fixed and not permanent: it was **0** at `0.27.0`/`v0.27.0`, **−1** at `0.28.0`/`v0.29.0`,
+> and **−2** here. It has changed at three consecutive releases, which is exactly why the two
+> numbers **must not be compared**.
+>
+> The number is taken from this package's own line — `0.28.0` plus a MINOR — and never from the
+> spec's. Choosing `0.31.0` to match the pin would derive one number from the other, the exact
+> reading trap [`VERSIONING.md`](https://github.com/ospp-org/spec/blob/main/VERSIONING.md#the-two-lines-have-crossed-and-they-will-not-uncross)
+> forbids. **`.spec-ref` remains the only source of truth.**
+>
+> Swept again, as a set rather than a sample: **nothing compares the two numbers.** Every
+> tracked file under `scripts/`, `.github/`, `tests/` and `src/` was swept — the denominators
+> are in the release notes below — and of the 14 files that name `.spec-ref` in each repo, not
+> one reads a spec version and compares it ordinally to this package's. The spec's **MUST NOT**
+> against introducing such a comparison is intact, and this release does not add one.
+
+### Re-vendored — spec `v0.31.0`, 3 schemas of 86
+
+`schemas/` is a byte-mirror; the three that moved:
+
+- **`mqtt/session-ended-event.schema.json`** — `reason` enum **6 → 7**, adding `Inactivity`.
+  Two `description` cells also lost their `—`/`§` escapes for literal `—`/`§`, which
+  is a byte change and nothing more.
+- **`mqtt/boot-notification-request.schema.json`** — new OPTIONAL property `messageSigningMode`
+  (`All` | `None`). `bootReason`'s description widened to cover a TriggerMessage-induced Boot;
+  **the enum did not change**.
+- **`provisioning-response.schema.json`** — `mqttConfig.keepAliveSeconds` description only. It
+  had said §1.2's 30 s was "the value to use when this field is ABSENT" while sitting in
+  `mqttConfig.required` three lines above. No constraint moved.
+
+**The three files carry 16 of the 334 vectors** (10 boot-notification-request, 6
+session-ended-event; `provisioning-response` carries none — the vector resolver maps only
+`mqtt/` and `ble/`, and that schema sits at the schema root). **All 16 still validate**, run
+rather than reasoned: `334 / 334` green after the re-vendor, same as before it.
+
+That a widening cannot break a *positive* vector is trivially true; it can break a **negative**
+one, by making a payload that was refused acceptable. The two at risk were checked by hand:
+`invalid/transaction/session-ended-event-invalid-reason.json` uses `"UserStopped"` and
+`invalid/core/boot-notification-request-invalid-enum.json` uses `"unknown_reason"`, neither of
+which the widened enums admit. `Inactivity` and `messageSigningMode` appear in **0** of the 339
+vector files in the spec (literal match; positive control on `bootReason` returns 10).
+
+### Changed — three hand-transcribed registry values the schemas do not carry
+
+1. **`SessionEndReason` 6 → 7** — `INACTIVITY = 'Inactivity'`. The `SessionTimeout` idle stop.
+   Billed **pro-rata on delivered duration**, the same shape as `Local`, *not* one of the
+   zero-billing reasons. **MeterValues do not reset the timer** (08-configuration.md): they are
+   the station's own telemetry, emitted whether or not a customer is present.
+2. **`ConfigurationKey` 28 → 29** — `STATION_IDENTITY_CERTIFICATE`, registered by spec `0.30.0`:
+   string, no default, **W**, Dynamic, **Security**. It had been named a valid
+   ChangeConfiguration key at two normative sites while absent from the Chapter 08 registry, so
+   §8.2 rule 3 obliged a *conforming* station to answer `NotSupported` — and, the batch being
+   atomic, to apply nothing else in the same request.
+3. **`3003 SERVICE_UNAVAILABLE` → HTTP `409`**, was the `default => 500` arm.
+
+### Fixed — `3003` fell through to `500`, and nothing could see it
+
+`3003` appeared in **no row** of §2.4's status table until spec `0.30.0`. Three implementations
+had to answer anyway and none agreed: the reference server said `503`, `sdk-ts` said `503`, and
+this SDK **had no arm at all** and fell to `default => 500` — a bay-level availability fact
+reported as a server fault, which tells a caller to back off the whole endpoint instead of
+picking another bay. `0.31.0` puts it in the `409` row, beside `3001 BAY_BUSY`,
+`3014 BAY_RESERVED` and `3019 SERVICE_NOT_BOUND`, which are the same shape.
+
+**Nothing here caught it, and that is the more useful finding.** `check-error-registry`
+compares `errorText`, `severity` and `recoverable` and deliberately skips `httpStatus`, on the
+stated ground that the spec gives a code no status. The §2.4 table is the partial exception to
+that, and no gate reads it. So the whole table is now transcribed as a test —
+`every_code_named_in_the_2_4_status_table_answers_that_status`, **30 codes**, asserted against
+the enum — rather than the six-code sample that was there. `sdk-ts` carries the mirror of the
+same list, which had drifted **eleven codes** behind the table.
+
+> `2008 ACTION_NOT_PERMITTED` is listed by the spec under **both** `401` and `403`. This SDK
+> answers `401` and `sdk-ts` answers `403`; both satisfy the table as written and neither is
+> falsifiable until the spec drops one of the two rows. It is **pinned in both**, not aligned,
+> so the disagreement stays visible instead of being settled by whoever edited last.
+
+### Fixed — two recommended actions the spec re-worded, caught by the gate
+
+The `recommendedAction` gate is built to survive translation — it checks coverage and structure,
+never bytes, because §1.4 forbids asserting byte-identity. **It caught this move**, with four
+findings before the fix and none after:
+
+- `1005` — the cell now cites `1005`, `1007` and `2001` (CORE-011 keeps applying on the boot
+  path: `recoverable: false` means someone must act, not that retrying stops). Three CODE-REF
+  findings.
+- `3003` — the cell became a **branching entry** carrying `details.cause`
+  (`station-reported` | `disabled` | `consumable`, absent reads as `station-reported`). One
+  DISCRIMINATOR finding.
+
+Both arms rewritten to carry the tokens and the addressing; both stay inside Appendix C's
+1..500 (394 and 438 characters).
+
+### Fixed — five hand-maintained cardinality literals
+
+`it_has_exactly_28_cases`, `security_profile_has_6_keys`, `profile_counts_sum_to_28`,
+`it_has_exactly_six_cases` and `cardinality_is_exactly_6` were the *intended* failures of the
+two enum changes and are updated with the new members asserted by value, not by count.
+
+### Verification — mutation, not assertion
+
+Each defect was injected and the job that owns it had to go red. **12 of 12 discriminated.**
+The two that matter most are the cross-injections the release exists to prevent:
+
+| mutation | job | verdict |
+|---|---|---|
+| this SDK's own defect (`3003` → `500`) injected into `sdk-ts` | `npm test` | **RED** |
+| `sdk-ts`'s defect (`3003` → `503`) injected into this SDK | `phpunit` | **RED** |
+| drop `Inactivity` (either SDK) | suite | **RED** |
+| drop the 29th config key (this SDK) | `check-config-registry` | **RED** |
+| one byte flipped in a re-vendored schema (either SDK) | `check-schemas` | **RED** |
+| `.spec-ref` banner reverted to `0.29.0` | `check-vector-corpus` | **RED** |
+| drop a cited code from the `1005` arm | `check-recommended-action` | **RED** |
+| drop `details.cause` from the `3003` arm | `check-recommended-action` | **RED** |
+
+> One case is worth stating precisely: dropping the 29th key from **`sdk-ts`'s enum** leaves
+> `check-config-registry` **green**, because that gate reads `CONFIG_KEY_REGISTRY`'s metadata
+> and not the enum, and the registry entry survives with its `key` field intact. It is caught
+> — by `tsc` and by two assertions in the suite, both of which run before that gate's job — so
+> nothing reaches a green CI. But the gate alone is blind to an enum/registry disagreement, and
+> that is recorded here rather than left for the next reader to rediscover.
+
+### Verification — a test that could not fail
+
+`sdk-ts`'s `9 + 6 + 6 + 4 + 3 = 28` asserted an arithmetic identity and never touched the
+registry, so it stayed **green** while the registry went to 29 keys. It now sums the actual
+per-profile counts and compares them to the actual key count; the mutation above confirms it
+discriminates. Recorded in both changelogs because it is the shape, not the file, that matters.
+
+---
+
 ## 0.28.0 — 2026-09-04
 
 **SDK-pair release against spec `v0.29.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).

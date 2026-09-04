@@ -17,9 +17,23 @@ use PHPUnit\Framework\TestCase;
 final class SessionEndReasonContractTest extends TestCase
 {
     #[Test]
-    public function cardinality_is_exactly_6(): void
+    public function cardinality_is_exactly_7(): void
     {
-        self::assertCount(6, SessionEndReason::cases());
+        self::assertCount(7, SessionEndReason::cases());
+    }
+
+    /**
+     * spec 0.31.0 widened the enum from six. The registry's SessionTimeout note had
+     * declined the widening at 0.30.0 and reversed it: an obligation with no legal
+     * value to satisfy it is not an unimplemented rule but an unimplementable one --
+     * session-ended.md 6 requires a SessionEnded for every session ending without a
+     * StopService, and no member was true of an idle stop.
+     */
+    #[Test]
+    public function v0_31_0_added_Inactivity_as_the_seventh(): void
+    {
+        self::assertSame(SessionEndReason::INACTIVITY, SessionEndReason::from('Inactivity'));
+        self::assertSame('Inactivity', SessionEndReason::INACTIVITY->value);
     }
 
     #[Test]

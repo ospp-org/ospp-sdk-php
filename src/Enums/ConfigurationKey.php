@@ -37,6 +37,28 @@ enum ConfigurationKey: string
     case CERTIFICATE_RENEWAL_THRESHOLD_DAYS = 'CertificateRenewalThresholdDays';
     case CERTIFICATE_RENEWAL_ENABLED = 'CertificateRenewalEnabled';
 
+    /**
+     * The station's signed **BLE StationIdentity** artefact — the JSON object of
+     * 06-security.md §6.5.2 (`stationId`, `organizationId`, `stationPubKey`,
+     * `issuedAt`, `expiresAt`, `signatureAlgorithm`, `signature`), in OSPP
+     * Canonical Form. First delivered in the provisioning response; **re-issued**
+     * through ChangeConfiguration [MSG-013], which §6.5.2 relies on because
+     * `expiresAt` is short and the server re-issues before expiry.
+     *
+     * **Write-only**, mirroring `OfflinePassPublicKey` — NOT for confidentiality
+     * (the station presents this artefact to any BLE peer during the handshake)
+     * but because a station's held identity is confirmed by completing a
+     * handshake, not by echoing ~364 characters back through the configuration
+     * channel on every GetConfiguration.
+     *
+     * Registered at spec 0.30.0. It was named as a valid ChangeConfiguration key
+     * at two normative sites while absent from the Chapter 08 registry, so §8.2
+     * rule 3 obliged a CONFORMING station to answer `NotSupported` — and, the
+     * batch being atomic, to apply nothing else in the same request. The
+     * specification mandated a rotation every conformant station had to refuse.
+     */
+    case STATION_IDENTITY_CERTIFICATE = 'StationIdentityCertificate';
+
     // Offline / BLE Profile (4 keys) -- Profile ID `OfflineBLE`
     case OFFLINE_MODE_ENABLED = 'OfflineModeEnabled';
     case MAX_OFFLINE_TRANSACTIONS = 'MaxOfflineTransactions';
@@ -67,6 +89,7 @@ enum ConfigurationKey: string
             self::CERTIFICATE_SERIAL_NUMBER,
             self::MESSAGE_SIGNING_MODE,
             self::OFFLINE_PASS_PUBLIC_KEY,
+            self::STATION_IDENTITY_CERTIFICATE,
             self::LOG_LEVEL => 'string',
 
             self::AUTHORIZATION_CACHE_ENABLED,
@@ -113,7 +136,8 @@ enum ConfigurationKey: string
             self::AUTO_REBOOT_ENABLED => false,
             self::FIRMWARE_VERSION,
             self::CERTIFICATE_SERIAL_NUMBER,
-            self::OFFLINE_PASS_PUBLIC_KEY => null,
+            self::OFFLINE_PASS_PUBLIC_KEY,
+            self::STATION_IDENTITY_CERTIFICATE => null,
         };
     }
 
@@ -124,7 +148,8 @@ enum ConfigurationKey: string
             self::FIRMWARE_VERSION,
             self::CERTIFICATE_SERIAL_NUMBER => 'R',
 
-            self::OFFLINE_PASS_PUBLIC_KEY => 'W',
+            self::OFFLINE_PASS_PUBLIC_KEY,
+            self::STATION_IDENTITY_CERTIFICATE => 'W',
 
             default => 'RW',
         };
@@ -200,7 +225,8 @@ enum ConfigurationKey: string
             self::MESSAGE_SIGNING_MODE,
             self::OFFLINE_PASS_PUBLIC_KEY,
             self::CERTIFICATE_RENEWAL_THRESHOLD_DAYS,
-            self::CERTIFICATE_RENEWAL_ENABLED => 'Security',
+            self::CERTIFICATE_RENEWAL_ENABLED,
+            self::STATION_IDENTITY_CERTIFICATE => 'Security',
 
             self::OFFLINE_MODE_ENABLED,
             self::MAX_OFFLINE_TRANSACTIONS,

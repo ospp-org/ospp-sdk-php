@@ -11,9 +11,10 @@ use PHPUnit\Framework\TestCase;
 final class SessionEndReasonTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_six_cases(): void
+    public function it_has_exactly_seven_cases(): void
     {
-        self::assertCount(6, SessionEndReason::cases());
+        // 7 since spec 0.31.0 added Inactivity, the SessionTimeout idle stop.
+        self::assertCount(7, SessionEndReason::cases());
     }
 
     #[Test]
@@ -24,6 +25,8 @@ final class SessionEndReasonTest extends TestCase
         self::assertSame('Local', SessionEndReason::LOCAL->value);
         self::assertSame('LocalOutOfCredit', SessionEndReason::LOCAL_OUT_OF_CREDIT->value);
         self::assertSame('Deauthorized', SessionEndReason::DEAUTHORIZED->value);
+        self::assertSame('OperatorStopped', SessionEndReason::OPERATOR_STOPPED->value);
+        self::assertSame('Inactivity', SessionEndReason::INACTIVITY->value);
     }
 
     #[Test]
@@ -34,6 +37,8 @@ final class SessionEndReasonTest extends TestCase
         self::assertSame(SessionEndReason::LOCAL, SessionEndReason::from('Local'));
         self::assertSame(SessionEndReason::LOCAL_OUT_OF_CREDIT, SessionEndReason::from('LocalOutOfCredit'));
         self::assertSame(SessionEndReason::DEAUTHORIZED, SessionEndReason::from('Deauthorized'));
+        self::assertSame(SessionEndReason::OPERATOR_STOPPED, SessionEndReason::from('OperatorStopped'));
+        self::assertSame(SessionEndReason::INACTIVITY, SessionEndReason::from('Inactivity'));
     }
 
     #[Test]

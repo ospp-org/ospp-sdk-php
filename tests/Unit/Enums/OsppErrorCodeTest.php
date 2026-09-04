@@ -133,6 +133,68 @@ final class OsppErrorCodeTest extends TestCase
         }
     }
 
+    /**
+     * The §2.4 status table, TRANSCRIBED IN FULL at spec 0.31.0 rather than sampled.
+     *
+     * 0.31.0 put `3003` in the `409` row. It was in NO row until 0.30.0, and the three
+     * implementations that had to answer anyway did not agree: the reference server
+     * said 503, sdk-ts said 503, and THIS SDK had no arm and fell to `default => 500`
+     * — a bay-level availability fact reported as a server fault. Nothing caught it:
+     * `check-error-registry` compares errorText, severity and recoverable and
+     * deliberately skips `httpStatus`, and no test named 3003.
+     *
+     * The whole table is asserted, not the one row, because a per-row sample is how
+     * the drift survived. sdk-ts carries the same list, mirrored.
+     *
+     * `2008` is listed by the spec under BOTH 401 and 403 — a duplicate upstream. This
+     * SDK answers 401 and sdk-ts answers 403; both satisfy the table as written, and
+     * neither can be called wrong until the spec drops one of the two rows. It is
+     * pinned rather than aligned so the disagreement stays visible.
+     */
+    #[Test]
+    public function every_code_named_in_the_2_4_status_table_answers_that_status(): void
+    {
+        $table = [
+            [OsppErrorCode::INVALID_MESSAGE_FORMAT, 400],
+            [OsppErrorCode::VALIDATION_ERROR, 400],
+            [OsppErrorCode::CSR_INVALID, 400],
+            [OsppErrorCode::PROVISIONING_REQUEST_INVALID, 400],
+            [OsppErrorCode::PAYLOAD_INVALID, 400],
+            [OsppErrorCode::JWT_EXPIRED, 401],
+            [OsppErrorCode::JWT_INVALID, 401],
+            [OsppErrorCode::PROVISIONING_TOKEN_INVALID, 401],
+            [OsppErrorCode::INSUFFICIENT_BALANCE, 402],
+            // See the docblock: the spec names 2008 in the 401 row too.
+            [OsppErrorCode::ACTION_NOT_PERMITTED, 401],
+            [OsppErrorCode::BAY_NOT_FOUND, 404],
+            [OsppErrorCode::SESSION_NOT_FOUND, 404],
+            [OsppErrorCode::RESERVATION_NOT_FOUND, 404],
+            [OsppErrorCode::BAY_BUSY, 409],
+            [OsppErrorCode::SERVICE_UNAVAILABLE, 409],
+            [OsppErrorCode::BAY_RESERVED, 409],
+            [OsppErrorCode::SERVICE_NOT_BOUND, 409],
+            [OsppErrorCode::PROVISIONING_KEY_MISMATCH, 409],
+            [OsppErrorCode::SESSION_ALREADY_ACTIVE, 409],
+            [OsppErrorCode::COMMAND_PRE_EMPTED, 409],
+            [OsppErrorCode::DURATION_INVALID, 422],
+            [OsppErrorCode::MAX_DURATION_EXCEEDED, 422],
+            [OsppErrorCode::INVALID_TIME_WINDOW, 422],
+            [OsppErrorCode::PROVISIONING_KEY_REUSE, 422],
+            [OsppErrorCode::BAY_COUNT_MISMATCH, 422],
+            [OsppErrorCode::RATE_LIMIT_EXCEEDED, 429],
+            [OsppErrorCode::SERVER_GENERIC, 500],
+            [OsppErrorCode::SERVER_INTERNAL_ERROR, 500],
+            [OsppErrorCode::STATION_OFFLINE, 502],
+            [OsppErrorCode::ACK_TIMEOUT, 504],
+        ];
+
+        self::assertCount(30, $table, 'the §2.4 table names 30 codes at spec 0.31.0');
+
+        foreach ($table as [$case, $status]) {
+            self::assertSame($status, $case->httpStatus(), "{$case->name} (§2.4)");
+        }
+    }
+
     #[Test]
     public function v0_5_2_codes_are_present_with_correct_values(): void
     {

@@ -11,10 +11,11 @@ use PHPUnit\Framework\TestCase;
 final class ConfigurationKeyTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_28_cases(): void
+    public function it_has_exactly_29_cases(): void
     {
-        // 28 since spec 0.23.0 withdrew DiagnosticsUploadUrl; 29 before it.
-        self::assertCount(28, ConfigurationKey::cases());
+        // 28 from spec 0.23.0 (which withdrew DiagnosticsUploadUrl) until 0.30.0
+        // registered StationIdentityCertificate; 29 before 0.23.0, by coincidence.
+        self::assertCount(29, ConfigurationKey::cases());
     }
 
     // =========================================================================
@@ -36,10 +37,11 @@ final class ConfigurationKeyTest extends TestCase
     }
 
     #[Test]
-    public function security_profile_has_6_keys(): void
+    public function security_profile_has_7_keys(): void
     {
+        // 7 since spec 0.30.0 registered StationIdentityCertificate.
         $count = $this->countByProfile('Security');
-        self::assertSame(6, $count);
+        self::assertSame(7, $count);
     }
 
     #[Test]
@@ -57,7 +59,7 @@ final class ConfigurationKeyTest extends TestCase
     }
 
     #[Test]
-    public function profile_counts_sum_to_28(): void
+    public function profile_counts_sum_to_29(): void
     {
         $sum = $this->countByProfile('Core')
             + $this->countByProfile('Transaction')
@@ -65,7 +67,27 @@ final class ConfigurationKeyTest extends TestCase
             + $this->countByProfile('OfflineBLE')
             + $this->countByProfile('DeviceManagement');
 
-        self::assertSame(28, $sum);
+        self::assertSame(29, $sum);
+    }
+
+    /**
+     * spec 0.30.0 08-configuration.md, ordinal 29: string, no default, W, Dynamic,
+     * Security. Write-only mirrors OfflinePassPublicKey -- not confidentiality (the
+     * station shows this artefact to any BLE peer) but because a held identity is
+     * confirmed by completing a handshake, not by echoing it back on every
+     * GetConfiguration.
+     */
+    #[Test]
+    public function station_identity_certificate_matches_the_chapter_08_row(): void
+    {
+        $k = ConfigurationKey::STATION_IDENTITY_CERTIFICATE;
+
+        self::assertSame('StationIdentityCertificate', $k->value);
+        self::assertSame('string', $k->type());
+        self::assertNull($k->defaultValue());
+        self::assertSame('W', $k->access());
+        self::assertTrue($k->isMutable(), 'Chapter 08 marks this key Dynamic');
+        self::assertSame('Security', $k->profile());
     }
 
     // =========================================================================

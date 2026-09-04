@@ -447,7 +447,7 @@ enum OsppErrorCode: int
             self::MQTT_PUBLISH_FAILED => 'Retry publish; if repeated, check broker connectivity. Buffer message for later delivery.',
             self::TLS_HANDSHAKE_FAILED => 'Check the negotiated TLS version against the 1.2 floor and the configured cipher suites; the certificate is **not** what was rejected, so do not regenerate, re-provision, or discard credentials in response to this code. Report via SecurityEvent [MSG-012].',
             self::CERTIFICATE_ERROR => 'Station: never enter provisioning mode and never discard stored credentials. Branch on `details.cause`; if it is absent, read your own certificate\'s `notAfter`. `expired` — enter offline-only BLE mode (§4.7.3) and await server-triggered renewal. `revoked` / `invalid-chain` / `self-signed` — keep credentials, stay off the broker, alert the operator. Server: reject the connection, alert the operator.',
-            self::INVALID_MESSAGE_FORMAT => 'Log the malformed message. Do NOT retry — sender must fix the message.',
+            self::INVALID_MESSAGE_FORMAT => 'Log it; do NOT resend the identical bytes — the sender must correct them. On the boot path this does not suspend CORE-011: a station rejected with `1005` MUST keep retrying at the response\'s `retryInterval`, exactly as for `1007` and `2001` (§5.2 — unlimited). One that stops is unrecoverable: it accepts no commands until booted. `recoverable: false` means someone must act, not stop retrying.',
             self::UNKNOWN_ACTION => '**Branch on whether a RESPONSE schema exists for the action.** Known to the protocol but unsupported here: reply `status: "Rejected"` with this code on that action\'s own RESPONSE (§2.1). Unknown to the protocol: no RESPONSE schema exists and all are closed, so log and discard (Chapter 02 §11). Either branch **MAY** be reported as an unsolicited EVENT (§2.2). Sender: verify the action name.',
             self::PROTOCOL_VERSION_MISMATCH => 'Station: keep retrying BootNotification at `retryInterval` (default 30 s) per CORE-011, in the `Rejected` restricted state; do **NOT** stop retrying. Record `supportedVersions` for diagnostics. Operator: upgrade station firmware to a version in `supportedVersions`, or add the station\'s version to the server\'s set. Server: reject with `Rejected`, including both `supportedVersions` and `retryInterval`.',
             self::BLE_RADIO_ERROR => 'Reset BLE stack. If persistent, disable BLE and report via SecurityEvent [MSG-012].',
@@ -484,7 +484,7 @@ enum OsppErrorCode: int
             self::SESSION_GENERIC => 'Inspect the `errorDescription` for specific context.',
             self::BAY_BUSY => 'Wait for the current session to complete, or select a different bay. Server: refund 100% if this rejects a StartService [MSG-005].',
             self::BAY_NOT_READY => 'Wait and retry. Check StatusNotification [MSG-009] for the bay\'s current state; if none has arrived at all, the station is not `Operational` and the boot is what needs attention.',
-            self::SERVICE_UNAVAILABLE => 'App: select a different service, or a different bay that supports the requested one. Station and server: echo the refused `programNumber` — REQUIRED on a `Rejected` StartService response, `details.programNumber` on REST — so a reader sees which ordinal was refused. Operator: check the hardware and consumable at that ordinal; the binding is correct and the ordinal declared, so nothing server-side changes.',
+            self::SERVICE_UNAVAILABLE => 'Branch on `details.cause`; absent means `station-reported`. App: select a different service, or a different bay. Station and server: echo the refused `programNumber` — REQUIRED on a `Rejected` StartService response, `details.programNumber` on REST. `station-reported`: wait for the station to report the ordinal available again; nothing server-side changes. `disabled`: an operator must re-enable it. `consumable`: refill at that ordinal.',
             self::INVALID_SERVICE => 'Verify the service ID against the station\'s UpdateServiceCatalog [MSG-021] data.',
             self::BAY_NOT_FOUND => 'Verify the bay ID. The bay may have been decommissioned or the ID may be incorrect.',
             self::SESSION_NOT_FOUND => 'Verify the session ID. For StopService [MSG-006], the session may have already ended (timer expiry or auto-stop).',
@@ -664,6 +664,21 @@ enum OsppErrorCode: int
             // valid — what is incomplete is the server's own configuration. For 6008 the
             // command was never dispatched, so nothing about the request was wrong either.
             self::SERVICE_NOT_BOUND,
+            // spec 0.31.0: 3003 joins the §2.4 `409` row explicitly. It appeared in
+            // NO row of that table until 0.30.0, and the three implementations that
+            // had to answer anyway did not agree — the reference server said 503, the
+            // TypeScript SDK said 503, and THIS SDK had no arm at all and fell through
+            // to `default => 500`, turning a bay-level availability fact into a server
+            // fault. A registry that declines to state a mapping does not avoid one; it
+            // delegates it, once per implementation.
+            //
+            // 409, not 503: the name misleads. `3003` says a declared service is not
+            // deliverable ON THAT BAY RIGHT NOW — a fact about the addressed resource.
+            // `503` asserts the SERVER is unavailable, which is false here and invites
+            // a caller to retry the whole endpoint rather than pick another bay. Same
+            // shape as 3001 BAY_BUSY, 3014 BAY_RESERVED and 3019 SERVICE_NOT_BOUND,
+            // which is why it sits with them.
+            self::SERVICE_UNAVAILABLE,
             self::COMMAND_PRE_EMPTED => 409,
             // v0.5.2: 2017 OFFLINE_RECEIPT_MISMATCH aligned cross-SDK to 422 —
             // signature itself verified per spec §3.2; the cross-check failure
