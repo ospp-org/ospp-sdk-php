@@ -6,8 +6,8 @@
 # only as a Markdown table upstream — so this gate always needs a spec checkout.
 #
 # Usage:
-#   scripts/check-bay-transitions.sh                        # clones the pinned ref
-#   SPEC_REPO=/local/path scripts/check-bay-transitions.sh  # uses a local checkout
+#   scripts/check-state-machines.sh                        # clones the pinned ref
+#   SPEC_REPO=/local/path scripts/check-state-machines.sh  # uses a local checkout
 #
 # Exit: 0 if every code agrees on errorText, severity and recoverable; 1 otherwise.
 
@@ -41,4 +41,4 @@ else
   REF_LABEL="${SPEC_REF}"
 fi
 
-exec php "${REPO_ROOT}/scripts/check-bay-transitions.php" "${SPEC_ROOT}" "${REF_LABEL}"
+exec php "${REPO_ROOT}/scripts/check-state-machines.php" "${SPEC_ROOT}" "${REF_LABEL}" --self-test

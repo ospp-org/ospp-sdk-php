@@ -7,6 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.32.0 — 2026-09-06
+
+**SDK-pair release. `.spec-ref` does NOT move** — it stays `v0.33.0`, because the specification was
+already right. `sdk-ts` releases the same number.
+
+> ### The fifth instance, and the gate that ends the class.
+>
+> `05-state-machines.md` §3.3 asserts `Active → Completed` in **four** places — the §3.1 diagram and
+> three table rows — for the three reasons a station reports *without ever being asked to stop*:
+> `Local` (the user pressed the physical Stop button on the bay), `LocalOutOfCredit`,
+> `OperatorStopped`. Both SDKs refused it. **Three of the seven `SessionEndReason` values were
+> therefore unrepresentable in this machine.**
+>
+> **The spec is what is right here, and the reference server is the evidence.** It reached the
+> correct end state only by writing an intermediate `STOPPING` — in a **separate, un-wrapped**
+> write — and its own timeout sweep reads a persisted `STOPPING` as *"the station never confirmed
+> the stop"* and settles it as `StopAckLost` on a different billing arm. A crash between those two
+> writes therefore settles a session the station HAD reported, carrying a real
+> `actualDurationSeconds`, as one it never answered. The workaround existed to compensate for this
+> defect, and it is being removed downstream now that it need not.
+
+### Fixed — `active -> completed`
+
+- `SessionTransitions::TRANSITIONS` gains the pair; the machine goes **8 → 9** transitions.
+- **The unit test's list of valid pairs passed without it**, because the loop asserts each *listed*
+  pair is valid and never that the list is *complete*. Only the derived 6×6 count in the contract
+  test made a completeness claim. The list is completed and the reason written in.
+
+### Added — `scripts/check-state-machines.{php,sh}`, replacing the bay-only gate
+
+- Derives **all six** machines from `05-state-machines.md`, each bounded to its own section (the
+  chapter holds seven tables; a global scan merges them), reading the `From`/`To` column positions
+  from each header because the Bay table carries an extra `Effected by` column the others do not.
+- **Compares against the SPEC, never against the sibling SDK.** Two transcriptions that are
+  identically wrong pass a cross-SDK comparison and fail this one.
+- **Zero parsed transitions is an exit-2 failure, not a pass.** Controlled both ways: a broken
+  section matcher exits `2`, a row matcher that recognises nothing exits `2`.
+- **It self-tests before it reports.** `--self-test` rewrites every `To` cell of one section and
+  requires the parsed set to change; the wrapper passes it, so CI runs it. The first version of that
+  control mutated a single row and asserted its pair vanished — **two** rows produce that pair, so
+  it reported a blind parser when the control was the blind one. It now makes a claim that holds
+  whatever the table contains.
+- **§5.3 BLE is named as NOT COVERED** rather than silently skipped: this SDK has no BLE machine.
+  A gate quietly covering six of seven tables would report a coverage it does not have.
+
+> ### The widening reported two findings and one was false — mine.
+>
+> `Station: NotProvisioned->Booting` was reported as refused; it is allowed. The comparison did
+> `ucfirst(strtolower($s))`, which turns `NotProvisioned` into `Notprovisioned`. The enums do not
+> share a casing convention — `StationState` is PascalCase, `SessionStatus` is lowercase — so any
+> re-casing is a guess. Both sides are now keyed on the enum **case name**, which removes the class.
+
+### Still ungated, measured and NOT built here
+
+**17 of this SDK's 28 enums mirror a vendored schema enum exactly, and none of the 17 has anything
+comparing the two.** A drift there is invisible: the byte-identity gate sees an unchanged schema and
+the enum's own test sees an unchanged hand-written list. `SessionEndReason`, `BootReason`,
+`SecurityEventType`, `MessageType` and thirteen others are in that position. Recorded rather than
+closed — it is one gate, and it is the next one, not this one.
+
+### Verification
+
+- **9/9 gates**; `paratest -p 28`: **1299 tests, 6700 assertions, 0 failures**; `phpstan --level=9`
+  clean. `.spec-ref` unchanged at `v0.33.0`, so no re-vendor and no schema or vector moves.
+
 ## 0.31.0 — 2026-09-05
 
 **SDK-pair release against spec `v0.33.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).

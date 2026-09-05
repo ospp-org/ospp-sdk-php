@@ -19,9 +19,9 @@ final class SessionTransitionsTest extends TestCase
     }
 
     #[Test]
-    public function transitionCountReturnsEight(): void
+    public function transitionCountReturnsNine(): void
     {
-        self::assertSame(8, $this->machine->transitionCount());
+        self::assertSame(9, $this->machine->transitionCount());
     }
 
     #[Test]
@@ -33,6 +33,12 @@ final class SessionTransitionsTest extends TestCase
             [SessionStatus::AUTHORIZED, SessionStatus::ACTIVE],
             [SessionStatus::AUTHORIZED, SessionStatus::FAILED],
             [SessionStatus::ACTIVE, SessionStatus::STOPPING],
+            // The autonomous stop: §3.3 asserts it in four places for `Local` (the physical
+            // Stop button), `LocalOutOfCredit` and `OperatorStopped`. Absent here until
+            // 0.32.0 — and this list PASSED without it, because the loop below asserts each
+            // listed pair is valid and never that the list is complete. The derived count in
+            // SessionTransitionsContractTest is what makes the completeness claim.
+            [SessionStatus::ACTIVE, SessionStatus::COMPLETED],
             [SessionStatus::ACTIVE, SessionStatus::FAILED],
             [SessionStatus::STOPPING, SessionStatus::COMPLETED],
             [SessionStatus::STOPPING, SessionStatus::FAILED],
@@ -81,7 +87,6 @@ final class SessionTransitionsTest extends TestCase
             [SessionStatus::AUTHORIZED, SessionStatus::STOPPING],
             [SessionStatus::AUTHORIZED, SessionStatus::COMPLETED],
             [SessionStatus::ACTIVE, SessionStatus::AUTHORIZED],
-            [SessionStatus::ACTIVE, SessionStatus::COMPLETED],
             [SessionStatus::STOPPING, SessionStatus::ACTIVE],
             [SessionStatus::STOPPING, SessionStatus::AUTHORIZED],
         ];

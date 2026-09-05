@@ -8,11 +8,31 @@ use Ospp\Protocol\Enums\SessionStatus;
 
 final class SessionTransitions
 {
-    /** @var array<string, list<string>> */
+    /**
+     * The nine `(from, to)` pairs of `05-state-machines.md` §3.3.
+     *
+     * `active -> completed` is the AUTONOMOUS stop, and it was missing here until 0.32.0
+     * of this SDK. §3.3 asserts it in four places for three reasons the station reports
+     * without ever being asked to stop -- `Local` (the user pressed the physical Stop
+     * button on the bay), `LocalOutOfCredit`, and `OperatorStopped` -- and the §3.1 diagram
+     * draws the edge. Without it, three of the seven `SessionEndReason` values were
+     * unrepresentable in this machine.
+     *
+     * `stopping` is NOT a legal substitute for it, and that is why this is a fix rather
+     * than a preference. `stopping` means the server sent StopService and is awaiting
+     * confirmation; the reference server reached the right end state by writing it anyway,
+     * in a separate un-wrapped write, and its own timeout sweep reads a persisted
+     * `stopping` as "the station never confirmed the stop" and settles it as
+     * `StopAckLost` on a different billing arm. A crash between the two writes therefore
+     * settled a session the station HAD reported, with a real `actualDurationSeconds`, as
+     * one it never answered.
+     *
+     * @var array<string, list<string>>
+     */
     private const TRANSITIONS = [
         'pending' => ['authorized', 'failed'],
         'authorized' => ['active', 'failed'],
-        'active' => ['stopping', 'failed'],
+        'active' => ['stopping', 'completed', 'failed'],
         'stopping' => ['completed', 'failed'],
         'completed' => [],
         'failed' => [],

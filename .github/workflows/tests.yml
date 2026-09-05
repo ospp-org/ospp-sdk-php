@@ -201,8 +201,8 @@ jobs:
   # properties it asserts instead, and tests/Contract/RecommendedActionGateTest.php
   # for the mutation that proves no diff is hiding in it.
 
-  bay-transitions:
-    name: Bay transition table vs spec §2.3
+  state-machines:
+    name: All six state machines vs spec chapter 05
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -210,13 +210,15 @@ jobs:
         with:
           php-version: '8.3'
       - run: composer install --prefer-dist --no-progress
-      # The six state machines were the only registries here with no parity gate.
-      # spec 0.30.0 added `Unknown -> Reserved` and it reached the canonical table and
-      # nothing else: BayCanonicalTableContractTest TRANSCRIBES the pairs by hand, so
-      # both SDKs refused the transition for three releases while every artefact stayed
-      # green. This derives them from §2.3 instead.
-      - name: Bay transition table vs spec §2.3
-        run: scripts/check-bay-transitions.sh
+      # The six transition tables were the only registries here with no parity gate,
+      # and a gate over ONE of them would have caught `Unknown -> Reserved` and missed
+      # `Active -> Completed`. Both drifted the same way: the canonical table was
+      # TRANSCRIBED into a contract test rather than derived. This derives all six, and
+      # compares against the SPEC rather than the sibling SDK -- two transcriptions that
+      # are identically wrong pass a cross-SDK comparison and fail this one. It runs its
+      # own --self-test: a gate that cannot see a change in the table must not report.
+      - name: All six state machines vs spec chapter 05
+        run: scripts/check-state-machines.sh
 
 
   recommended-action:

@@ -19,9 +19,9 @@ final class SessionTransitionsContractTest extends TestCase
     }
 
     #[Test]
-    public function transition_count_is_exactly_8(): void
+    public function transition_count_is_exactly_9(): void
     {
-        self::assertSame(8, $this->transitions->transitionCount());
+        self::assertSame(9, $this->transitions->transitionCount());
     }
 
     #[Test]
@@ -51,8 +51,8 @@ final class SessionTransitionsContractTest extends TestCase
             }
         }
 
-        self::assertSame(8, $valid, 'Expected exactly 8 valid transitions');
-        self::assertSame(28, $invalid, 'Expected exactly 28 invalid transitions');
+        self::assertSame(9, $valid, 'Expected exactly 9 valid transitions');
+        self::assertSame(27, $invalid, 'Expected exactly 27 invalid transitions');
         self::assertSame(36, $valid + $invalid, 'Total pairs should be 36 (6x6)');
     }
 
