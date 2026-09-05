@@ -70,12 +70,26 @@ final class GateScriptsAreExecutableTest extends TestCase
 
         // Denominator. Without it this test passes on an empty set — the exact
         // shape of a gate that reports success because it measured nothing.
-        // Five at 0.25.0: schemas, error-registry, config-registry,
-        // crypto-vectors; vector-corpus is the fifth and the reason this exists.
-        self::assertGreaterThanOrEqual(
-            5,
-            \count($modes),
-            'fewer gate scripts than expected — the glob matched nothing or the scripts moved'
+        //
+        // It was a hand-written floor of 5, which is the defect this test is a
+        // cousin of: a number nothing derives, that stops being the real count
+        // the moment a gate is added, and that keeps passing while it rots
+        // upward. It is now taken from the filesystem, which also makes the
+        // check stronger — a script sitting in scripts/ and NOT in the index
+        // does not run in CI at all, and that is now a failure rather than an
+        // invisible omission.
+        $onDisk = glob(\dirname(__DIR__, 2).'/scripts/*.sh') ?: [];
+        $onDiskNames = array_map(static fn (string $p): string => 'scripts/'.basename($p), $onDisk);
+        sort($onDiskNames);
+        $indexed = array_keys($modes);
+        sort($indexed);
+
+        self::assertNotEmpty($onDiskNames, 'no gate scripts found on disk — the glob matched nothing');
+        self::assertSame(
+            $onDiskNames,
+            $indexed,
+            'the set of gate scripts on disk differs from the set in the git index; an unindexed '
+            .'script is not shipped and does not run in CI'
         );
 
         foreach ($modes as $path => $mode) {

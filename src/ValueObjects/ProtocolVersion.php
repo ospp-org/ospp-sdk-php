@@ -75,8 +75,15 @@ final class ProtocolVersion implements \JsonSerializable, \Stringable
      * sets `OSPP_PROTOCOL_VERSION`, ts-station-simulator carried its own constant
      * — so the wrong default was never on a wire anyone was watching. A default
      * that is only ever correct because everyone overrides it is not a default;
-     * it is a trap for the first caller who does not. `check-config-registry`
-     * (CI, since 0.15.0) now compares this against Chapter 08 on every push.
+     * it is a trap for the first caller who does not.
+     *
+     * `check-config-registry` compares `ConfigurationKey::PROTOCOL_VERSION`
+     * against Chapter 08 on every push, and now compares THIS literal against
+     * that one — closing the half that was open. Between 0.15.0 and then, this
+     * docblock claimed the gate already covered this value; it did not. The gate
+     * imported only `ConfigurationKey` and iterated only its cases, so the
+     * second copy — the one that had drifted to `0.2.1` alongside the first —
+     * was the one nothing watched, under a sentence saying it was watched.
      *
      * Frameworks may override via {@see self::setDefaultResolver()}.
      */

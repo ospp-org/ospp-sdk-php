@@ -414,12 +414,13 @@ enum OsppErrorCode: int
      * the cell says an absent `details.phase` means `retry` on REST but `renewal` on
      * SignCertificate [MSG-022], and this SDK said `retry` unconditionally — the
      * opposite recovery on the renewal path, since `renewal` regenerates the keypair
-     * and `retry` must not. Both are re-transcribed from the v0.29.0 cell.
+     * and `retry` must not. Both are re-transcribed from the cell at the pinned ref.
      *
      * The values are the registry cell with Markdown links flattened to their label
      * text and whitespace collapsed; nothing else is changed. Every cell fits the
-     * wire bound as written at v0.29.0 (longest 494 of 500), so no shortening is
-     * needed anywhere and none is done.
+     * wire bound as written at the pinned ref (longest 494 of 500), so no shortening
+     * is needed anywhere and none is done — and `scripts/check-doc-claims.php` derives
+     * that 494 from the accessor rather than trusting this sentence for it.
      *
      * There is deliberately no matching `errorDescription()` accessor. That field is
      * PER-OCCURRENCE and written by the emitter; §1.4 states that an implementation

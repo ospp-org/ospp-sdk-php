@@ -37,20 +37,20 @@
   │              │ TriggerMessageStatus, CertificateType, ResetType, SecurityEventType, StationConnectivity,                    │
   │              │ BleServiceStatus, PricingType, LogLevel, SessionEndReason, ConfigurationKey (29 keys with metadata)            │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ State        │ Transition tables for Bay (7 states), Session (6 states), Firmware (10 states), Diagnostics (5 states),        │
-  │ Machines     │ Reservation (5 states)                                                                                         │
+  │ State        │ Transition tables for Station (6 states), Bay (7 states), Session (6 states), Firmware (10 states),            │
+  │ Machines     │ Diagnostics (5 states), Reservation (5 states)                                                                 │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ Envelope     │ MessageEnvelope, MessageBuilder — wire-format message construction with correlation support                    │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ Crypto       │ HMAC-SHA256 message signing (MacSigner), ECDSA P-256 offline pass signing, canonical JSON serialization,       │
-  │              │ critical message registry (20 actions), SessionProofCalculator (BLE session proof)                            │
+  │              │ MessageSigningRegistry (3 structural signing exemptions), SessionProofCalculator (BLE session proof)          │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ Value        │ MessageId (UUID v4), ProtocolVersion (semver)                                                                  │
   │ Objects      │                                                                                                                │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
   │ Actions      │ OsppAction — all 30 protocol actions (27 MQTT + 3 API-only) with validation                                   │
   ├──────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-  │ JSON         │ 78 schema files (ble, common, mqtt) accessible via SchemaPath::directory()                                    │
+  │ JSON         │ 86 schema files (ble, common, mqtt, the root) accessible via SchemaPath::directory()                          │
   │ Schemas      │                                                                                                                │
   └──────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
@@ -75,8 +75,9 @@
   use Ospp\Protocol\Enums\SessionStatus;
   use Ospp\Protocol\StateMachines\SessionTransitions;
 
-  $allowed = SessionTransitions::canTransition('pending', 'authorized'); // true
-  $timeout = SessionTransitions::timeout('active'); // 3600
+  $sessions = new SessionTransitions();
+  $allowed = $sessions->canTransition(SessionStatus::PENDING, SessionStatus::AUTHORIZED); // true
+  $timeout = $sessions->getTimeout(SessionStatus::ACTIVE); // 3600
 
   Wire format conversion
 
@@ -105,19 +106,25 @@
   composer install
   vendor/bin/phpunit
 
-  668 tests across 4 test suites:
+  4 test suites:
 
-  ┌─────────────┬───────┬───────────────────────────────────────┐
-  │    Suite    │ Tests │                Purpose                │
-  ├─────────────┼───────┼───────────────────────────────────────┤
-  │ Unit        │ 478   │ Individual class behavior             │
-  ├─────────────┼───────┼───────────────────────────────────────┤
-  │ Regression  │ 10    │ Pins previously found bugs            │
-  ├─────────────┼───────┼───────────────────────────────────────┤
-  │ Contract    │ 153   │ Behavioral alignment with CSMS server │
-  ├─────────────┼───────┼───────────────────────────────────────┤
-  │ Integration │ 27    │ Cross-component workflows             │
-  └─────────────┴───────┴───────────────────────────────────────┘
+  ┌─────────────┬───────────────────────────────────────┐
+  │    Suite    │                Purpose                │
+  ├─────────────┼───────────────────────────────────────┤
+  │ Unit        │ Individual class behavior             │
+  ├─────────────┼───────────────────────────────────────┤
+  │ Regression  │ Pins previously found bugs            │
+  ├─────────────┼───────────────────────────────────────┤
+  │ Contract    │ Behavioral alignment with CSMS server │
+  ├─────────────┼───────────────────────────────────────┤
+  │ Integration │ Cross-component workflows             │
+  └─────────────┴───────────────────────────────────────┘
+
+  The per-suite test counts are deliberately not printed here. They changed on
+  every commit and nothing compared them, so they rotted: this table read
+  478/10/153/27 against an actual 482/10/776/26, and the total said 668 against
+  1294. A number that must be re-derived by hand on every push is not
+  documentation, it is a second place to be wrong.
 
   Static analysis:
 

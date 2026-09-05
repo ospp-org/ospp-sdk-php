@@ -90,8 +90,8 @@ jobs:
         run: git clone --depth 1 --branch "$SPEC_REF" https://github.com/ospp-org/spec.git /tmp/spec-source
       # SCOPE — this diffs the WHOLE directory, and that is deliberate.
       #
-      # ospp-sdk-php vendors the COMPLETE spec schema set (85 of 85 at v0.8.0),
-      # not a subset, so "every vendored file matches the spec" and "the
+      # ospp-sdk-php vendors the COMPLETE spec schema set at the pinned ref, not a
+      # subset, so "every vendored file matches the spec" and "the
       # directory matches the spec" are the same assertion here. The
       # full-directory form is the stronger one: it also catches a schema
       # DELETED from the vendored copy, or one ADDED to the spec and never
@@ -126,6 +126,53 @@ jobs:
   #
   # The script does its own .spec-ref validation and clone (see
   # scripts/check-error-registry.sh), so this job stays a single step.
+  # `OsppAction` is what this SDK is keyed on — signing classification, envelope
+  # construction, the station/server direction split — and it was the only
+  # registry here with NOTHING comparing it to the spec. 07-errors.md had
+  # error-registry, 08-configuration.md had config-registry, schemas/ and both
+  # vector corpora had byte gates. Chapter 03 had a doc comment and five
+  # assertCount() calls that compare the class to itself, which is the shape of
+  # the 5004 finding recorded in check-error-registry.php: two things that agree
+  # are not evidence when neither is the source.
+  #
+  # This gate also checks the 27/3 partition, which has no upstream at all — the
+  # spec has no notion of an API-only action, so `apiOnlyActions()` is a claim of
+  # ABSENCE from the catalogue and is checked as one.
+  action-registry:
+    name: Action registry vs spec message catalog
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json, openssl
+      - run: composer install --no-interaction --prefer-dist
+      - name: Compare src/Actions/OsppAction.php against spec/03-messages.md
+        run: scripts/check-action-registry.sh
+
+  # README.md made seventeen checkable claims and SEVEN were false: 78 schema
+  # files against 86, 668 tests against 1294 (and three of the four per-suite
+  # numbers wrong), a Crypto row advertising a class that had been retired, and a
+  # State Machines row naming five of the six that exist. The usage example did
+  # not run at all — one call shown static against an instance API, one naming a
+  # method that has never existed.
+  #
+  # Every job above was green throughout, because not one of them read README.md.
+  # No spec clone and no network: every value is derived from this repository.
+  doc-claims:
+    name: Documented claims vs derived values
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json, openssl
+      - run: composer install --no-interaction --prefer-dist
+      - name: Every asserted number, and every method the README demonstrates
+        run: scripts/check-doc-claims.sh
+
   error-registry:
     name: Error registry vs spec registry
     runs-on: ubuntu-latest

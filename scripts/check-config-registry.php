@@ -58,6 +58,7 @@ declare(strict_types=1);
 require __DIR__.'/../vendor/autoload.php';
 
 use Ospp\Protocol\Enums\ConfigurationKey;
+use Ospp\Protocol\ValueObjects\ProtocolVersion;
 
 $specRoot = $argv[1] ?? null;
 $refLabel = $argv[2] ?? 'local checkout';
@@ -348,6 +349,36 @@ foreach ($sdk as $key => $o) {
     }
 }
 
+// THE SECOND COPY OF ProtocolVersion.
+//
+// `ValueObjects\ProtocolVersion::default()` hard-codes the same wire version
+// that `ConfigurationKey::PROTOCOL_VERSION->defaultValue()` carries, and until
+// now only the second was compared to Chapter 08. That is not a hypothetical
+// split: KNOWN-ISSUES records both literals reading `0.2.1` together while the
+// chapter had said `0.3.0` since spec v0.10.0, for four minor releases. The fix
+// landed in both places; the GATE landed on one.
+//
+// The docblock on `ProtocolVersion::default()` has claimed since 0.15.0 that
+// "`check-config-registry` (CI, since 0.15.0) now compares this against Chapter
+// 08 on every push." It did not — this file imported only ConfigurationKey and
+// iterated only its cases. A sentence asserting coverage that does not exist is
+// worse than no sentence, because it is what stops the next reader looking.
+// These lines are what make it true.
+$vo = (string) ProtocolVersion::default();
+$viaKey = $sdk['ProtocolVersion']['default'] ?? null;
+
+if ($viaKey === null) {
+    $problems[] = 'ProtocolVersion: the ConfigurationKey case carries no default, so the value object '
+        .'has nothing to be compared against — this check has silently stopped running';
+} elseif ($vo !== $viaKey) {
+    $problems[] = sprintf(
+        "ProtocolVersion: the two copies disagree — ValueObjects\\ProtocolVersion::default()='%s', "
+        ."ConfigurationKey::PROTOCOL_VERSION->defaultValue()='%s'. Both must equal Chapter 08.",
+        $vo,
+        $viaKey,
+    );
+}
+
 // Zero compared pairs is a failure, never a pass. Every threshold above can be
 // cleared by a §1.5 that parses cleanly and a §§2--6 that parses cleanly while the
 // two name DISJOINT key sets — each side full, the intersection empty, no key
@@ -395,7 +426,8 @@ if ($problems !== []) {
 
 printf(
     "OK — all %d keys agree with spec %s on type, default, access and mutability,\n"
-    ."and all %d agree with §1.5 on the normative Profile ID\n",
+    ."all %d agree with §1.5 on the normative Profile ID, and ProtocolVersion's two\n"
+    ."copies agree with each other\n",
     count($spec),
     $refLabel,
     $profilesCompared,

@@ -115,7 +115,7 @@ if ($md === false) {
  *
  * That is deliberate rather than an `explode('|')`: a *Description* cell may contain
  * a pipe inside a code span, which would shift every field after it. No *Recommended
- * Action* cell contains one — verified across all 118 at v0.29.0 — so anchoring on
+ * Action* cell contains one — verified across all 118 at the pinned ref — so anchoring on
  * the last pipe is correct whatever the earlier columns hold.
  */
 const ROW = '/^\|\s*(\d{4})\s*\|\s*`([A-Z_]+)`\s*\|\s*(\w+)\s*\|\s*(?:true|false)\s*\|(.*)\|\s*$/';
@@ -130,7 +130,7 @@ const MAX_LEN = 500;
 /**
  * The party vocabulary §1.4 has in mind when it says an entry may address "more than
  * one party". Enumerated from the registry rather than guessed: these are every
- * `Word:` label that occurs in an action cell at v0.29.0.
+ * `Word:` label that occurs in an action cell at the pinned ref.
  *
  * Used on the CELL side only, where the language is known to be the spec's own.
  */

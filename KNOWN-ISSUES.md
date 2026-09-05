@@ -28,10 +28,12 @@ that duplicates this package.
 | CLOSED in **0.28.0** | `Enums\OsppErrorCode::recommendedAction()` | answered **11 of 118** registry codes and `null` for the other 107. §3 has an action for 118 of 118 with no empty cell, so the gap was here. All 118 transcribed; `check-recommended-action` keeps it shut |
 | **OPEN** | `Enums\OsppErrorCode::recommendedAction()` | the new gate catches a *structural* drift and **cannot** catch a semantic one. Measured, not assumed — see below. §1.4 is what makes it uncloseable by a gate |
 
-Measured across all 29 cases against `spec/08-configuration.md` at the ref in
-`.spec-ref` (v0.13.0): before 0.15.0, **two keys disagreed, and no other field on any
-other key did.** That was the useful shape of the finding — the table was otherwise
-exact, so these were two transcription slips, not a stale port. After 0.15.0 the gate
+Measured across all 29 cases against `spec/08-configuration.md` at the ref then in
+`.spec-ref` (`v0.13.0` — the pin has moved many times since; this sentence is about
+the measurement, not about what the file says today): before 0.15.0, **two keys
+disagreed, and no other field on any other key did.** That was the useful shape of
+the finding — the table was otherwise exact, so these were two transcription slips,
+not a stale port. After 0.15.0 the gate
 reports `all 29 keys agree on type, default, access and mutability`, and reports it on
 every push rather than in a session that went looking.
 
