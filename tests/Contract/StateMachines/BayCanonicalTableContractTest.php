@@ -35,14 +35,14 @@ final class BayCanonicalTableContractTest extends TestCase
     }
 
     /**
-     * The twenty `Station` rows of §2.3, by distinct (from, to) pair.
+     * The twenty-one `Station` rows of §2.3, by distinct (from, to) pair.
      *
      * @return list<array{BayStatus, BayStatus}>
      */
     public static function stationPairs(): array
     {
         return [
-            // Unknown has FIVE exits, not three. §2.3: "A station that reboots
+            // Unknown has SIX exits, not three. §2.3: "A station that reboots
             // mid-session MUST resume that session [...] `Occupied` and
             // `Finishing` are the two states a resumed session can leave a bay
             // in, and they are the two added."
@@ -51,6 +51,12 @@ final class BayCanonicalTableContractTest extends TestCase
             [BayStatus::UNKNOWN, BayStatus::UNAVAILABLE],
             [BayStatus::UNKNOWN, BayStatus::OCCUPIED],
             [BayStatus::UNKNOWN, BayStatus::FINISHING],
+            // The sixth, added by spec 0.30.0 and absent from this transcription
+            // until 0.31.0 of this SDK. A station that reboots holding a `Confirmed`
+            // reservation reports `Reserved`; §2.3 makes persisting it a station MUST
+            // "for exactly this reason". scripts/check-bay-transitions.php now derives
+            // these pairs from §2.3 instead of trusting this list.
+            [BayStatus::UNKNOWN, BayStatus::RESERVED],
 
             [BayStatus::AVAILABLE, BayStatus::RESERVED],
             [BayStatus::AVAILABLE, BayStatus::OCCUPIED],
@@ -94,10 +100,10 @@ final class BayCanonicalTableContractTest extends TestCase
         ];
     }
 
-    public function testStationRowCountIsTwenty(): void
+    public function testStationRowCountIsTwentyOne(): void
     {
-        self::assertCount(20, self::stationPairs(), 'the vector list itself');
-        self::assertSame(20, $this->transitions->transitionCount(EffectedBy::STATION));
+        self::assertCount(21, self::stationPairs(), 'the vector list itself');
+        self::assertSame(21, $this->transitions->transitionCount(EffectedBy::STATION));
     }
 
     public function testServerRowCountIsSix(): void
@@ -152,9 +158,9 @@ final class BayCanonicalTableContractTest extends TestCase
         );
     }
 
-    public function testServerTableIsExactlyTwentySix(): void
+    public function testServerTableIsExactlyTwentySeven(): void
     {
-        self::assertSame(26, $this->transitions->transitionCount(EffectedBy::SERVER));
+        self::assertSame(27, $this->transitions->transitionCount(EffectedBy::SERVER));
     }
 
     /**

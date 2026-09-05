@@ -25,10 +25,10 @@ final class BayTransitionsTest extends TestCase
     }
 
     #[Test]
-    public function transitionCountIsTwentyForAStationAndTwentySixForAServer(): void
+    public function transitionCountIsTwentyOneForAStationAndTwentySevenForAServer(): void
     {
-        self::assertSame(20, $this->machine->transitionCount(EffectedBy::STATION));
-        self::assertSame(26, $this->machine->transitionCount(EffectedBy::SERVER));
+        self::assertSame(21, $this->machine->transitionCount(EffectedBy::STATION));
+        self::assertSame(27, $this->machine->transitionCount(EffectedBy::SERVER));
     }
 
     #[Test]
@@ -78,7 +78,6 @@ final class BayTransitionsTest extends TestCase
     public function canTransitionReturnsFalseForInvalidTransitions(): void
     {
         $invalidTransitions = [
-            [BayStatus::UNKNOWN, BayStatus::RESERVED],
             [BayStatus::AVAILABLE, BayStatus::FINISHING],
             [BayStatus::RESERVED, BayStatus::UNAVAILABLE],
             [BayStatus::OCCUPIED, BayStatus::AVAILABLE],
@@ -124,7 +123,7 @@ final class BayTransitionsTest extends TestCase
     public function allowedTransitionsForEachState(): void
     {
         $expectations = [
-            [BayStatus::UNKNOWN, [BayStatus::AVAILABLE, BayStatus::FAULTED, BayStatus::UNAVAILABLE, BayStatus::OCCUPIED, BayStatus::FINISHING]],
+            [BayStatus::UNKNOWN, [BayStatus::AVAILABLE, BayStatus::FAULTED, BayStatus::UNAVAILABLE, BayStatus::OCCUPIED, BayStatus::FINISHING, BayStatus::RESERVED]],
             [BayStatus::AVAILABLE, [BayStatus::RESERVED, BayStatus::OCCUPIED, BayStatus::FAULTED, BayStatus::UNAVAILABLE]],
             [BayStatus::RESERVED, [BayStatus::OCCUPIED, BayStatus::AVAILABLE, BayStatus::FAULTED]],
             [BayStatus::OCCUPIED, [BayStatus::FINISHING, BayStatus::FAULTED]],
@@ -153,7 +152,7 @@ final class BayTransitionsTest extends TestCase
             self::assertArrayHasKey($state->value, $table);
         }
 
-        self::assertSame(['available', 'faulted', 'unavailable', 'occupied', 'finishing'], $table['unknown']);
+        self::assertSame(['available', 'faulted', 'unavailable', 'occupied', 'finishing', 'reserved'], $table['unknown']);
         self::assertSame(['reserved', 'occupied', 'faulted', 'unavailable'], $table['available']);
         self::assertSame(['occupied', 'available', 'faulted'], $table['reserved']);
         self::assertSame(['finishing', 'faulted'], $table['occupied']);

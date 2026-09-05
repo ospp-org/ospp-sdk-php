@@ -113,7 +113,7 @@ enum OsppErrorCode: int
     case PUBLIC_KEY_INVALID = 4019;
     case BAY_COUNT_MISMATCH = 4020;
 
-    // 5xxx - Station Hardware & Software Errors (34 codes)
+    // 5xxx - Station Hardware & Software Errors (35 codes)
     case HARDWARE_GENERIC = 5000;
     case PUMP_SYSTEM = 5001;
     case FLUID_SYSTEM = 5002;
@@ -148,6 +148,20 @@ enum OsppErrorCode: int
     case RESET_FAILED = 5110;
     case BUFFER_FULL = 5111;
     case FIRMWARE_SIGNATURE_INVALID = 5112;
+
+    /**
+     * 5113 — the station cannot determine what a bay delivered.
+     *
+     * Added by spec 0.33.0 for `start-service.md` §6 rule 12 and
+     * `05-state-machines.md` §3.5 rule 6. It is the ONE member of the 5xxx range
+     * that asserts no fault was detected: every other member names something the
+     * station observed, and this one exists because rule 12's condition is that it
+     * observed nothing. Rule 12 mandated a `Faulted` StatusNotification and named
+     * no code, while CORE-012 and the schema both require one on `Faulted` — so
+     * the message the rule required did not validate, and the `sessionId` it
+     * carries, which the rule calls "the whole of its value", went with it.
+     */
+    case OUTCOME_INDETERMINATE = 5113;
 
     // 6xxx - Server Errors (9 codes — v0.11.1 added 6008 COMMAND_PRE_EMPTED)
     case SERVER_GENERIC = 6000;
@@ -366,6 +380,7 @@ enum OsppErrorCode: int
             self::INVALID_CONFIGURATION_VALUE,
             self::RESET_FAILED,
             self::FIRMWARE_SIGNATURE_INVALID,
+            self::OUTCOME_INDETERMINATE,
             // v0.8.0: 2019 and 4015 are recoverable=false per registry — no retry on
             // the same token can succeed. 4016 and 4017 are recoverable=true and fall
             // through to the default: both leave the token unconsumed.
@@ -559,6 +574,7 @@ enum OsppErrorCode: int
             self::INVALID_CONFIGURATION_VALUE => 'Check the valid range and type for the configuration key in the configuration registry.',
             self::RESET_FAILED => 'Dispatch technician. A physical power cycle may be required. Report via SecurityEvent [MSG-012].',
             self::BUFFER_FULL => 'Station: reject new StartService requests. Reconnect to MQTT to flush buffered TransactionEvents. Server: prioritize reconnection and reconciliation for this station.',
+            self::OUTCOME_INDETERMINATE => 'Station: report the bay `Faulted` and emit the SecurityEvent [MSG-012] that carries the `sessionId`. Server: settle on the estimate, and record that the closing figure is unmeasured rather than observed. Operator: inspect the bay before returning it to service.',
             self::FIRMWARE_SIGNATURE_INVALID => 'Do NOT install. Report via SecurityEvent [MSG-012] with `FirmwareIntegrityFailure` type. Server: verify signing key and re-publish firmware.',
 
             // 07-errors.md §3.6 — Server (6xxx)

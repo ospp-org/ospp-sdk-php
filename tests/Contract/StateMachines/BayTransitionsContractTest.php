@@ -34,12 +34,12 @@ final class BayTransitionsContractTest extends TestCase
     }
 
     #[Test]
-    public function transition_count_is_exactly_20_for_a_station(): void
+    public function transition_count_is_exactly_21_for_a_station(): void
     {
         // spec/05-state-machines.md §2.3: "Twenty `Station` rows by distinct
         // `(from, to)` pair, and six `Server` rows -- twenty-six in all."
-        self::assertSame(20, $this->transitions->transitionCount(EffectedBy::STATION));
-        self::assertSame(26, $this->transitions->transitionCount(EffectedBy::SERVER));
+        self::assertSame(21, $this->transitions->transitionCount(EffectedBy::STATION));
+        self::assertSame(27, $this->transitions->transitionCount(EffectedBy::SERVER));
     }
 
     #[Test]
@@ -69,8 +69,8 @@ final class BayTransitionsContractTest extends TestCase
             }
         }
 
-        self::assertSame(20, $valid, 'Expected exactly 20 valid Station transitions');
-        self::assertSame(29, $invalid, 'Expected exactly 29 invalid Station transitions');
+        self::assertSame(21, $valid, 'Expected exactly 21 valid Station transitions');
+        self::assertSame(28, $invalid, 'Expected exactly 28 invalid Station transitions');
         self::assertSame(49, $valid + $invalid, 'Total pairs should be 49 (7x7)');
     }
 

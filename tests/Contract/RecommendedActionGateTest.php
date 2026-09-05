@@ -131,7 +131,7 @@ final class RecommendedActionGateTest extends TestCase
         [$exit, $out] = self::runGate($this->requireSpec());
 
         self::assertSame(0, $exit, "the gate must pass against the pinned registry:\n".$out);
-        self::assertStringContainsString('covered 118/118', $out);
+        self::assertStringContainsString('covered 119/119', $out);
     }
 
     /**

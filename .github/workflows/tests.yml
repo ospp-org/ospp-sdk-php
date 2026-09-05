@@ -200,6 +200,25 @@ jobs:
   # test MUST NOT assert byte-identity. See the script header for the eight
   # properties it asserts instead, and tests/Contract/RecommendedActionGateTest.php
   # for the mutation that proves no diff is hiding in it.
+
+  bay-transitions:
+    name: Bay transition table vs spec §2.3
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - run: composer install --prefer-dist --no-progress
+      # The six state machines were the only registries here with no parity gate.
+      # spec 0.30.0 added `Unknown -> Reserved` and it reached the canonical table and
+      # nothing else: BayCanonicalTableContractTest TRANSCRIBES the pairs by hand, so
+      # both SDKs refused the transition for three releases while every artefact stayed
+      # green. This derives them from §2.3 instead.
+      - name: Bay transition table vs spec §2.3
+        run: scripts/check-bay-transitions.sh
+
+
   recommended-action:
     name: Recommended action coverage vs §3 registry
     runs-on: ubuntu-latest

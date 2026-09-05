@@ -24,11 +24,22 @@ final class BayTransitions
      * The twenty `Station` rows. These are the complete set a station may effect
      * and therefore the complete set a StatusNotification [MSG-009] may report.
      *
-     * `Unknown` has FIVE exits. §2.3: a station that reboots mid-session MUST
+     * `Unknown` has SIX exits. §2.3: a station that reboots mid-session MUST
      * resume that session, and on the boot that follows the bay is physically
      * `Occupied` (or `Finishing`, mid wind-down) and owes a post-boot report.
      * With only the three determinate-idle exits that station had no truthful
      * report to send — `Available` would free a bay running a paid session.
+     *
+     * `Unknown -> Reserved` is the sixth, and it was MISSING here until `0.31.0`
+     * of this SDK. Spec `0.30.0` added the row together with a station-side MUST
+     * to persist a `Confirmed` reservation durably, *for exactly this reason*: a
+     * station that reboots holding one reports `Reserved` and resumes the expiry
+     * timer. This class refused it, `sdk-ts` refused it, and the reference server
+     * delegates to this class — so the one truthful report was rejected in all
+     * three, and a station following the guides reported `Available` instead,
+     * which resells a reserved bay. Nothing caught it because the canonical table
+     * was TRANSCRIBED into a contract test rather than derived from the spec;
+     * `scripts/check-bay-transitions.php` now derives it.
      *
      * `Unavailable -> Faulted` is here because a bay taken out of service can
      * still develop a fault, and a technician working on it is the most likely
@@ -38,7 +49,7 @@ final class BayTransitions
      * @var array<string, list<string>>
      */
     private const STATION_TRANSITIONS = [
-        'unknown' => ['available', 'faulted', 'unavailable', 'occupied', 'finishing'],
+        'unknown' => ['available', 'faulted', 'unavailable', 'occupied', 'finishing', 'reserved'],
         'available' => ['reserved', 'occupied', 'faulted', 'unavailable'],
         'reserved' => ['occupied', 'available', 'faulted'],
         'occupied' => ['finishing', 'faulted'],

@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.31.0 — 2026-09-05
+
+**SDK-pair release against spec `v0.33.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+`.spec-ref` moves **v0.32.0 → v0.33.0**. `sdk-ts` releases the **same** number — unlike `0.30.0`,
+which was this package's alone, both SDKs have content this time, so the pair is cut and ADR-001's
+completeness list is satisfied rather than argued around.
+
+> ### A transition was normative for three releases and both SDKs refused it.
+>
+> Spec `0.30.0` added `Unknown → Reserved` to the canonical bay table, with a station-side **MUST**
+> to persist a `Confirmed` reservation durably — *"for exactly this reason"*. It reached the
+> canonical table and **nothing else**. This SDK refused it, `sdk-ts` refused it, and `csms-server`
+> delegates to this class, so a station that rebooted holding a reservation had its one truthful
+> post-boot report rejected in all three. Following the guides it reports `Available`, and the bay is
+> resold under the holder.
+>
+> **`BayCanonicalTableContractTest` is named for the canonical table and transcribes it** — twenty-one
+> pairs by hand under a docblock quoting §2.3. A transcription is not a comparison. The error
+> registry, the config registry, the action registry, the recommended actions, the schemas and the
+> vectors each have a gate that derives them from the spec; **the six state machines had none.**
+>
+> | | before | after |
+> |---|---|---|
+> | `Station` transitions | 20 | **21** |
+> | `Server` (the union) | 26 | **27** |
+> | exits from `Unknown` | 5 | **6** |
+
+### Added — `scripts/check-bay-transitions.{php,sh}` and the `bay-transitions` CI job
+
+- Parses §2.3 **bounded to that section** (the file holds six transition tables and a global scan
+  merges them), expands multi-source rows into transitions, and compares both parties against
+  `BayTransitions` in **both directions** — refused-but-specified and allowed-but-unspecified.
+- Fails loudly on **zero parsed rows** rather than passing vacuously. And it models the union
+  correctly: §2.3 says *"A station implements the `Station` rows. A server implements all of them"*,
+  so comparing the `Server` party against the six server-effected rows alone reports every station
+  row as an extra. **That is what its first run did** — one true finding and twenty false — and the
+  false ones are what said the instrument was wrong rather than the SDK.
+
+### Added — `5113 OUTCOME_INDETERMINATE`, the 119th code
+
+- Spec `0.33.0` adds it for `start-service.md` rule 12, which **mandated a message the schema
+  refuses**: a `Faulted` StatusNotification with no `errorCode`, against a CORE-012 **MUST** and the
+  schema's `if status == Faulted then required: [errorCode, errorText]`. Measured over all 34 codes
+  then in the range, **every one asserts a fault the station observed**; that rule's condition is
+  that it observed nothing. A code was missing, not a list.
+- `Warning`, not recoverable. Registry **118 → 119**, the 5xxx band **34 → 35**, and
+  `recommendedAction` covers **119/119**.
+
+### Changed — sync to spec `v0.33.0`
+
+- Corpus re-vendored: **0** of the 334 existing vectors move, **3 added**, and one changed —
+  `security-event-hardware-fault.json` carried `5003 CONSUMABLE_SYSTEM` under *"Pump overcurrent
+  detected"*, which is `5001`. **0 of the 86 schemas move**: `errorCode` is a free integer, so the
+  119th code costs no schema byte.
+
+### Verification
+
+- **9/9 gates** against spec `v0.33.0`; `paratest -p 28`: **1299 tests, 6700 assertions, 0
+  failures**; `phpstan --level=9` clean.
+- **Nineteen hand-written restatements** of the transition count and the registry size went red on
+  the fix and were corrected — including four test *method names* that still said `118`. Each was a
+  number a human had copied, which is the failure the new gate ends.
+- **The file-mode trap fired and was caught by its own guard.** `core.fileMode` is `false` here, so
+  the new `check-bay-transitions.sh` entered the index `100644` with the exec bit sitting on disk;
+  `GateScriptsAreExecutableTest` went red and `git update-index --chmod=+x` fixed it. Set claim
+  after: **9** `scripts/*.sh` at `100755`, **6** `scripts/*.php` at `100644`.
+
 ## 0.30.0 — 2026-09-05
 
 **SDK-pair release against spec `v0.32.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
