@@ -7,12 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## Unreleased — `.spec-ref` v0.31.0 → v0.32.0
+## 0.30.0 — 2026-09-05
 
-**Not a release.** No version is cut here: spec `0.32.0` moves **zero** schema bytes and **zero**
-of the 334 conformance vectors, so there is nothing to re-vendor and no lockstep pair to publish.
-The marker moves because one behaviour changed, and the re-vendor that follows it is **one README
-banner** — which is what "zero vectors moved" looks like from this side.
+**SDK-pair release against spec `v0.32.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+`.spec-ref` moves **v0.31.0 → v0.32.0**, taking up **one** spec minor.
+
+> ### This release exists because one line changed, and that line could not have been wrong before.
+>
+> The work on `main` was written as **Unreleased**, on the argument that a spec take-up moving
+> **0** schema bytes and **0** of the 334 vectors has nothing to publish. That argument was
+> incomplete, and the incompleteness is the reason for cutting: **`httpStatus(2008)` answers `403`
+> now and answered `401` before**, and a behaviour change that reaches consumers only through a tag
+> does not reach them at all while it sits untagged on `main`.
+>
+> Measured against the spec at both tags rather than read from its release notes:
+>
+> | | moved | denominator |
+> |---|---|---|
+> | schemas | **0** | 86 |
+> | conformance vectors | **0** | 334 |
+> | crypto vectors | **0** | 5 in spec |
+> | config keys | **0** | 29 |
+> | error codes | **0** | 118 |
+> | §2.4 code–status pairs | **−1** | 31 → 30 |
+>
+> The last row is the whole release. It is also the only release in this file's history where the
+> spec moved a **normative decision** and moved **no artefact this package vendors** — which is why
+> every byte gate stayed green through it and only the hand-written arm moved.
+>
+> ### The number is `0.30.0`, from this package's own line.
+>
+> **A spec take-up bumps a MINOR even when it changes no code** — the rule stated at `0.27.0` and
+> restated at `0.28.0`, and applied at `0.18.0` which changed none. `0.29.1` was considered and
+> **refused with its cost**: a caret on a `0.x` version locks the MINOR, so `^0.29.0` **can** resolve
+> `0.29.1` and **cannot** resolve `0.30.0`. Shipping a 401→403 change as a PATCH would push it into
+> every `^0.29.0` consumer — `csms-server` included — on the next `composer update`, silently, which
+> is exactly the shape of failure this change is about. As a MINOR it requires the consumer to say
+> yes. The spec's own number is **not** the source: pinning `v0.32.0` at `0.30.0` puts the offset at
+> **−2**, where it was at `0.28.0` and `0.29.0`.
+>
+> ### `sdk-ts` is NOT tagged alongside this, and that is measured rather than assumed.
+>
+> The sibling needs no release: `OSPP_ERROR_REGISTRY[2008].httpStatus` was **already `403`** and its
+> §2.4 fixture already asserted `[2008, 403]`, so the correction shipping here has no counterpart
+> there. It moved its own `.spec-ref` to `v0.32.0` in a **non-release** commit for the same hygiene
+> reason, and stays at **`0.29.0`** on npm.
+>
+> **ADR-001 pairs the two SDKs on the SPEC they vendor, not on each other's version numbers**, and
+> the sweep run at `0.28.0` and again at `0.29.0` holds at this release: **nothing compares the two
+> package versions** — no script in `scripts/`, no job in `.github/workflows/`, no assertion in
+> `tests/`. Lockstep here is a convention a reader enforces, not a gate. Cutting `0.30.0` in
+> `sdk-ts` to keep the numbers level would publish a version whose entire diff is a version string,
+> and would break the rule above rather than honour it: **the pair is the `.spec-ref`, and both now
+> read `v0.32.0`.**
 
 ### Changed
 
@@ -45,6 +92,35 @@ banner** — which is what "zero vectors moved" looks like from this side.
 
 - `tests/Fixtures/test-vectors/README.md` only. `check-vector-corpus.sh` and `check-schemas.sh` both
   pass byte-identical against `v0.32.0`; **no `.json` vector and no schema differs.**
+
+### Verification at this release
+
+- **8/8 gate scripts pass** against a spec checkout at `v0.32.0` — `action-registry`,
+  `config-registry`, `crypto-vectors`, `doc-claims`, `error-registry`, `recommended-action`,
+  `schemas`, `vector-corpus`. `check-schemas.sh` is run **by hand** and named here because it is
+  the one of the eight that **no CI job invokes** — the `schemas` job inlines its own copy of the
+  same diff, which is an **OPEN** entry in `KNOWN-ISSUES.md` and is not closed by this release.
+- `paratest -p 28`: **1294 tests, 6644 assertions, 0 failures**, 7 skipped. `phpstan --level=9`: no
+  errors. Counts unchanged from `0.29.0` except the two tests that pinned the old `401`.
+- **The two tests that failed are the reason to trust the change.** `OsppErrorCodeTest`'s §2.4
+  fixture and `http_status_401_for_auth_codes` both went red on the edit, which is the correct
+  failure: they existed to pin the choice, and the choice moved. Updated with the reason written
+  in, not just the number.
+- **File modes checked before tagging**, because `core.fileMode` is `false` in this repository and
+  a `chmod` is invisible to git: **14 tracked files** under `scripts/` and `.github/`, **0**
+  index/disk mismatches. `GateScriptsAreExecutableTest` reads `git ls-files -s`, not
+  `is_executable()`, and derives its denominator from `glob()`, so a script that is present but
+  unindexed fails too. This is the guard written after `0.14.0` shipped two gate scripts as
+  `100644`; both died `Permission denied` before their first line and **the CI column was green,
+  because a job that cannot start reports nothing.**
+
+### Still open
+
+Both `KNOWN-ISSUES.md` entries remain **OPEN** and neither is touched here: the `schemas` job's
+inlined copy of `check-schemas.sh`, and `recommendedAction()`'s semantic drift, which §1.4 makes
+uncloseable by a gate.
+
+---
 
 ## 0.29.0 — 2026-09-04
 
