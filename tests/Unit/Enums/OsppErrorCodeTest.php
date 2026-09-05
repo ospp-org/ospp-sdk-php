@@ -165,7 +165,7 @@ final class OsppErrorCodeTest extends TestCase
             [OsppErrorCode::PROVISIONING_TOKEN_INVALID, 401],
             [OsppErrorCode::INSUFFICIENT_BALANCE, 402],
             // See the docblock: the spec names 2008 in the 401 row too.
-            [OsppErrorCode::ACTION_NOT_PERMITTED, 401],
+            [OsppErrorCode::ACTION_NOT_PERMITTED, 403],  // spec 0.32.0: left the 401 row
             [OsppErrorCode::BAY_NOT_FOUND, 404],
             [OsppErrorCode::SESSION_NOT_FOUND, 404],
             [OsppErrorCode::RESERVATION_NOT_FOUND, 404],
@@ -188,7 +188,7 @@ final class OsppErrorCodeTest extends TestCase
             [OsppErrorCode::ACK_TIMEOUT, 504],
         ];
 
-        self::assertCount(30, $table, 'the §2.4 table names 30 codes at spec 0.31.0');
+        self::assertCount(30, $table, 'the §2.4 table names 30 codes at spec 0.32.0');
 
         foreach ($table as [$case, $status]) {
             self::assertSame($status, $case->httpStatus(), "{$case->name} (§2.4)");
@@ -846,9 +846,16 @@ final class OsppErrorCodeTest extends TestCase
     {
         self::assertSame(401, OsppErrorCode::JWT_EXPIRED->httpStatus());
         self::assertSame(401, OsppErrorCode::JWT_INVALID->httpStatus());
-        self::assertSame(401, OsppErrorCode::ACTION_NOT_PERMITTED->httpStatus());
         self::assertSame(401, OsppErrorCode::SESSION_TOKEN_EXPIRED->httpStatus());
         self::assertSame(401, OsppErrorCode::SESSION_TOKEN_INVALID->httpStatus());
+
+        // 2008 ACTION_NOT_PERMITTED is deliberately NOT here. It sat in this list
+        // because 07-errors.md §2.4 listed it under BOTH 401 and 403 and 401 was
+        // therefore unfalsifiable, not because authentication had failed — the
+        // registry entry says "the AUTHENTICATED entity does not have the required
+        // RBAC role". spec 0.32.0 made the multi-status licence conditional and the
+        // 401 row went with it. Asserted at 403 below.
+        self::assertSame(403, OsppErrorCode::ACTION_NOT_PERMITTED->httpStatus());
     }
 
     #[Test]

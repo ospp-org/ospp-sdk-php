@@ -581,14 +581,22 @@ enum OsppErrorCode: int
      * `07-errors.md` §4.4 is headed "The status is not a property of the code": §2.4's
      * mapping table "is illustrative and assigns no code a fixed status", nothing in §3
      * carries an HTTP status column, and one code can honestly appear with more than one
-     * status. §2.4's own table lists 2008 under BOTH 401 and 403 — which no function from
-     * code to status can represent.
+     * status — but as of spec 0.32.0 only where its registry entry names the condition
+     * that selects between the two. Until 0.32.0 that licence was unconditional, and
+     * §2.4's own table listed 2008 under BOTH 401 and 403, which no function from code to
+     * status could represent. No code is listed twice today, so the objection now runs to
+     * a permitted future rather than to the present contents.
      *
      * So this method answers a question the spec does not define, and `sdk-ts` answers it
-     * differently: the two disagree on 51 of the 114 codes. Everything else in the two
-     * registries is identical — numbers, names, severity, recoverable, the category
-     * partition, the vendored schemas. Recorded in the spec's KNOWN-ISSUES.md together
-     * with `category()`, which has the same cause.
+     * differently. Re-derived 2026-09-05 by dumping both registries: 118 codes each,
+     * identical code sets, names, severity, recoverable, category partition and vendored
+     * schemas; 76 agreements and 42 disagreements. The figure recorded in the spec's
+     * KNOWN-ISSUES.md read "51 of 114" and was stale on both halves. 40 of the 42 are
+     * THIS class falling through to `default => 500` while sdk-ts asserts a value —
+     * one library declining to answer, not two libraries disagreeing. Only 2001
+     * (php 422 / ts 401) is now a genuine two-sided disagreement; 2008 was the other
+     * and is settled above. Recorded in the spec's KNOWN-ISSUES.md together with
+     * `category()`, which has the same cause.
      *
      * Treat the result as a default for a server that has no better answer, never as the
      * status a code "has". A server that knows the state it is in knows the truer status;
@@ -618,7 +626,7 @@ enum OsppErrorCode: int
             // v0.5.2: 2014 OFFLINE_PASS_REVOKED aligned cross-SDK to 401 (revoked
             // credential ≡ credential no longer valid; RFC 9110 401 "credential invalid").
             self::OFFLINE_PASS_REVOKED,
-            self::JWT_EXPIRED, self::JWT_INVALID, self::ACTION_NOT_PERMITTED,
+            self::JWT_EXPIRED, self::JWT_INVALID,
             self::SESSION_TOKEN_EXPIRED, self::SESSION_TOKEN_INVALID,
             // v0.6.2: 2018 SERVER_AUTH_NONCE_MISMATCH → 401 — ServerSignedAuth replay
             // at the BLE handshake; the auth is REJECTED (station refuses the
@@ -637,6 +645,19 @@ enum OsppErrorCode: int
             // cross-SDK to 403 — pass is cryptographically valid but used in a
             // context it wasn't issued for (cross-org / wrong user); RFC 9110 403
             // "authenticated, not permitted for this resource".
+            //
+            // spec 0.32.0: 2008 ACTION_NOT_PERMITTED moved 401 -> 403. This arm was
+            // NOT wrong before — 07-errors.md §2.4 listed 2008 under BOTH 401 and 403,
+            // so 401 satisfied the table and nothing could refute it. sdk-ts had
+            // chosen 403 and was equally conformant; the two libraries disagreed and
+            // the spec licensed both. 0.32.0 gave the multi-status licence a
+            // condition — a code listed twice MUST have a registry entry naming the
+            // discriminator — and 2008's entry names one condition, "the AUTHENTICATED
+            // entity does not have the required RBAC role", which is 403 by
+            // construction. The 401 row was unselectable, and it is gone. This is the
+            // first time this accessor has been decidable against the specification
+            // rather than against the other SDK.
+            self::ACTION_NOT_PERMITTED,
             self::OFFLINE_ORG_MISMATCH, self::OFFLINE_USER_MISMATCH => 403,
             // 3017/3018 are MQTT-only -- BootNotification and StartService, neither a
             // REST endpoint -- so §2.4's HTTP status table does not list them and both

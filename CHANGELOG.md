@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## Unreleased — `.spec-ref` v0.31.0 → v0.32.0
+
+**Not a release.** No version is cut here: spec `0.32.0` moves **zero** schema bytes and **zero**
+of the 334 conformance vectors, so there is nothing to re-vendor and no lockstep pair to publish.
+The marker moves because one behaviour changed, and the re-vendor that follows it is **one README
+banner** — which is what "zero vectors moved" looks like from this side.
+
+### Changed
+
+- **`2008 ACTION_NOT_PERMITTED` moves `401` → `403`, and this arm was not wrong before.**
+  `07-errors.md` §2.4 listed `2008` under **both** `401` and `403` — the only one of that table's
+  30 codes to appear twice, and so listed in **all 49 spec tags**. §4.4 declared the table
+  illustrative and expressly permitted a code under two statuses, so `401` satisfied it and nothing
+  could refute it; `sdk-ts` had chosen `403` and was equally conformant. **Two published libraries
+  disagreed and the specification licensed both.**
+
+  Spec `0.32.0` gave that licence a condition: a code listed under more than one status **MUST**
+  have a registry entry naming the discriminator. `2008`'s entry names one condition — *the
+  **authenticated** entity does not have the required RBAC role* — which is `403` by construction,
+  so the `401` row was unselectable and is gone. **This is the first time this accessor has been
+  decidable against the specification rather than against the other SDK.**
+
+- **The `httpStatus` divergence figure was stale on both halves and is re-derived.** The count
+  recorded in the spec's `KNOWN-ISSUES.md` read *51 of 114*. Measured 2026-09-05 by dumping both
+  registries and joining them: **118 codes each**, identical code sets, names, severity,
+  recoverable, category partition and vendored schemas — **42** disagreements before this change,
+  **41** after, re-derived on both sides rather than predicted.
+
+  **40 of the 41 are this SDK falling through to its documented `default => 500`, which is a
+  different shape from a disagreement**: one library declining to answer, not two libraries reading
+  one sentence two ways. After this change exactly **one** genuine two-sided disagreement remains —
+  `2001 STATION_NOT_REGISTERED`, php `422` against ts `401` — and it is a different defect, named
+  by no row of §2.4's table at all. The docblock on `httpStatus()` carries all of this.
+
+### Re-vendored — spec `v0.32.0`
+
+- `tests/Fixtures/test-vectors/README.md` only. `check-vector-corpus.sh` and `check-schemas.sh` both
+  pass byte-identical against `v0.32.0`; **no `.json` vector and no schema differs.**
+
 ## 0.29.0 — 2026-09-04
 
 **SDK-pair release against spec `v0.31.0`** ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
