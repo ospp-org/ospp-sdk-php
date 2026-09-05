@@ -53,13 +53,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > there. It moved its own `.spec-ref` to `v0.32.0` in a **non-release** commit for the same hygiene
 > reason, and stays at **`0.29.0`** on npm.
 >
-> **ADR-001 pairs the two SDKs on the SPEC they vendor, not on each other's version numbers**, and
-> the sweep run at `0.28.0` and again at `0.29.0` holds at this release: **nothing compares the two
-> package versions** — no script in `scripts/`, no job in `.github/workflows/`, no assertion in
-> `tests/`. Lockstep here is a convention a reader enforces, not a gate. Cutting `0.30.0` in
-> `sdk-ts` to keep the numbers level would publish a version whose entire diff is a version string,
-> and would break the rule above rather than honour it: **the pair is the `.spec-ref`, and both now
-> read `v0.32.0`.**
+> **Nothing mechanical compares the two package versions** — no script in `scripts/`, no job in
+> `.github/workflows/`, no assertion in `tests/`; the sweep run at `0.28.0` and again at `0.29.0`
+> holds here. Lockstep is a convention a reader enforces, not a gate, and `.spec-ref` — the thing
+> CI does enforce — reads `v0.32.0` in both SDKs.
+>
+> **But the convention, written down, does ask for the pair, and this release does not supply it.**
+> Stated plainly because it is the part a reader has to decide about:
+> [ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)
+> §"SDK-pair releases against a spec tag" defines such a release as complete only when *"the git tag
+> `vX.Y.Z` is pushed on **both SDKs**"* and `sdk-ts/package.json` `version` equals it, and
+> `VERSIONING.md` says *"The two SDKs release **at the same version as each other**. A consumer
+> pairs them, so an identical number is what tells them which pair is coherent."* At `0.30.0` that
+> is not true: `@ospp/protocol` stays at `0.29.0` on npm.
+>
+> **So this is not an SDK-pair release, and the header above should be read as naming the spec tag
+> implemented rather than the shape.** It is the other shape ADR-001 already allows, in the same
+> document: *"The SDKs **MAY** tag and release independently … A tag cut mid-development is not a
+> release of the OSPP surface, and obliges the other two repositories to do nothing."* The reason
+> for taking that shape is that there is nothing to pair with — `sdk-ts`'s registry already answered
+> `403` and its §2.4 fixture already asserted `[2008, 403]`, so a matching tag there would publish a
+> version whose entire diff is a version string.
+>
+> **Two documents are inaccurate as written until someone chooses**, and neither is this repo's to
+> edit: `VERSIONING.md:139` and `ADR-001` §"SDK-pair releases" both assert the numbers match. Either
+> `sdk-ts` takes `0.30.0` to restore the pair, or those two sentences gain the independent-tag case
+> they already permit twenty lines earlier. **Recorded here rather than decided here.**
 
 ### Changed
 
