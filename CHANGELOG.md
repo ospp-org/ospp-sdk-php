@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.34.0 — 2026-09-06
+
+**SDK-pair release, MINOR. `.spec-ref` moves `v0.34.0` → `v0.35.0`.** One vendored schema moves and
+four vendored vectors are added. **No type edit** — this SDK ships no payload DTOs, so the schemas
+*are* the payload layer here, and a re-vendor is the whole of it. Its TypeScript pair needed a
+hand-written interface widened; that asymmetry is the reason both are listed.
+
+### The cascade, measured before it was taken
+
+`git diff --name-only v0.34.0 v0.35.0 -- schemas/ conformance/test-vectors/` on the spec touches
+**5 files** of the 86 schemas + 341 vectors vendored here: `get-configuration-response.schema.json`
+and four new `device-management` vectors. **0** of the other 85 schemas move.
+
+### What the spec did
+
+`get-configuration-response` gained OPTIONAL `errorCode` and `errorText`. It was the last of the
+**14** Server → Station REQUEST actions whose response could not express a refusal at all — the
+*Implicit Error Codes* note makes `1005`, `2007` and `6001` implicit for every one of them, and this
+schema declared neither an error field nor a `status` to hang one on. `required` did **not** move:
+`configuration: []` was already the mandated answer when every requested key is unknown, so a
+refusing station reports zero entries and says nothing false. Two `if`/`then` arms pair the fields
+and force both arrays empty on that branch.
+
+For a consumer of this package the operative rule is: **test `errorCode` to detect a refusal, never
+test `configuration` for emptiness.** An empty array with no `errorCode` is an ordinary answer, and
+the spec mandates exactly that when every requested key is unknown or every named key is WriteOnly.
+
+### Changed
+
+- `schemas/mqtt/get-configuration-response.schema.json` — re-vendored from spec `v0.35.0`.
+- `tests/Fixtures/test-vectors/{valid,invalid}/device-management/get-configuration-response-refused*.json`
+  — 4 new vectors, one valid and three invalid, one per clause the schema added. `ConformanceVectorTest`
+  maps them by filename prefix, so they are exercised without a list to edit.
+- `tests/Fixtures/test-vectors/README.md`, `.spec-ref` — `v0.34.0` → `v0.35.0`.
+- `scripts/check-vector-corpus.sh` — its own restated corpus counts, **166 + 171 → 167 + 174** (and
+  334 → 341 in the header). `check-doc-claims.sh` held the release red until they moved, which is
+  the order that check exists to force: a tool that keeps a second copy of a number about the corpus
+  is a document like any other.
+
+### Also written here: the missing `0.33.0` entry
+
+---
+
+## 0.33.0 — 2026-09-05
+
+**Written retroactively at `0.34.0`.** This entry was missing: the tag was cut and the code shipped,
+and this file recorded neither. Recorded now from the commit rather than from memory (`b13f486`,
+10 files).
+
+**SDK-pair release, MINOR. `.spec-ref` moved `v0.33.1` → `v0.34.0`.** Spec `0.34.0` withdrew
+`MessageSigningMode`: signing is unconditional, every MQTT message carries a `mac` except the three
+structural exemptions, and a station that does not sign is non-conforming rather than "in another
+mode". The configuration registry went 29 → 28 keys.
+
+### Changed
+
+- `src/Enums/ConfigurationKey.php` — `MESSAGE_SIGNING_MODE` withdrawn;
+  `tests/Unit/Enums/ConfigurationKeyTest.php` follows.
+- `src/Enums/SigningMode.php` — DEPRECATED and RETAINED, as the type of the deprecated boot field
+  only.
+- `schemas/mqtt/` — 4 schemas re-vendored: `authorize-offline-pass-response`,
+  `boot-notification-request` (`messageSigningMode` DEPRECATED and RETAINED — removing a property
+  from a closed object refuses the boot of every station already sending it),
+  `transaction-event-response`, `trigger-message-response` (gained `errorCode`/`errorText`).
+- `.spec-ref`, `README.md`, `tests/Fixtures/test-vectors/README.md`.
+
+---
+
 ## 0.32.1 — 2026-09-06
 
 **SDK-pair release, PATCH. `.spec-ref` moves `v0.33.0` → `v0.33.1`** — the spec cut a

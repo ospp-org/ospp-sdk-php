@@ -10,7 +10,7 @@
 # WHY THIS EXISTS
 #
 # schemas/ has been byte-gated since 0.8.0 and the crypto corpus since 0.14.0.
-# The conformance corpus — the 334 files that decide what this SDK accepts and
+# The conformance corpus — the 341 files that decide what this SDK accepts and
 # refuses — had NOTHING. It was re-vendored by hand on every spec sync and its
 # correctness rested on the maintainer having copied the right tree. A vector
 # edited in place, a vector the spec added and nobody vendored, a vector the
@@ -28,7 +28,7 @@
 # SCOPE — the WHOLE directory, deliberately, and that is wider than it was.
 #
 # This SDK vendors the COMPLETE valid/ and invalid/ sets at the pinned ref
-# (166 valid + 171 invalid vendored here), not a subset, so "every vendored vector
+# (167 valid + 174 invalid vendored here), not a subset, so "every vendored vector
 # matches" and "the directory matches" are the same assertion. The directory
 # form is the stronger one: it also catches a vector DELETED from the vendored
 # copy and one ADDED to the spec and never vendored, which a per-file list
