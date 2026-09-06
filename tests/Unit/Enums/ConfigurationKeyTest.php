@@ -11,11 +11,11 @@ use PHPUnit\Framework\TestCase;
 final class ConfigurationKeyTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_29_cases(): void
+    public function it_has_exactly_28_cases(): void
     {
         // 28 from spec 0.23.0 (which withdrew DiagnosticsUploadUrl) until 0.30.0
         // registered StationIdentityCertificate; 29 before 0.23.0, by coincidence.
-        self::assertCount(29, ConfigurationKey::cases());
+        self::assertCount(28, ConfigurationKey::cases());
     }
 
     // =========================================================================
@@ -37,11 +37,12 @@ final class ConfigurationKeyTest extends TestCase
     }
 
     #[Test]
-    public function security_profile_has_7_keys(): void
+    public function security_profile_has_6_keys(): void
     {
-        // 7 since spec 0.30.0 registered StationIdentityCertificate.
+        // 7 since spec 0.30.0 registered StationIdentityCertificate; 6 since 0.34.0
+        // withdrew MessageSigningMode, because signing is unconditional.
         $count = $this->countByProfile('Security');
-        self::assertSame(7, $count);
+        self::assertSame(6, $count);
     }
 
     #[Test]
@@ -59,7 +60,7 @@ final class ConfigurationKeyTest extends TestCase
     }
 
     #[Test]
-    public function profile_counts_sum_to_29(): void
+    public function profile_counts_sum_to_28(): void
     {
         $sum = $this->countByProfile('Core')
             + $this->countByProfile('Transaction')
@@ -67,7 +68,7 @@ final class ConfigurationKeyTest extends TestCase
             + $this->countByProfile('OfflineBLE')
             + $this->countByProfile('DeviceManagement');
 
-        self::assertSame(29, $sum);
+        self::assertSame(28, $sum);
     }
 
     /**
@@ -116,7 +117,6 @@ final class ConfigurationKeyTest extends TestCase
         self::assertSame('string', ConfigurationKey::PROTOCOL_VERSION->type());
         self::assertSame('string', ConfigurationKey::FIRMWARE_VERSION->type());
         self::assertSame('string', ConfigurationKey::CERTIFICATE_SERIAL_NUMBER->type());
-        self::assertSame('string', ConfigurationKey::MESSAGE_SIGNING_MODE->type());
         self::assertSame('string', ConfigurationKey::OFFLINE_PASS_PUBLIC_KEY->type());
         self::assertSame('string', ConfigurationKey::LOG_LEVEL->type());
     }
@@ -166,7 +166,6 @@ final class ConfigurationKeyTest extends TestCase
     public function default_values_for_security_profile(): void
     {
         self::assertTrue(ConfigurationKey::AUTHORIZATION_CACHE_ENABLED->defaultValue());
-        self::assertSame('All', ConfigurationKey::MESSAGE_SIGNING_MODE->defaultValue());
     }
 
     #[Test]
@@ -249,13 +248,14 @@ final class ConfigurationKeyTest extends TestCase
         ConfigurationKey::PROTOCOL_VERSION,
         ConfigurationKey::FIRMWARE_VERSION,
         ConfigurationKey::CERTIFICATE_SERIAL_NUMBER,
-        ConfigurationKey::MESSAGE_SIGNING_MODE,
+        // MESSAGE_SIGNING_MODE was the sixth until spec 0.34.0 withdrew the key:
+        // signing is unconditional, so nothing selects it and it cannot be Static.
     ];
 
     #[Test]
     public function static_keys_are_not_mutable(): void
     {
-        self::assertCount(6, self::SPEC_STATIC_KEYS, 'Chapter 08 marks six keys Static');
+        self::assertCount(5, self::SPEC_STATIC_KEYS, 'Chapter 08 marks five keys Static');
 
         foreach (self::SPEC_STATIC_KEYS as $key) {
             self::assertFalse($key->isMutable(), "{$key->value} is Static in 08-configuration.md");
@@ -277,16 +277,6 @@ final class ConfigurationKeyTest extends TestCase
         }
     }
 
-    #[Test]
-    public function message_signing_mode_is_static_and_the_package_agrees_with_itself(): void
-    {
-        // The regression this pair exists for. isMutable() returned true from its
-        // default arm while Enums\SigningMode's docblock said "The mode is `Static`",
-        // so the package contradicted itself across two files and neither was checked
-        // against the spec that settles it.
-        self::assertFalse(ConfigurationKey::MESSAGE_SIGNING_MODE->isMutable());
-        self::assertSame('Security', ConfigurationKey::MESSAGE_SIGNING_MODE->profile());
-    }
 
     // =========================================================================
     // Wire format

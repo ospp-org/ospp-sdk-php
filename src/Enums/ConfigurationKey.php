@@ -6,7 +6,7 @@ namespace Ospp\Protocol\Enums;
 
 /**
  * Complete OSPP Configuration Key registry.
- * 29 keys across 5 profiles.
+ * 28 keys across 5 profiles.
  */
 enum ConfigurationKey: string
 {
@@ -32,7 +32,6 @@ enum ConfigurationKey: string
     // Security Profile (6 keys)
     case CERTIFICATE_SERIAL_NUMBER = 'CertificateSerialNumber';
     case AUTHORIZATION_CACHE_ENABLED = 'AuthorizationCacheEnabled';
-    case MESSAGE_SIGNING_MODE = 'MessageSigningMode';
     case OFFLINE_PASS_PUBLIC_KEY = 'OfflinePassPublicKey';
     case CERTIFICATE_RENEWAL_THRESHOLD_DAYS = 'CertificateRenewalThresholdDays';
     case CERTIFICATE_RENEWAL_ENABLED = 'CertificateRenewalEnabled';
@@ -87,7 +86,6 @@ enum ConfigurationKey: string
             self::PROTOCOL_VERSION,
             self::FIRMWARE_VERSION,
             self::CERTIFICATE_SERIAL_NUMBER,
-            self::MESSAGE_SIGNING_MODE,
             self::OFFLINE_PASS_PUBLIC_KEY,
             self::STATION_IDENTITY_CERTIFICATE,
             self::LOG_LEVEL => 'string',
@@ -124,7 +122,6 @@ enum ConfigurationKey: string
             // than Dynamic -- the mode is bound to the session key, which is
             // issued at boot, so a mid-session change would leave one peer
             // signing and the other not.
-            self::MESSAGE_SIGNING_MODE => 'All',
             self::CERTIFICATE_RENEWAL_THRESHOLD_DAYS => 30,
             self::CERTIFICATE_RENEWAL_ENABLED => true,
             self::OFFLINE_MODE_ENABLED => true,
@@ -160,8 +157,8 @@ enum ConfigurationKey: string
      *
      * `false` is 08-configuration.md's `Static`, which does not mean "unchangeable" —
      * it means the change lands at the station's next boot. Six keys are Static and
-     * all six are listed; the `default` arm is Dynamic. It was seven until spec 0.23.0
-     * withdrew `DiagnosticsUploadUrl`.
+     * all five are listed; the `default` arm is Dynamic. It was seven until spec 0.23.0
+     * withdrew `DiagnosticsUploadUrl`, and six until 0.34.0 withdrew `MessageSigningMode`.
      */
     public function isMutable(): bool
     {
@@ -170,18 +167,11 @@ enum ConfigurationKey: string
             self::TIME_ZONE,
             self::PROTOCOL_VERSION,
             self::FIRMWARE_VERSION,
-            self::CERTIFICATE_SERIAL_NUMBER,
-            // The sixth, and the one this arm was missing. 08-configuration.md:114
-            // sets it **Static** in bold and gives the reason: the mode is bound to the
-            // session key, which is issued at boot, so a mid-session change leaves one
-            // peer signing and the other not — and verification fails closed while
-            // signing fails closed too, so the station goes silent in BOTH directions.
-            // A server trusting the old `true` here would dispatch that change mid
-            // session, and the outage would present as a station that had died.
-            //
-            // This enum was contradicting its own package: Enums\SigningMode's docblock
-            // has always said "The mode is `Static`". sdk-ts had it right throughout.
-            self::MESSAGE_SIGNING_MODE => false,
+            self::CERTIFICATE_SERIAL_NUMBER => false,
+            // `MESSAGE_SIGNING_MODE` was the sixth until spec 0.34.0 withdrew it: signing
+            // is unconditional, so no key selects it and there is no mode to be Static
+            // about. Its `=> false` terminated this arm, which is why removing the case
+            // had to move the terminator up rather than just delete a line.
 
             default => true,
         };
@@ -222,7 +212,6 @@ enum ConfigurationKey: string
 
             self::CERTIFICATE_SERIAL_NUMBER,
             self::AUTHORIZATION_CACHE_ENABLED,
-            self::MESSAGE_SIGNING_MODE,
             self::OFFLINE_PASS_PUBLIC_KEY,
             self::CERTIFICATE_RENEWAL_THRESHOLD_DAYS,
             self::CERTIFICATE_RENEWAL_ENABLED,

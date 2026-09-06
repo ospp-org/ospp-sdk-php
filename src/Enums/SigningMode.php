@@ -7,16 +7,26 @@ namespace Ospp\Protocol\Enums;
 use Ospp\Protocol\Crypto\MessageSigningRegistry;
 
 /**
- * The `MessageSigningMode` configuration key — spec/06-security.md §5.1.
+ * DEPRECATED at spec 0.34.0, and RETAINED for one reason only.
  *
- * Two modes, and the default is `All`:
+ * `MessageSigningMode` is no longer a configuration key: it was withdrawn from the
+ * Chapter 08 registry, which went 29 keys to 28. Signing is **unconditional** — every
+ * MQTT message MUST carry a `mac` except the three STRUCTURAL exemptions of §5.6, and
+ * those are exempt because of *when they happen*, never because of a choice.
  *
- * - `All` (default) — HMAC on every MQTT message except the three structural
- *   exemptions of §5.6. Every deployment.
- * - `None` — no HMAC, TLS-only integrity. Development and test harnesses only.
- *   It exists so a test suite can exercise the message layer without a
- *   key-management fixture, and for no other reason. It MUST NOT be used in
- *   production.
+ * WHY THE ENUM SURVIVES ANYWAY. `boot-notification-request` still carries an OPTIONAL
+ * `messageSigningMode` field, itself deprecated and deliberately retained: that schema is
+ * `additionalProperties: false` and stations already send the field, so removing it would
+ * refuse their boot. This enum is that field's type and nothing else.
+ *
+ * The only conforming value is now `All`. A station reporting `None` is not selecting a
+ * mode — it is announcing that every non-exempt message it sends will be refused `1013`.
+ *
+ * WHAT TO CALL INSTEAD. `requiresMac()` and `requiresMacVerification()` below are
+ * deprecated with the key. They dispatch on a mode that no longer exists, so a caller
+ * holding `None` gets `false` and would skip a check the protocol requires. Ask
+ * `MessageSigningRegistry::isStructurallyExempt($action, $messageType)` directly: it is
+ * the whole of the question now
  *
  * `Critical` is REMOVED rather than deprecated: with everything signed it
  * selected nothing, and the protocol is unreleased, so there is no installed
@@ -52,6 +62,7 @@ enum SigningMode: string
      * Otherwise `All` signs everything — there is no per-message judgement left,
      * so an action this SDK has never heard of is signed rather than exempted.
      */
+    /** @deprecated 0.33.0 Signing is unconditional; use MessageSigningRegistry::isStructurallyExempt(). */
     public function requiresMac(string $action, MessageType $messageType): bool
     {
         if (MessageSigningRegistry::isStructurallyExempt($action, $messageType)) {
@@ -71,6 +82,7 @@ enum SigningMode: string
      * from two ends, and a receiver that expected a MAC the sender did not owe
      * would reject conforming traffic.
      */
+    /** @deprecated 0.33.0 Signing is unconditional; use MessageSigningRegistry::isStructurallyExempt(). */
     public function requiresMacVerification(string $action, MessageType $messageType): bool
     {
         return $this->requiresMac($action, $messageType);
