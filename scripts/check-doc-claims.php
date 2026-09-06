@@ -346,6 +346,22 @@ $claims = [
         (string) codesInBand(1), 'codes with 1000 <= value < 2000'],
     ['src/Enums/OsppErrorCode.php', '5xxx band size', '/5xxx - Station Hardware & Software Errors \((\d+) codes\)/',
         (string) codesInBand(5), 'codes with 5000 <= value < 6000'],
+
+    // The registry's own total, in the three places this file states it. It went
+    // stale by one the day 5113 OUTCOME_INDETERMINATE landed, and the header
+    // docblock had said in the SAME SENTENCE that the total 'is now asserted
+    // against the spec ... rather than restated here' while restating it. The band
+    // sizes above were gated and correct; the total was not gated and was wrong.
+    // The history in that docblock -- '114 -> 116 ... then -> 118' -- is a record of
+    // moves and is deliberately NOT matched by these patterns.
+    ['src/Enums/OsppErrorCode.php', 'registry total (header)', '/(\d+) standard error codes across 6 categories/',
+        (string) count(OsppErrorCode::cases()), 'count(OsppErrorCode::cases())'],
+    ['src/Enums/OsppErrorCode.php', 'registry total (transcribed)', '/All (\d+) registry codes are transcribed/',
+        (string) count(OsppErrorCode::cases()), 'count(OsppErrorCode::cases())'],
+    ['src/Enums/OsppErrorCode.php', 'registry total (actions numerator)', '/Recommended Action for (\d+) of \d+ rows/',
+        (string) count(OsppErrorCode::cases()), 'count(OsppErrorCode::cases())'],
+    ['src/Enums/OsppErrorCode.php', 'registry total (actions denominator)', '/Recommended Action for \d+ of (\d+) rows/',
+        (string) count(OsppErrorCode::cases()), 'count(OsppErrorCode::cases())'],
 ];
 
 // Every state machine on disk must be named in the README with its state count.

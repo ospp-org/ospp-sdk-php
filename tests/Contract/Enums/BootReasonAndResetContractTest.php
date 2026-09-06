@@ -20,12 +20,33 @@ final class BootReasonAndResetContractTest extends TestCase
      * `RemoteReset`, `ManualReset`, `ScheduledReset`, `ErrorRecovery`,
      * `Reconnect`. The first seven name an actual boot; `Reconnect` says none
      * occurred."
+     *
+     * DERIVED FROM THE SCHEMA, not from a literal. This assertion used to compare
+     * the enum against an eight-element array typed into this method body, beside a
+     * docblock quoting the spec — which is a transcription checked against a second
+     * transcription, and both were written by the same hand at the same minute. The
+     * sibling in sdk-ts (tests/enums/BootReasonAndReset.test.ts) has read the
+     * vendored schema all along, so the two SDKs disagreed about how this enum is
+     * pinned while agreeing about its contents; the ungated one is where a drift
+     * would have landed silently. `assertSame` compares order, and the schema's
+     * `enum` array is in spec order, so this pins the sequence too.
      */
     #[Test]
-    public function bootReasonHasTheEightSpecValuesInSpecOrder(): void
+    public function bootReasonMatchesTheVendoredSchemaEnumInOrder(): void
     {
+        $schemaPath = \dirname(__DIR__, 3).'/schemas/mqtt/boot-notification-request.schema.json';
+        self::assertFileExists($schemaPath);
+
+        /** @var array{properties: array{bootReason: array{enum: list<string>}}} $schema */
+        $schema = json_decode((string) file_get_contents($schemaPath), true, 512, JSON_THROW_ON_ERROR);
+        $fromSchema = $schema['properties']['bootReason']['enum'];
+
+        // A vacuous pass is the failure mode this method exists to end: an empty or
+        // missing enum would make the comparison below true of an empty enum too.
+        self::assertNotSame([], $fromSchema, 'the schema carries no bootReason enum — the path or shape moved');
+
         self::assertSame(
-            ['PowerOn', 'Watchdog', 'FirmwareUpdate', 'RemoteReset', 'ManualReset', 'ScheduledReset', 'ErrorRecovery', 'Reconnect'],
+            $fromSchema,
             array_map(fn (BootReason $r) => $r->value, BootReason::cases()),
         );
     }

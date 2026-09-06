@@ -7,12 +7,19 @@ namespace Ospp\Protocol\Enums;
 /**
  * Complete OSPP Error Code registry.
  *
- * 118 standard error codes across 6 categories (spec 07-errors.md §1.1). The
+ * 119 standard error codes across 6 categories (spec 07-errors.md §1.1). The
  * count moved 114 → 116 with 3017 PROGRAM_NOT_DECLARED and 3018
- * TOPOLOGY_MISMATCH, then → 118 with 3019 SERVICE_NOT_BOUND and 6008; the
- * total is now asserted against the spec by scripts/check-error-registry.sh
- * rather than restated here. The registry states its own total in five places and they
- * move together. Fully spec-aligned with sdk-ts.
+ * TOPOLOGY_MISMATCH, then → 118 with 3019 SERVICE_NOT_BOUND and 6008, then
+ * → 119 with 5113 OUTCOME_INDETERMINATE at spec 0.33.0.
+ *
+ * The sentence above used to end "the total is now asserted against the spec by
+ * scripts/check-error-registry.sh rather than restated here" — while restating it,
+ * and it was wrong by one from the day 5113 landed. That script compares the CASES
+ * to the spec and never reads this prose; the band sizes below were gated and stayed
+ * right, and the total beside them was not. It is gated now, by
+ * scripts/check-doc-claims.php, against count(self::cases()). The 114/116/118 above
+ * are a record of moves, not a claim about today, and no pattern matches them.
+ * Fully spec-aligned with sdk-ts.
  */
 enum OsppErrorCode: int
 {
@@ -399,10 +406,10 @@ enum OsppErrorCode: int
     /**
      * The per-code corrective action from the spec registry (07-errors.md §3).
      *
-     * All 118 registry codes are transcribed. This method returned a value for
+     * All 119 registry codes are transcribed. This method returned a value for
      * ELEVEN of them until 0.28.0 — the provisioning block plus four server codes —
      * and null for the other 107. That was read once as the registry being
-     * incomplete; it is not. §3 carries a Recommended Action for 118 of 118 rows
+     * incomplete; it is not. §3 carries a Recommended Action for 119 of 119 rows
      * with no empty cell, so the gap was a transcription hole on this side of the
      * wire, and `scripts/check-recommended-action.php` now refuses to let one reopen.
      *

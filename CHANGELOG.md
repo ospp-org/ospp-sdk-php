@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.32.1 — 2026-09-06
+
+**SDK-pair release, PATCH. `.spec-ref` moves `v0.33.0` → `v0.33.1`** — the spec cut a
+documentation-only patch, and the marker follows it. **Zero JSON bytes move in anything this SDK
+vendors**: the vendored corpus changes by **one line in one file**, `tests/Fixtures/test-vectors/README.md`,
+and the byte-identity gate is what said so.
+
+> ### A docblock that said the total was no longer restated here, while restating it — wrongly.
+
+`src/Enums/OsppErrorCode.php` opened with *"118 standard error codes across 6 categories … the total
+is now asserted against the spec by `scripts/check-error-registry.sh` **rather than restated
+here**"*. It was restated, in that same sentence, and it had been wrong by one since `5113
+OUTCOME_INDETERMINATE` landed. `check-error-registry.sh` compares the **cases** to the spec and never
+reads this prose. Two more copies stood below it — *"All 118 registry codes are transcribed"* and
+*"a Recommended Action for 118 of 118 rows"*.
+
+**The band sizes in the same file were gated and stayed right.** `1xxx - Transport Errors (15 codes)`
+and `5xxx - … (35 codes)` are both derived by `check-doc-claims.php`; the total beside them was not,
+and that is the whole distinction. Four claims are added, and the `114 → 116 → 118` history above
+them is a record of moves that no pattern matches.
+
+### Fixed
+
+- `src/Enums/OsppErrorCode.php` — the registry total, in all three sentences that state it, now
+  derived from `count(self::cases())` by `scripts/check-doc-claims.php`.
+- `tests/Fixtures/test-vectors/README.md` — re-vendored at `v0.33.1`.
+
+### Changed — `BootReasonAndResetContractTest` derives from the schema instead of a literal
+
+The two SDKs agreed about this enum's **contents** and disagreed about **how it is pinned**.
+`sdk-ts` has compared `BootReason` against
+`schemas/mqtt/boot-notification-request.schema.json#/properties/bootReason/enum` all along; this side
+asserted the eight values against an array typed into the test body, beside a docblock quoting the
+spec — **a transcription checked against a second transcription, both written by the same hand at
+the same minute.** The ungated one is where a drift lands silently.
+
+**Three mutations, run before the change was believed:** renaming an enum member fails (the old
+form caught this too); **adding a member to the vendored schema fails — the mutation the literal
+could not see**; and emptying the schema's enum fails rather than passing vacuously, because the
+comparison would otherwise be true of an empty enum.
+
+This closes the `BootReason` half of the class. The `Diagnostics` and `Firmware` canonical-table
+tests are a **different** shape and are deliberately left: they read the schema and compare it to a
+literal, then feed every schema value through the bridge, so a spec change already fails them
+loudly. Dropping their literal would weaken them, not strengthen them.
+
 ## 0.32.0 — 2026-09-06
 
 **SDK-pair release. `.spec-ref` does NOT move** — it stays `v0.33.0`, because the specification was
