@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.35.0 — 2026-09-08
+
+**SDK-pair release, MINOR. `.spec-ref` moves `v0.35.0` → `v0.36.0`.** Re-vendor only on this side —
+this SDK ships no payload DTOs, so the ConnectionLost widening has no type layer here to follow it.
+The half that is not a copy is the tamper corpus, which grows by a surface's worth of coverage.
+
+### The cascade, measured before it was taken
+
+`git diff --name-only v0.35.0 v0.36.0 -- schemas/ conformance/test-vectors/` on the spec touches
+**4 files of the 86 schemas + 341 vectors vendored here**:
+
+| file | what |
+|---|---|
+| `schemas/mqtt/connection-lost.schema.json` | `reason` `const` → 2-member `enum` |
+| `conformance/test-vectors/valid/core/connection-lost-planned-shutdown.json` | new |
+| `conformance/test-vectors/crypto/tamper-rejection.json` | 12 → 14 vectors |
+| `conformance/test-vectors/README.md` | version stamp |
+
+**0 of the other 85 schemas move, and 341 of 341 existing vectors keep their verdict** — including
+`invalid/core/connection-lost-invalid-enum.json`, which carries `graceful_shutdown` and is still
+correctly rejected. The three byte-identity gates are what say so.
+
+### What the new vectors actually add here
+
+`TamperRejectionTest` iterates the corpus array, so the two new firmware cases arrived with no
+change to the test file — 44 tests, up from 38. The firmware surface now carries all three mutation
+classes, and each new case is asserted the same way the other twelve are: **the untouched base
+verifies first**, then the tampered form is refused, then the recorded mutation is checked to be
+exactly what the vector claims.
+
+- `firmware-body-image-byte-flipped` — one byte of the image flipped and the **checksum recomputed
+  to match**. The document is self-consistent, so a station verifying only the checksum installs it.
+- `firmware-verified-with-station-key` — pristine artefact offered to the station identity key.
+
+Both use keys this corpus has always published (`firmware-test-pub.pem`, `station-test-pub.pem`);
+**no new key material was minted.**
+
+### Counts
+
+`scripts/check-vector-corpus.sh` said "167 valid + 174 invalid" in its own header; it is now 168.
+`check-doc-claims.sh` is what caught it, which is what that gate is for.
+
+---
+
 ## 0.34.0 — 2026-09-06
 
 **SDK-pair release, MINOR. `.spec-ref` moves `v0.34.0` → `v0.35.0`.** One vendored schema moves and
