@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.36.0 — 2026-09-08
+
+**SDK-pair release, MINOR. `.spec-ref` moves `v0.36.0` → `v0.37.0`.** Re-vendor only on this side —
+the spec release is prose. `02-transport.md` §3.3 gained what a duplicate *is*: a repeat whose
+content differs is not a duplicate (rule 4), and an identifier reused by design — the LWT
+`messageId`, fixed at CONNECT and republished unchanged — is not a duplicate marker (rule 5).
+
+**The cascade was measured before it was performed, and it is two files.** The rule is *receiver
+behaviour*, and this SDK is a type, schema and canonicalisation library: it holds no deduplication
+surface at all (`grep -ril dedup src/` → **0 files**). So:
+
+| | |
+|---|---|
+| `schemas/**` bytes moved | **0** — re-vendored from `v0.37.0` and byte-identical |
+| Conformance vectors moved | **0** — only `test-vectors/README.md`, which carries the version string |
+| Files changed | **2** — `.spec-ref`, `tests/Fixtures/test-vectors/README.md` |
+| Suite | **1309 tests / 6685 assertions**, 7 skipped, unchanged; PHPStan **0 errors** |
+| Gates | 9 of 9 green |
+
+`check-vector-corpus.sh` was **RED first** and named the reason exactly — *"A README-only drift
+means exactly one of the two halves of a sync was done: the marker moved without the copy, or the
+reverse."* It is the gate that makes the paired bump honest, and it earned that here.
+
+The one clause an implementor should read is rule 4's comparison basis: content equality is the
+**OSPP Canonical Form** with `mac` removed — the bytes `06-security.md` §5.4 already MACs — so it
+**cannot be stricter than the signature the frame already passed**. `CanonicalJsonSerializer` in
+this package is that serialiser; a consumer building a fingerprint for rule 4 should use it and
+nothing else.
+
+---
+
 ## 0.35.0 — 2026-09-08
 
 **SDK-pair release, MINOR. `.spec-ref` moves `v0.35.0` → `v0.36.0`.** Re-vendor only on this side —
