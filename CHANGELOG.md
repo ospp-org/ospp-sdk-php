@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.36.1 — 2026-09-08
+
+**SDK-pair release, PATCH. `.spec-ref` moves `v0.37.0` → `v0.37.1`.** Three conformance vectors,
+and they are the first the corpus has ever had for `errorText`'s `^[A-Z][A-Z0-9_]+$`.
+
+Removing that pattern from **all 18** schemas that declare it left the spec's own
+`verify-schemas.py` at **342/342, identical to baseline** — the restriction was unguarded on every
+schema that carries it. The three added vectors cover prose with spaces, **hyphens where the rule
+says underscores**, and a **nested** occurrence; the spec's control shows the corpus now reports
+exactly those three when the pattern is stripped, against zero before.
+
+| | |
+|---|---|
+| Vendored corpus | **342 → 345** (168 valid, **174 → 177** invalid) |
+| Schema bytes moved | **0** |
+| Suite | **1309 → 1312** tests, **6685 → 6723** assertions — the corpus test picks the vectors up on its own |
+| PHPStan | 0 errors |
+| Gates | 9 of 9 green |
+
+`check-doc-claims.sh` was **RED**: `check-vector-corpus.sh`'s own comment still said *174 invalid
+vendored here*. It is a comment in a shell script, and the gate derives the number from the
+directory rather than trusting the sentence, which is the only reason it was caught.
+
+---
+
 ## 0.36.0 — 2026-09-08
 
 **SDK-pair release, MINOR. `.spec-ref` moves `v0.36.0` → `v0.37.0`.** Re-vendor only on this side —

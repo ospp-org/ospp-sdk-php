@@ -28,7 +28,7 @@
 # SCOPE — the WHOLE directory, deliberately, and that is wider than it was.
 #
 # This SDK vendors the COMPLETE valid/ and invalid/ sets at the pinned ref
-# (168 valid + 174 invalid vendored here), not a subset, so "every vendored vector
+# (168 valid + 177 invalid vendored here), not a subset, so "every vendored vector
 # matches" and "the directory matches" are the same assertion. The directory
 # form is the stronger one: it also catches a vector DELETED from the vendored
 # copy and one ADDED to the spec and never vendored, which a per-file list
