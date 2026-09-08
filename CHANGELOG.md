@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.36.2 — 2026-09-08
+
+**SDK-pair release, PATCH. `.spec-ref` moves `v0.37.1` → `v0.37.2`.** The spec corrected one
+cross-reference in §3.3 — per-sender uniqueness was cited as Chapter 01 §6 and lives in §3.
+
+Nothing here changes: **0 schema bytes, 0 vectors**, suite **1312 / 6723** and PHPStan **0**, both
+unchanged. The marker moves because the pairing is the point — an SDK whose `.spec-ref` names a
+tag that is not the current one is the drift `check-vector-corpus.sh` exists to make loud.
+
+---
+
 ## 0.36.1 — 2026-09-08
 
 **SDK-pair release, PATCH. `.spec-ref` moves `v0.37.0` → `v0.37.1`.** Three conformance vectors,
