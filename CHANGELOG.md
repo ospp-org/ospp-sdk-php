@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.36.3 — 2026-09-08
+
+**SDK-pair release, PATCH. `.spec-ref` moves `v0.37.2` → `v0.37.3`.** The spec corrected rule 4's
+comparison basis from the whole envelope to the **`payload`** — an envelope-level comparison calls
+every re-stamped retry a collision and processes it twice.
+
+**0 schema bytes, 0 vectors**; suite **1312 / 6723** and PHPStan **0**, unchanged. Worth reading for
+anyone building a rule-4 fingerprint on this package: it is `CanonicalJsonSerializer` over the
+**payload**, not over the envelope.
+
+---
+
 ## 0.36.2 — 2026-09-08
 
 **SDK-pair release, PATCH. `.spec-ref` moves `v0.37.1` → `v0.37.2`.** The spec corrected one
