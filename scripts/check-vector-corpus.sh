@@ -53,7 +53,14 @@
 # stayed green. Including it is what makes this gate discriminate the pin.
 #
 # NOT covered here: conformance/test-vectors/crypto/, excluded by name below.
-# That subset is genuinely a subset — this repo vendors 2 of the spec's 4 — and
+# CORRECTED 2026-09-09 — this sentence used to read "this repo vendors 2 of the
+# spec's 4", and both numbers were wrong in a way that mattered. The spec carries
+# FIVE crypto vectors, and the gated copy under tests/Contract/Crypto/fixtures/
+# carries all five as of today; the "2" was counting the DUPLICATE directory
+# handled at the bottom of this script, which mirrors a subset of the gated copy
+# and is not the vendoring. Reading the duplicate as the vendoring is what made
+# `mqtt-mac.json` look like one of three deliberately-absent files rather than
+# the single unvendored one it was.
 # scripts/check-crypto-vectors.sh already pins it against the spec by
 # name, with its rationale in that script's header. It is the ONE exclusion, it
 # is stated as an argument rather than by omission, and a whole-directory diff
@@ -149,14 +156,23 @@ if [[ "${status}" -eq 0 ]]; then
   fi
 fi
 
-# The duplicate crypto pair. tests/Fixtures/test-vectors/crypto/ holds a second
-# copy of two files the crypto gate already pins under tests/Contract/Crypto/
-# fixtures/. Nothing reads this copy and nothing checked it; it is compared to
-# the gated copy so that the spec pin lives in exactly one script.
+# The duplicate crypto copies. tests/Fixtures/test-vectors/crypto/ holds a second
+# copy of files the crypto gate already pins under tests/Contract/Crypto/
+# fixtures/. It is compared to the gated copy so that the spec pin lives in
+# exactly one script.
+#
+# DIRECTORY-DRIVEN SINCE 2026-09-09. This was `for f in ble-handshake-keyschedule
+# rfc-primitive-anchors` — two names, hand-written, the same shape this file's own
+# header criticises two paragraphs up and the same shape that let `mqtt-mac.json`
+# go unvendored for nine releases. A third file mirrored into that directory was
+# compared by nothing. Iterating the directory means a newly mirrored file is
+# pinned the moment it lands.
 GATED_CRYPTO="${REPO_ROOT}/tests/Contract/Crypto/fixtures"
-for f in ble-handshake-keyschedule.json rfc-primitive-anchors.json; do
-  dup="${VECTORS}/crypto/${f}"
+mirrored=0
+while IFS= read -r dup; do
+  f="$(basename "${dup}")"
   src="${GATED_CRYPTO}/${f}"
+  mirrored=$((mirrored + 1))
   if [[ ! -f "${dup}" ]]; then
     echo "DRIFT: missing duplicate crypto vector: crypto/${f}" >&2
     status=1
@@ -169,7 +185,15 @@ for f in ble-handshake-keyschedule.json rfc-primitive-anchors.json; do
     echo "DRIFT: crypto/${f} differs from the spec-pinned copy in tests/Contract/Crypto/fixtures/" >&2
     status=1
   fi
-done
+done < <(find "${VECTORS}/crypto" -maxdepth 1 -type f -name '*.json' | sort)
+
+# The floor this loop has always needed: iterating an empty or renamed directory
+# compares nothing and would report success for zero work.
+if [[ "${mirrored}" -lt 2 ]]; then
+  echo "DRIFT: only ${mirrored} mirrored crypto vector(s) found under" >&2
+  echo "       tests/Fixtures/test-vectors/crypto/ — expected at least 2." >&2
+  status=1
+fi
 
 if [[ "${status}" -eq 0 ]]; then
   echo "OK — vendored conformance corpus byte-identical to spec ${SPEC_REF}"

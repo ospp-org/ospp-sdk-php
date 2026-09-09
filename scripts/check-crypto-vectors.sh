@@ -132,6 +132,57 @@ if [[ ! -f "${FIXTURES}/tamper-rejection.json" ]]; then
   status=1
 fi
 
+# COMPLETENESS — the direction the loop above cannot see. ADDED 2026-09-09.
+#
+# Iterating the VENDORED directory fixed one failure and left its mirror image
+# open. The loop proves "everything we vendored matches the spec"; it cannot
+# prove "we vendored everything the spec has", because a spec vector that was
+# never copied is never walked and so is never missed.
+#
+# MEASURED, not argued. On 2026-09-09 the spec carried FIVE crypto vectors and
+# this directory held FOUR of them: `mqtt-mac.json` had never been vendored, no
+# SDK_LOCAL entry named it, no comment excluded it, and this script printed
+# "OK — vendored crypto corpus byte-identical" on every run since 0.14.0. It is
+# the vector that pins §5.4 — the one an integrator needs to verify envelope
+# signing, and the only place the "key is the DECODED 32 bytes, not the 44-char
+# Base64 text" mistake is recorded with the wrong value beside the right one.
+# Two files already in this directory quote values out of it BY HAND
+# (`tamper-rejection.json`'s `mqtt-mac-bitflip` names it as its `base`;
+# `canonical-mac-strip.json` says in prose that its mac came from it), so the
+# corpus already depended on a file the corpus did not carry.
+#
+# Reproduce the blindness: delete any vendored vector and re-run. Before this
+# arm the script reported success.
+#
+# SPEC_ONLY is the counterpart of SDK_LOCAL and carries the same obligation —
+# a REASON a later reader can disagree with, not a bare name. Empty today: every
+# crypto vector the spec publishes belongs in an SDK that claims to implement it.
+declare -A SPEC_ONLY=()
+
+spec_side=0
+while IFS= read -r src; do
+  name="$(basename "${src}")"
+  spec_side=$((spec_side + 1))
+  if [[ -v "SPEC_ONLY[${name}]" ]]; then
+    echo "SKIP spec-only: ${name} — ${SPEC_ONLY[${name}]}"
+    continue
+  fi
+  if [[ ! -f "${FIXTURES}/${name}" ]]; then
+    echo "DRIFT: ${name} exists in spec ${SPEC_REF} but was NEVER vendored here." >&2
+    echo "       Not drift in a copy — an absent copy. Add it to ${FIXTURES}/, or" >&2
+    echo "       add it to SPEC_ONLY with the reason it does not belong in this SDK." >&2
+    status=1
+  fi
+done < <(find "${CRYPTO_SRC}" -maxdepth 1 -type f -name '*.json' | sort)
+
+# Zero matches = failure, the same floor the vendored loop carries: a walk over a
+# moved or renamed spec directory would otherwise report completeness for no work.
+if [[ "${spec_side}" -lt 4 ]]; then
+  echo "DRIFT: the spec crypto directory yielded only ${spec_side} vector(s) — the" >&2
+  echo "       completeness walk found nothing to check. Expected at least 4." >&2
+  status=1
+fi
+
 if [[ "${status}" -eq 0 ]]; then
   echo "OK — vendored crypto corpus byte-identical to spec ${SPEC_REF}"
 else

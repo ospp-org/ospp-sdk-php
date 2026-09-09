@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.36.4 — 2026-09-09
+
+**SDK-pair release, PATCH. `.spec-ref` does NOT move — it stays `v0.37.3`.** Nothing in the spec
+changed; what changed is that this SDK now carries a vector the spec has published since 0.13.0 and
+this repo had never copied.
+
+**The defect.** The spec's crypto corpus holds **five** vectors. This repo vendored **four**.
+`mqtt-mac.json` — the one that pins §5.4, the envelope MAC — was absent, and had been for nine
+releases, while `scripts/check-crypto-vectors.sh` printed *"OK — vendored crypto corpus
+byte-identical"* on every run.
+
+**Why no gate saw it.** That script iterates the **vendored** directory. It was written that way
+deliberately, at 0.14.0, to close the opposite failure: an inclusion list means vendoring a fifth
+file compares nothing. The inversion is correct and it closed one direction — but it proves
+*"everything we vendored matches the spec"*, never *"we vendored everything the spec has"*. A file
+never copied is never walked, so it is never missed. Reproduce it on any release before this one:
+delete a vendored vector and re-run; the script reports success.
+
+Two files already in that directory quoted values out of the missing one **by hand** —
+`tamper-rejection.json`'s `mqtt-mac-bitflip` names it as its `base`, and `canonical-mac-strip.json`
+says in prose that its mac came from it. The corpus depended on a file the corpus did not carry.
+
+**Fixed:**
+
+- `mqtt-mac.json` vendored into `tests/Contract/Crypto/fixtures/`, byte-identical, and mirrored into
+  `tests/Fixtures/test-vectors/crypto/`.
+- `check-crypto-vectors.sh` gains a **completeness arm** that walks the SPEC side and fails on a
+  vector that was never vendored, with a `SPEC_ONLY` map that demands a stated reason — the
+  counterpart of the existing `SDK_LOCAL`. Empty today.
+- `check-vector-corpus.sh`'s mirror loop was `for f in <two hardcoded names>` — the exact shape that
+  file's own header criticises. Now directory-driven, with a floor.
+- `MqttMacVectorTest` consumes the vector: canonical bytes and length, the MAC, the key reproduced
+  from its recorded derivation, the **negative** (`macIfKeyNotDecoded` must be what the Base64-text
+  key produces **and** must differ from the real MAC), and verify accept/reject.
+
+**Radius: 0 schema bytes, 0 `src/` bytes, `.spec-ref` unmoved.** A marker and the corpus. Suite
+**1316 / 6703**, 7 skipped.
+
+---
+
 ## 0.36.3 — 2026-09-08
 
 **SDK-pair release, PATCH. `.spec-ref` moves `v0.37.2` → `v0.37.3`.** The spec corrected rule 4's
