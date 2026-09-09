@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.36.5 — 2026-09-09
+
+**SDK-pair release, PATCH — PACKAGING. `.spec-ref` does not move, no schema byte moves, no
+`src/` byte moves.** A protocol package ships the conformance vectors: they *are* the contract,
+and an implementer has to be able to verify against them without cloning anything.
+
+**Measured from the PUBLISHED archive, not from configuration.** The v0.36.4 Composer dist
+(GitHub zipball, 660 K, 604 files) already carried 86 schemas, 168 valid and 177 invalid vectors
+— but its **corpus** directory held only **3 of the 5** crypto vectors. `canonical-form.json` and
+`tamper-rejection.json` existed solely under `tests/Contract/Crypto/fixtures/`, the gated copy,
+which is mixed with SDK-local fixtures and is not the corpus a consumer is pointed at.
+
+**Fixed:** all **5** crypto vectors are now mirrored into
+`tests/Fixtures/test-vectors/crypto/`, plus `server-test-pub.pem`. The key ships because the
+crypto corpus is not self-sufficient without it — `ble-handshake-keyschedule.json` names
+`conformance/test-keys/server-test-pub.pem` as the key its station-certificate signature verifies
+under, so a consumer who cannot resolve that path cannot finish the verification the vector exists
+to enable. `check-vector-corpus.sh`'s mirror loop now pins `.pem` as well as `.json`; everything
+shipped is pinned.
+
+**What is NOT shipped, deliberately:** the SDK-local fixtures (`canonical-mac-strip.json`,
+`hmac-golden-vectors.json`, `signing-classification.json`) stay in the gated directory only. They
+are this library's own properties and policy, not protocol facts, and the corpus is the contract.
+
+**Known and left alone:** Composer ships the whole repository, so a consumer also receives
+`scripts/` (16), `.github/` (3) and this SDK's own test suite (79 PHP files) — none of which is
+contract. Trimming that with `export-ignore` is a separate decision with its own radius: a live
+consumer already reads `tests/Contract/Crypto/fixtures/canonical-form.json` (csms-server's
+`CanonicalFormVectorsTest`), so the trim needs that consumer moved to the corpus path first.
+
+Suite **1316 / 6703**, 7 skipped. All **9** gates green, corpus gate red under both controls
+(drifted vector, drifted key).
+
+---
+
 ## 0.36.4 — 2026-09-09
 
 **SDK-pair release, PATCH. `.spec-ref` does NOT move — it stays `v0.37.3`.** Nothing in the spec

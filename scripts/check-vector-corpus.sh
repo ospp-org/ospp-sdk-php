@@ -167,6 +167,15 @@ fi
 # go unvendored for nine releases. A third file mirrored into that directory was
 # compared by nothing. Iterating the directory means a newly mirrored file is
 # pinned the moment it lands.
+# EXTENDED 2026-09-09 to `.pem` as well as `.json`, and the reason is a change of
+# STATUS rather than of taste: this directory is the CORPUS a consumer receives —
+# Composer ships the whole repository, so everything here reaches everyone who
+# requires the package, and the integrator guide now names this path as where the
+# vectors come from. `server-test-pub.pem` is here because the crypto corpus is not
+# self-sufficient without it: `ble-handshake-keyschedule.json` names
+# `conformance/test-keys/server-test-pub.pem` as the key its station-certificate
+# signature verifies under, and a consumer who cannot resolve that path cannot
+# finish the verification the vector exists to make possible.
 GATED_CRYPTO="${REPO_ROOT}/tests/Contract/Crypto/fixtures"
 mirrored=0
 while IFS= read -r dup; do
@@ -185,7 +194,7 @@ while IFS= read -r dup; do
     echo "DRIFT: crypto/${f} differs from the spec-pinned copy in tests/Contract/Crypto/fixtures/" >&2
     status=1
   fi
-done < <(find "${VECTORS}/crypto" -maxdepth 1 -type f -name '*.json' | sort)
+done < <(find "${VECTORS}/crypto" -maxdepth 1 -type f \( -name '*.json' -o -name '*.pem' \) | sort)
 
 # The floor this loop has always needed: iterating an empty or renamed directory
 # compares nothing and would report success for zero work.
