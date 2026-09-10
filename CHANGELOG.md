@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.37.0 — 2026-09-10
+
+**SDK-pair release, MINOR — the envelope cap. `.spec-ref` moves `v0.37.3` → `v0.38.0`; ZERO schema
+bytes move and the vector corpus is byte-identical.**
+
+Spec `0.38.0` adds [`02-transport.md` §10.2.1](https://github.com/ospp-org/ospp-spec/blob/main/spec/02-transport.md):
+**a serialised MQTT envelope MUST NOT exceed 64 512 bytes (63 KiB)**, and a receiver **MAY** refuse
+one on serialised length alone — before parsing, and before verifying `mac`. That is the only
+refusal permitted to precede MAC verification, and it exists because verifying a MAC means
+re-canonicalising the *whole* envelope, so a receiver holds the complete frame before it may read
+one field of it. Every other "this is bigger than I can hold" refusal is therefore issued from
+behind the buffer it claims not to have.
+
+**It cannot be a schema keyword, which is why it lands here.** JSON Schema has no keyword for the
+length of a serialisation, and the bound could not be pushed down into field bounds either:
+measured over the 86 schemas, **37 of the 47** MQTT message schemas admit a bounded serialisation
+and the other **10** carry **12** unbounded members — **7** arrays with no `maxItems` and **5** open
+objects, which no `maxItems` can close. So the cap is a normative rule an implementation enforces,
+and this release is where these two implementations enforce it.
+
+### Added
+
+- `MAX_ENVELOPE_BYTES` = **64 512** and `MQTT_MAX_PACKET_BYTES` = **65 536**. The gap is not slack:
+  a PUBLISH packet is the payload **plus** its header, so an envelope sized at the packet ceiling
+  makes a packet above it and the broker drops what the emitter was told was legal. The 1 024 bytes
+  held back are the header allowance — 4 fixed + at most 151 topic (`topicPrefix` ≤ 64, `stationId`
+  ≤ 64) + 2 packet identifier + at most 128 of MQTT 5 properties = **285** at every one of those
+  fields' own maxima, so the allowance is **3.6×** the worst case.
+- The **receiver** half: a length-only check that takes raw, unparsed, unverified bytes. It is the
+  one check that never has to enter the buffer it protects.
+- The **emitter** half: it **throws** rather than returning a flag, because §10.2.1 states the
+  obligation as a MUST NOT and a returned flag is a MUST NOT nobody has to read. Fail-closed is
+  also the kinder failure: an over-cap envelope is one the broker drops anyway, so the caller loses
+  the message either way — the only question is whether it learns why here or watches a PUBLISH
+  disappear.
+- A size accessor, so a caller that wants to **decide** rather than be refused — sizing a receive
+  buffer, trimming a catalog before it is built — is not forced through the guard.
+
+### Notes
+
+Byte length, not character length. `'é'` is one character and two bytes; an astral character is two
+UTF-16 code units and four bytes. The cap is stated in bytes because that is the unit the broker
+measures, and measuring anything else lets a UTF-8 envelope pass the SDK and be dropped on the wire.
+
+Nothing in normal traffic is close: the largest envelope ever measured on a live deployment is
+**1 220** bytes, and the largest real service catalog **1 326** — **48×** under the cap. The guards
+are boundary-tested from both sides at exactly 64 512 and 64 513, because a cap tested only with a
+value far over it proves the comparison fires, not that it fires in the right place.
+
+---
+
 ## 0.36.5 — 2026-09-09
 
 **SDK-pair release, PATCH — PACKAGING. `.spec-ref` does not move, no schema byte moves, no
