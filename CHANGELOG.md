@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.37.2 — 2026-09-10
+
+**SDK-pair release, PATCH — `.spec-ref` follows the spec to `v0.39.1`. No library code moves, no
+schema byte moves; the conformance corpus README re-syncs because it carries the spec's own
+version banner.**
+
+Spec `0.39.1` withdraws two counts `0.39.0` invalidated — one that the same release moved by
+bounding the member it named, and one that was false on save because a sentence saying how often a
+token occurs in `spec/` adds occurrences of that token to `spec/`. Neither reaches either library:
+no obligation changed, no schema changed, and the vector corpus is byte-identical.
+
+This release exists so the pinned-spec claim keeps meaning what it says — which is the same reason
+`0.37.1` existed, and the reason both libraries re-tag together even when only one of them has a
+sentence to correct.
+
+---
+
 ## 0.37.1 — 2026-09-10
 
 **SDK-pair release, PATCH — `.spec-ref` follows the spec to `v0.39.0`. No library code moves;
