@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.38.0 — 2026-09-10
+
+**SDK-pair release, MINOR — `.spec-ref` follows the spec to `v0.40.0`, which uniforms `errorText`
+to `maxLength: 64` on every declaration that pairs it with an `errorCode`. Breaking for producers
+emitting a value the registry does not contain; that was already non-conforming.**
+
+The vendored schemas move with the spec: **17 files, 18 insertions, 18 deletions — numbers only.**
+`errorText` carried three limits (64 x1, 128 x17, 256 x3) for one meaning that is actually
+separated by `pattern`, not by length. The 19 declarations carrying `^[A-Z][A-Z0-9_]+$` are now
+all at 64; the 2 carrying no pattern keep 128, because they hold prose and mean something else.
+
+64 is derived from the registry rather than chosen: 119 codes, longest `errorText` **28**
+characters, none over 32 — 2.3x headroom.
+
+**Corpus and suite unchanged: 1325 tests, 6720 assertions, 0 failures**, and all nine
+`scripts/check-*.sh` gates green against the spec at `v0.40.0`.
+
+No library code moves. `EnvelopeSizeGuard` and its wiring in `MessageEnvelope::toJson()` are
+untouched — this SDK already enforced the envelope cap at the point of serialisation, which the
+TypeScript SDK did not; that asymmetry is recorded in the consumers that publish.
+
+---
+
 ## 0.37.2 — 2026-09-10
 
 **SDK-pair release, PATCH — `.spec-ref` follows the spec to `v0.39.1`. No library code moves, no
