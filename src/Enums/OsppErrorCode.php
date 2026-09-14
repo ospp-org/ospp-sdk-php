@@ -528,7 +528,7 @@ enum OsppErrorCode: int
             // 07-errors.md §3.4 — Payment & Credit (4xxx)
             self::PAYMENT_GENERIC => 'Inspect the `errorDescription` for context. Contact support if persistent.',
             self::INSUFFICIENT_BALANCE => 'App: show top-up prompt. Web: redirect to payment page. The user must purchase more credits before starting a session.',
-            self::OFFLINE_LIMIT_EXCEEDED => 'App: the user must go online to request a new OfflinePass (or top up credits).',
+            self::OFFLINE_LIMIT_EXCEEDED => 'App: the user must go online to request a new OfflinePass (or top up credits). Where `details.constraint` names a station-scoped ceiling, a different pass will not help and the station itself must reconnect.',
             self::OFFLINE_RATE_LIMITED => 'Wait the required interval (default 60 seconds) before attempting another offline transaction.',
             self::OFFLINE_PER_TX_EXCEEDED => 'Select a less expensive service or reduce the requested duration.',
             self::PAYMENT_FAILED => 'User: try a different payment method. Web: restart the payment flow.',

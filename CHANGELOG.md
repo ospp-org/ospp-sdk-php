@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.38.1 — 2026-09-14
+
+**PATCH — `.spec-ref` follows the spec to `v0.41.0`. No schema byte, no vector; one registry
+string.**
+
+`v0.41.0` is a prose-only spec release: it tags three normative rules that had been written into
+the spec tree across `26b3061`, `7b453ba` and `a4d9017` and left in no tag, so a reader holding
+`v0.40.0` and an implementer reading the tree disagreed on three points — `SessionTimeout` accepting
+`0` to disable the inactivity stop, the MeterValues skip permission being conditioned on the running
+program, and non-integers being forbidden on the signed path with the receiver licensed to refuse.
+
+**Measured against `v0.40.0..v0.41.0`: 0 schema bytes, 0 of 350 conformance vectors, 0 example
+payloads.** All **86** schema files in this package are byte-identical to the spec's at `v0.41.0`;
+the only file that moved is `schemas/README.md`, whose header carries the document version. There is
+therefore almost nothing for this SDK to mirror.
+
+**One thing there was, and only moving `.spec-ref` surfaced it.** `scripts/check-recommended-action.sh`
+passes at `v0.40.0` and fails at `v0.41.0` on a single finding: `4002 OFFLINE_LIMIT_EXCEEDED`. Its
+registry cell now selects a branch on `details.constraint` — pass-scoped ceilings mean a new pass
+helps, station-scoped ones mean it does not and the station must reconnect — and the SDK's action
+named neither. It does now. That is the whole content change: **one string, no signature, no enum
+member, no schema.**
+
+Two sync gaps that predate this release are closed in the same pass, both found by the gates rather
+than by reading: `tests/Fixtures/test-vectors/README.md` still carried `OSPP Version: 0.39.1`, so the
+vendored corpus marker had not moved at `v0.40.0` either, and `schemas/README.md` carried the same
+stale header.
+
+---
+
 ## 0.38.0 — 2026-09-10
 
 **SDK-pair release, MINOR — `.spec-ref` follows the spec to `v0.40.0`, which uniforms `errorText`
