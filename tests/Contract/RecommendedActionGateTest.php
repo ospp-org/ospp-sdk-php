@@ -131,7 +131,11 @@ final class RecommendedActionGateTest extends TestCase
         [$exit, $out] = self::runGate($this->requireSpec());
 
         self::assertSame(0, $exit, "the gate must pass against the pinned registry:\n".$out);
-        self::assertStringContainsString('covered 119/119', $out);
+        // Both halves are the SPEC's row count, not this package's: the gate prints
+        // `covered {$covered}/{$total}` where $total is count($spec). It moved 119 -> 120
+        // when spec v0.42.0 added the 3020 BINDING_UNCOVERED row, so this literal tracks
+        // the pinned spec and not the enum.
+        self::assertStringContainsString('covered 120/120', $out);
     }
 
     /**

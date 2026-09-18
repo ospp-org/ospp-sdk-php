@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 0.39.0 — 2026-09-18
+
+**MINOR — `3020 BINDING_UNCOVERED` enters the registry, and its severity is now a decision rather
+than a default.** `.spec-ref` follows the spec to `v0.42.0`. MINOR and not PATCH by this package's
+own rule (`0.13.0`): an enum member is added, and a consumer pinned to `^0.38.0` must opt in to
+receive it. Paired with `@ospp/protocol` `0.39.0` from the same spec pin
+([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+
+### Added
+
+- **`OsppErrorCode::BINDING_UNCOVERED = 3020`**, with `409`, `Error`, `recoverable: true`, its
+  `category()` of `session`, and its transcribed `recommendedAction()`. The condition is that the
+  server holds a service→program binding whose ordinal the station no longer declares — the binding
+  exists, which is what separates it from `3019 SERVICE_NOT_BOUND`, and the ordinal is declared
+  nowhere on that bay, which separates it from `3003 SERVICE_UNAVAILABLE`. It is server-originated
+  and **MUST NOT** reach a station. `tests/Unit/Enums/BindingUncoveredCodeTest.php` pins all of it.
+
+### Fixed
+
+- **The severity was `Warning` by accident and is now `Error` by decision.** This enum had no
+  `severity()` arm for `3020`, so it answered through `default => Severity::WARNING` — a value
+  nobody chose. Spec `v0.42.0` §3.3 states `Error`, and derives it from the band rather than
+  asserting it: 3xxx splits **20 of 20** on whether the condition clears by waiting (8 rows) or
+  recurs identically until something is corrected (12 rows), and an uncovered binding recurs until
+  an operator re-binds. `scripts/check-error-registry.sh` caught the disagreement on its first run
+  against `v0.42.0` — `3020 BINDING_UNCOVERED: severity spec=Error sdk=Warning` — which is the one
+  job a default arm can never do. **Both source documents that specified this code said `Warning`
+  and neither argued for it**, so this is a divergence from the ask, not from the spec.
+
+### Changed
+
+- **`.spec-ref` `v0.41.0` → `v0.42.0`.** The spec release adds one registry row and one emitter-side
+  processing rule (`update-service-catalog.md` §6 rule 10, which obliges a server not to publish a
+  catalog entry whose `(bayNumber, programNumber)` pair the station has not declared, *where it
+  holds a declaration for that bay*). **Measured against `v0.41.0..v0.42.0`: 0 schema bytes, 0 of
+  350 conformance vectors, 0 example payloads.** All **86** vendored schema files stay
+  byte-identical; the only vendored file that moved is
+  `tests/Fixtures/test-vectors/README.md`, whose header carries the document version, re-vendored as
+  `scripts/check-vector-corpus.sh` instructs.
+
+- **`RecommendedActionGateTest::itPassesUnmutated`** asserts `covered 120/120` where it asserted
+  `covered 119/119`. Both halves of that figure are the **spec's** row count, not this package's —
+  the gate prints `covered {$covered}/{$total}` with `$total = count($spec)` — so the literal tracks
+  the pinned spec and moved because §3 grew by one row.
+
+- **`KNOWN-ISSUES.md`** closes the entry raised 2026-09-18 recording that this enum carried `3020`
+  and the spec registry did not. It also retires the note it carried about a second outstanding 3xxx
+  ask: spec `v0.42.0` declined to mint `PROGRAM_UNAVAILABLE`, because `3003`'s own cell says *"No
+  code is added for this"* and has given `details.cause: station-reported` since spec 0.31.0. The
+  ordinal was never contended.
+
+**All nine gates green, `phpstan --level=9` clean, suite `1333 tests, 6798 assertions, 0 failures,
+0 skips` with `SPEC_REPO` set.** The two registry gates were verified in network mode as well, against
+the pushed `v0.42.0` tag rather than a local checkout.
+
+---
+
 ## 0.38.1 — 2026-09-14
 
 **PATCH — `.spec-ref` follows the spec to `v0.41.0`. No schema byte, no vector; one registry

@@ -54,7 +54,10 @@ final class BindingUncoveredCodeTest extends TestCase
         // the server answering. The same row 3003 was moved to at spec 0.31.0, and
         // where 3001, 3014 and 3019 already sit.
         self::assertSame(409, $c->httpStatus());
-        self::assertSame(Severity::WARNING, $c->severity());
+        // Error, not Warning: spec 0.42.0 §3.3 states it, and the band decides it.
+        // A default that happens to be right is not a statement — this arm is
+        // explicit in severity() for exactly that reason.
+        self::assertSame(Severity::ERROR, $c->severity());
         // An operator re-binds the service to a declared ordinal and the next start
         // succeeds. No firmware, no visit.
         self::assertTrue($c->isRecoverable());

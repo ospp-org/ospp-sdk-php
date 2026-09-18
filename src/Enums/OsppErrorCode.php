@@ -339,7 +339,13 @@ enum OsppErrorCode: int
             self::PUBLIC_KEY_INVALID,
             self::BAY_COUNT_MISMATCH,
             // 3019: the server's configuration is incomplete — an operator has to act.
-            self::SERVICE_NOT_BOUND => Severity::ERROR,
+            self::SERVICE_NOT_BOUND,
+            // 3020: same shape as 3019 and stated explicitly by spec 0.42.0 §3.3.
+            // It reached this enum through `default => WARNING`, which is not a
+            // decision: the 3xxx band splits Warning where the condition clears by
+            // waiting and Error where it recurs identically until something is
+            // corrected, and an uncovered binding recurs until an operator re-binds.
+            self::BINDING_UNCOVERED => Severity::ERROR,
 
             self::SERVICE_DEGRADED => Severity::INFO,
 
@@ -438,18 +444,15 @@ enum OsppErrorCode: int
      * All 120 registry codes are transcribed. This method returned a value for
      * ELEVEN of them until 0.28.0 — the provisioning block plus four server codes —
      * and null for the other 107. That was read once as the registry being
-     * incomplete; it is not. §3 carries a Recommended Action for 119 of 119 rows
+     * incomplete; it is not. §3 carries a Recommended Action for 120 of 120 rows
      * with no empty cell, so the gap was a transcription hole on this side of the
      * wire, and `scripts/check-recommended-action.php` now refuses to let one reopen.
      *
-     * THE TWO NUMBERS IN THE PARAGRAPH ABOVE NO LONGER AGREE, AND THAT IS THE
-     * REPORT RATHER THAN AN OVERSIGHT. `120` counts the cases here; `119 of 119`
-     * counts the rows §3 carries at `.spec-ref`. 3020 BINDING_UNCOVERED is in this
-     * enum and is not yet in the spec registry, so the gap is one row wide and
-     * closes when a spec release carries it. `scripts/check-doc-claims.php` derives
-     * both from `count(self::cases())` and therefore reports the §3 pair as stale:
-     * that finding is correct and is the divergence, so the sentence keeps the
-     * number that is true of §3 rather than the one that makes the gate pass.
+     * THE ONE-ROW DIVERGENCE RECORDED HERE IS CLOSED. Between `44cfe92` and spec
+     * `v0.42.0` this enum carried 3020 BINDING_UNCOVERED and §3 did not, so the two
+     * numbers in the paragraph above disagreed on purpose and the sentence kept the
+     * one that was true of §3. Spec `v0.42.0` carries the row, `.spec-ref` points at
+     * it, and both numbers are again derived from the same 120 rows.
      *
      * WHAT §1.4 REQUIRES, AND WHAT IT FORBIDS A TEST FROM ASSERTING
      *
