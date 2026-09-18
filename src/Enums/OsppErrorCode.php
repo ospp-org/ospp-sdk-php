@@ -7,10 +7,11 @@ namespace Ospp\Protocol\Enums;
 /**
  * Complete OSPP Error Code registry.
  *
- * 119 standard error codes across 6 categories (spec 07-errors.md §1.1). The
+ * 120 standard error codes across 6 categories (spec 07-errors.md §1.1). The
  * count moved 114 → 116 with 3017 PROGRAM_NOT_DECLARED and 3018
  * TOPOLOGY_MISMATCH, then → 118 with 3019 SERVICE_NOT_BOUND and 6008, then
- * → 119 with 5113 OUTCOME_INDETERMINATE at spec 0.33.0.
+ * → 119 with 5113 OUTCOME_INDETERMINATE at spec 0.33.0, then → 120 with 3020
+ * BINDING_UNCOVERED.
  *
  * The sentence above used to end "the total is now asserted against the spec by
  * scripts/check-error-registry.sh rather than restated here" — while restating it,
@@ -65,9 +66,9 @@ enum OsppErrorCode: int
     // spec v0.8.0 07-errors.md §3.2 — provisioning token unusable (expired / superseded / revoked)
     case PROVISIONING_TOKEN_INVALID = 2019;
 
-    // 3xxx - Session & Bay Errors (20 codes — v0.11.0 added 3017 PROGRAM_NOT_DECLARED
-    // and 3018 TOPOLOGY_MISMATCH; v0.11.1 added 3019 SERVICE_NOT_BOUND; the range is
-    // dense and gaps are never back-filled)
+    // 3xxx - Session & Bay Errors (21 codes — v0.11.0 added 3017 PROGRAM_NOT_DECLARED
+    // and 3018 TOPOLOGY_MISMATCH; v0.11.1 added 3019 SERVICE_NOT_BOUND; 3020
+    // BINDING_UNCOVERED follows; the range is dense and gaps are never back-filled)
     case SESSION_GENERIC = 3000;
     case BAY_BUSY = 3001;
     case BAY_NOT_READY = 3002;
@@ -96,6 +97,34 @@ enum OsppErrorCode: int
      * to a station.
      */
     case SERVICE_NOT_BOUND = 3019;
+
+    /**
+     * The binding EXISTS and the ordinal is GONE: a service→program binding names
+     * a `(bayNumber, programNumber)` pair the station no longer declares, so the
+     * server refuses the start rather than dispatching an ordinal the bay would
+     * reject.
+     *
+     * Not 3019, which asserts the server holds NO binding — its action sends an
+     * operator to create a row that is already in the table. Not 3017, which is
+     * the STATION's code for an ordinal it was sent and does not have; a station
+     * that declared correctly has no part in this fault. Not 3003, which is the
+     * adjacent case, discriminated by `details.cause: station-reported` — the
+     * station reporting a declared program dead, which is the opposite of a
+     * program it never declared.
+     *
+     * Server-originated toward the requesting client and MUST NOT be transmitted
+     * to a station, for the same reason 3019 is not.
+     *
+     * `details` carries `bayId`, `serviceId`, `programNumber` and
+     * `declaredPrograms[]` — the last is what the repair is pointed at.
+     *
+     * A binding loses its cover without anyone acting: a service may be bound to
+     * a `(bay, program)` pair before the station has ever connected, and
+     * provisioning then rewrites the declaration for that bay without consulting
+     * the bindings. The drift is not caught at first boot, because provisioning
+     * overwrote the record the boot comparison reads.
+     */
+    case BINDING_UNCOVERED = 3020;
 
     // 4xxx - Payment & Credit Errors (20 codes — v0.8.0 added 4015-4017, v0.8.3 added 4018-4019, v0.8.4 added 4020)
     case PAYMENT_GENERIC = 4000;
@@ -406,12 +435,21 @@ enum OsppErrorCode: int
     /**
      * The per-code corrective action from the spec registry (07-errors.md §3).
      *
-     * All 119 registry codes are transcribed. This method returned a value for
+     * All 120 registry codes are transcribed. This method returned a value for
      * ELEVEN of them until 0.28.0 — the provisioning block plus four server codes —
      * and null for the other 107. That was read once as the registry being
      * incomplete; it is not. §3 carries a Recommended Action for 119 of 119 rows
      * with no empty cell, so the gap was a transcription hole on this side of the
      * wire, and `scripts/check-recommended-action.php` now refuses to let one reopen.
+     *
+     * THE TWO NUMBERS IN THE PARAGRAPH ABOVE NO LONGER AGREE, AND THAT IS THE
+     * REPORT RATHER THAN AN OVERSIGHT. `120` counts the cases here; `119 of 119`
+     * counts the rows §3 carries at `.spec-ref`. 3020 BINDING_UNCOVERED is in this
+     * enum and is not yet in the spec registry, so the gap is one row wide and
+     * closes when a spec release carries it. `scripts/check-doc-claims.php` derives
+     * both from `count(self::cases())` and therefore reports the §3 pair as stale:
+     * that finding is correct and is the divergence, so the sentence keeps the
+     * number that is true of §3 rather than the one that makes the gate pass.
      *
      * WHAT §1.4 REQUIRES, AND WHAT IT FORBIDS A TEST FROM ASSERTING
      *
@@ -524,6 +562,7 @@ enum OsppErrorCode: int
             self::PROGRAM_NOT_DECLARED => 'Station: reject, echo the refused `programNumber` in the response, and run nothing. Do **NOT** substitute a neighbouring ordinal or clamp to the highest declared one — that charges for one thing and delivers another. Server: the service→program binding names an ordinal this station does not have. Correct the binding, or re-provision the station if its hardware genuinely changed. Operator: compare the station\'s declared topology against the catalog binding.',
             self::TOPOLOGY_MISMATCH => 'Station: keep the declaration stable and keep retrying BootNotification per CORE-011; answer commands while `Pending`. Do **NOT** alter the declaration to match the server — it describes hardware, and agreeing silently hides a real change. Operator: read `details`. If the hardware genuinely changed, re-provision the station, which re-creates the bay records. If it did not, correct the station record server-side; the next boot is then accepted.',
             self::SERVICE_NOT_BOUND => 'Operator: create the binding for this (bay, service) pair, naming an ordinal the bay declared at provisioning. Server: name the bay and the service in `details`, and do not dispatch StartService. The customer has not been charged, because nothing was started — say so, rather than reporting a station fault for a condition no station has seen.',
+            self::BINDING_UNCOVERED => 'Operator: the service→program binding on this bay names ordinal `details.programNumber`, which the station no longer declares. Re-bind the service to one of `details.declaredPrograms`, or re-provision the station if its hardware changed. Server: do not dispatch StartService, and do not substitute a neighbouring ordinal. The customer has not been charged, because nothing was started.',
 
             // 07-errors.md §3.4 — Payment & Credit (4xxx)
             self::PAYMENT_GENERIC => 'Inspect the `errorDescription` for context. Contact support if persistent.',
@@ -709,6 +748,11 @@ enum OsppErrorCode: int
             // valid — what is incomplete is the server's own configuration. For 6008 the
             // command was never dispatched, so nothing about the request was wrong either.
             self::SERVICE_NOT_BOUND,
+            // 3020 is the same shape as 3019 and 3003: a fact about the addressed
+            // resource, not about the server answering. The binding exists and the
+            // ordinal behind it is gone, so nothing in the request is wrong and
+            // retrying it unchanged cannot succeed until an operator re-binds.
+            self::BINDING_UNCOVERED,
             // spec 0.31.0: 3003 joins the §2.4 `409` row explicitly. It appeared in
             // NO row of that table until 0.30.0, and the three implementations that
             // had to answer anyway did not agree — the reference server said 503, the

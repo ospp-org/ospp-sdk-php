@@ -27,6 +27,7 @@ that duplicates this package.
 | **OPEN** | `.github/workflows/tests.yml` `schemas` job | it inlines its own copy of `check-schemas.sh`'s diff. Two definitions of one check; closing it is options 1--2 below |
 | CLOSED in **0.28.0** | `Enums\OsppErrorCode::recommendedAction()` | answered **11 of 118** registry codes and `null` for the other 107. §3 has an action for 118 of 118 with no empty cell, so the gap was here. All 118 transcribed; `check-recommended-action` keeps it shut |
 | **OPEN** | `Enums\OsppErrorCode::recommendedAction()` | the new gate catches a *structural* drift and **cannot** catch a semantic one. Measured, not assumed — see below. §1.4 is what makes it uncloseable by a gate |
+| **OPEN (unreleased, on a branch)** | `Enums\OsppErrorCode::BINDING_UNCOVERED` | the enum carries **3020** and `spec/07-errors.md` §3 does not. Three gates say so and two tests fail on it. **Not releasable until a spec release carries the row** — see below |
 
 Measured across all 29 cases against `spec/08-configuration.md` at the ref then in
 `.spec-ref` (`v0.13.0` — the pin has moved many times since; this sentence is about
@@ -98,6 +99,60 @@ is read by people.
 **`@ospp/sdk-ts` carries the identical finding and has no KNOWN-ISSUES.md to record it in**
 — it never has, in 89 commits. Its half is recorded in the header of
 `scripts/check-recommended-action.ts` and in its 0.28.0 changelog entry.
+
+---
+
+## OPEN (unreleased, on a branch) — the enum carries `3020 BINDING_UNCOVERED` and the spec registry does not
+
+Raised **2026-09-18**, minting the code specified in `csms-server` at
+`docs/SPEC-ASKS-CATALOG-BINDING-VALIDITY.md` §6.3. The code itself is complete here: the
+case, its `409`, its `Warning`, its `recoverable: true`, its `recommendedAction`, and
+`tests/Unit/Enums/BindingUncoveredCodeTest.php` pinning all of it. What is missing is
+upstream.
+
+**The measurement, with both denominators.** `spec/07-errors.md` §3 carries **119** rows at
+`.spec-ref = v0.41.0`; this enum carries **120** cases. `3020` and `BINDING_UNCOVERED`
+return **0** hits across the whole spec tree at `v0.41.0` and at `origin/main`, the only
+remote branch — positive control on the same grep shape, `SERVICE_NOT_BOUND`, returns
+**10**. So the number is free and the row is absent, which are two different facts.
+
+**What goes red, and it is one cause reported five times:**
+
+| surface | finding |
+|---|---|
+| `scripts/check-error-registry.sh` | `3020 BINDING_UNCOVERED: in the SDK enum, MISSING from the spec` — 1 problem |
+| `scripts/check-recommended-action.sh` | `ORPHAN 3020 — this SDK carries an action for a code §3 does not list` — 1 finding |
+| `scripts/check-doc-claims.sh` | 2 false claims of 33 — the `Recommended Action for 119 of 119 rows` pair |
+| `RecommendedActionGateTest::itPassesUnmutated` | asserts the gate exits `0`; it exits `1` on the ORPHAN |
+| `RecommendedActionGateTest::itAcceptsACellRewrittenInAnotherLanguage` | the same, for the same reason |
+
+Six of nine gates and `phpstan --level=9` stay green, and the suite is otherwise clean:
+**1333 tests, 6797 assertions, 2 failures, 0 skips.**
+
+**Why none of it is repaired here.** `check-error-registry.php` states the rule in its own
+failure text — *"The spec registry is the source of truth … If the SPEC is what is wrong,
+fix it there first and re-pin `.spec-ref` — do not 'correct' it here."* The bidirectional
+comparison is the point of that gate: it exists because a check between the two SDKs
+reported `recoverable` as identical while both were wrong about `5004` for eight releases.
+Silencing it for one code would restore exactly the blindness it was built to end.
+
+The two false doc claims are a narrower case of the same thing. The sentence says what §3
+carries, `check-doc-claims.php` derives it from `count(self::cases())`, and the two are one
+row apart. `119` is what is true of §3, so the sentence keeps it: writing `120` there would
+make the gate pass by making the sentence false, which is the shape of defect this file
+exists to record.
+
+**What closes it.** One spec release adding the `3020 BINDING_UNCOVERED` row to
+`07-errors.md` §3 with `Warning`, `true` and the corrective action, then a MINOR here that
+re-pins `.spec-ref` to it. Adding enum members is a MINOR by this package's own rule
+(`CHANGELOG.md` at `0.13.0`: *"MINOR, not PATCH: three enum members are added"*), and a
+spec take-up is a MINOR even when it changes no code (`0.27.0`). `.spec-ref` **MUST NOT**
+anticipate an unreleased spec version — the CI `schemas` job refuses the pin and says so —
+so the order is fixed: spec first, SDK second, and `@ospp/protocol` in the same pair.
+
+**The number is not reserved.** `csms-server` records a second outstanding 3xxx ask, a
+`PROGRAM_UNAVAILABLE` for the station-reported case, that also wants the next free ordinal.
+Whichever lands in the spec first takes `3020`.
 
 ---
 

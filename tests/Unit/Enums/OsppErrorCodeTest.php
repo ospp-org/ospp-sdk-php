@@ -12,13 +12,18 @@ use PHPUnit\Framework\TestCase;
 final class OsppErrorCodeTest extends TestCase
 {
     #[Test]
-    public function it_has_exactly_119_cases(): void
+    public function it_has_exactly_120_cases(): void
     {
         // 102 standard + 4 v0.5.2 auth codes (2014-2017, spec v0.4.2 07-errors.md §3.2)
         // + 1 v0.6.2 auth code (2018 SERVER_AUTH_NONCE_MISMATCH) = 107.
         // + 4 v0.8.0 provisioning-identity codes (2019, 4015, 4016, 4017) = 114,
-        // + 3017 PROGRAM_NOT_DECLARED and 3018 TOPOLOGY_MISMATCH = 119.
-        self::assertCount(119, OsppErrorCode::cases());
+        // + 3017 PROGRAM_NOT_DECLARED and 3018 TOPOLOGY_MISMATCH = 119,
+        // + 3020 BINDING_UNCOVERED = 120.
+        //
+        // The running sum above has been wrong before and is a record of moves, not
+        // the assertion: the assertion is the count, and the derivation of record is
+        // scripts/check-doc-claims.php over count(OsppErrorCode::cases()).
+        self::assertCount(120, OsppErrorCode::cases());
     }
 
     // =========================================================================
@@ -1042,13 +1047,14 @@ final class OsppErrorCodeTest extends TestCase
     }
 
     #[Test]
-    public function session_category_has_twenty_codes(): void
+    public function session_category_has_twenty_one_codes(): void
     {
+        // 20 -> 21 with 3020 BINDING_UNCOVERED. The other five bands are untouched.
         $count = count(array_filter(
             OsppErrorCode::cases(),
             static fn (OsppErrorCode $c): bool => $c->category() === 'session',
         ));
-        self::assertSame(20, $count);
+        self::assertSame(21, $count);
     }
 
     #[Test]

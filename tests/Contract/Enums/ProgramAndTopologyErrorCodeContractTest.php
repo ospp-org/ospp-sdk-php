@@ -10,7 +10,9 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The two codes the topology/programs arc adds — spec/07-errors.md §3.3.
+ * The two codes the topology/programs arc adds — spec/07-errors.md §3.3 — and
+ * the density of the range they sit in, which is what 3020 BINDING_UNCOVERED was
+ * allocated from.
  *
  * Mirrored by sdk-ts tests/enums/ProgramAndTopologyErrorCode.test.ts, which
  * asserts the same facts on the same inputs.
@@ -65,11 +67,16 @@ final class ProgramAndTopologyErrorCodeContractTest extends TestCase
     /**
      * "3xxx is dense with no gaps, so allocation is dense and gaps are never
      * back-filled. Registry totals move 114 -> 116."
+     *
+     * The density is not decoration: it is what decides the NEXT number. 3020
+     * BINDING_UNCOVERED is the next ordinal because 3000..3019 were all taken and
+     * a gap is never re-used, so this assertion is the one that has to move
+     * deliberately rather than be widened until it passes.
      */
     #[Test]
-    public function registryTotalIs119AndThe3xxxRangeIsDense(): void
+    public function registryTotalIs120AndThe3xxxRangeIsDense(): void
     {
-        self::assertCount(119, OsppErrorCode::cases());
+        self::assertCount(120, OsppErrorCode::cases());
 
         $threeK = array_values(array_filter(
             array_map(fn (OsppErrorCode $c) => $c->value, OsppErrorCode::cases()),
@@ -77,8 +84,8 @@ final class ProgramAndTopologyErrorCodeContractTest extends TestCase
         ));
         sort($threeK);
 
-        self::assertSame(range(3000, 3019), $threeK, '3xxx must be dense from 3000 to 3019');
-        self::assertCount(20, $threeK);
+        self::assertSame(range(3000, 3020), $threeK, '3xxx must be dense from 3000 to 3020');
+        self::assertCount(21, $threeK);
     }
 
     /**
