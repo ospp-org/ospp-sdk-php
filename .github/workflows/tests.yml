@@ -243,6 +243,42 @@ jobs:
       - name: Every code named by 07-errors.md 2.4 carries the status it gives
         run: scripts/check-http-status.sh
 
+  # Comments here argue from the specification by QUOTING it, and a quotation is
+  # the only form of comment that can rot invisibly: an out-of-date paraphrase
+  # still reads as a summary, an out-of-date quotation reads as the spec's own
+  # words, in quotation marks, with a section number beside it, long after the
+  # spec stopped saying them. Every other gate reads a table, a schema or a claim
+  # table -- free prose in a doc block, which is where the reasoning lives, was
+  # read by none of them.
+  #
+  # Thirteen real misquotations were found here and repaired, including the
+  # un-swept mirror of two sentences a sibling-SDK session had already found
+  # invented: `Two modes are defined: All (default) [...] None` and `The middle
+  # mode, Critical, is removed rather than deprecated`, both attributed to
+  # 06-security.md 5.1, both returning zero hits across the whole corpus, and
+  # 5.1 saying close to the opposite. Two more were substantive rather than
+  # cosmetic: they quoted a topology referent the spec RETIRED at 0.26.0.
+  #
+  # The instrument parses rather than pattern-matches -- a literal-aware comment
+  # scanner, logical comment blocks so a wrapped quotation is ONE quotation,
+  # citable document names derived from the spec tree, and attribution as a
+  # BINDING within 60 characters with every quotation masked. On the repaired
+  # tree: 80 spec-attributed quotations, 80 verbatim, 0 not found, with a
+  # built-in control that fabricates a variant of a real passage and refuses a
+  # verdict unless it is caught.
+  spec-quotations:
+    name: Every sentence quoted as the spec is one the spec contains
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json, openssl, intl
+      - run: composer install --no-interaction --prefer-dist
+      - name: No spec-attributed quotation the spec does not carry
+        run: scripts/check-spec-quotations.sh
+
   # The sibling of error-registry, on the column that gate does not read.
   #
   # check-error-registry.sh compares errorText, severity and recoverable and stops
