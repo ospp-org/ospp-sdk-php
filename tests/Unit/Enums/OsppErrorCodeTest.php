@@ -269,8 +269,10 @@ final class OsppErrorCodeTest extends TestCase
         //         2006 STATION_MISMATCH)
         //   2017 OFFLINE_RECEIPT_MISMATCH  → 422  (signature itself
         //         verified per spec §3.2 — NOT 401; the cross-check
-        //         failure is "syntax correct, instructions inconsistent"
-        //         = RFC 9110 422 Unprocessable Entity)
+        //         failure is *syntax correct, instructions inconsistent*
+        //         = RFC 9110 422 Unprocessable Entity. That phrase is this
+        //         file's condensation of RFC 9110 §15.5.21, italicised
+        //         because double quotes beside a §-citation are the spec's)
         self::assertSame(401, OsppErrorCode::OFFLINE_PASS_REVOKED->httpStatus(),
             'Revoked credential → 401');
         self::assertSame(403, OsppErrorCode::OFFLINE_ORG_MISMATCH->httpStatus(),

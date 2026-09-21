@@ -27,10 +27,18 @@ final class EverythingIsSignedContractTest extends TestCase
     }
 
     /**
-     * §5.1: "Two modes are defined: `All` (default) [...] `None`."
+     * §5.1: "`MessageSigningMode` -- Chapter 08 registry key #18, with values
+     * `All` and `None` -- is **withdrawn**." And, of the third case this enum
+     * no longer carries: "the middle mode `Critical` had already been removed on
+     * the same reasoning: with everything signed it selected nothing."
      *
-     * §5.1: "The middle mode, `Critical`, is removed rather than deprecated.
-     * With everything signed it selected nothing."
+     * Neither sentence this docblock used to carry -- "Two modes are defined:
+     * `All` (default) [...] `None`" and "The middle mode, `Critical`, is removed
+     * rather than deprecated" -- exists anywhere in the spec at `.spec-ref`.
+     * §5.1 says close to the opposite: "There is no mode, and no configuration
+     * key selects one." The two VALUES are real, and §5.6 is where they live;
+     * this enum is a library parameter for a test harness, which is why
+     * `ConfigurationKey` correctly has no key for it.
      */
     #[Test]
     public function theModeEnumHasExactlyAllAndNone(): void
@@ -42,7 +50,10 @@ final class EverythingIsSignedContractTest extends TestCase
     }
 
     /**
-     * §5.1: "`All` **(default)**". The default moves from `Critical` to `All`.
+     * The default moves from `Critical` to `All`. The string "`All`
+     * **(default)**" is NOT §5.1's -- it is a table row in
+     * `guides/implementors-guide.md`, and §5.1 contains no occurrence of
+     * "default" at all.
      */
     #[Test]
     public function theDefaultModeIsAll(): void
@@ -51,9 +62,15 @@ final class EverythingIsSignedContractTest extends TestCase
     }
 
     /**
-     * §5.1: "Both values are PascalCase — `"All"`, `"None"` [...] lowercase
-     * spellings that appeared in three places were drift, not an alternative
-     * form, and a receiver MUST NOT accept them."
+     * Both values are PascalCase, and a backed enum refuses every other
+     * spelling through `tryFrom()`.
+     *
+     * No part of this was §5.1's, though it was attributed there: the phrases
+     * `Both values are PascalCase`, `were drift, not an alternative form` and
+     * `a receiver MUST NOT accept them` all return zero hits across the spec at
+     * `.spec-ref`. The record is the spec CHANGELOG at 0.34.0, which says
+     * PascalCase wins as the repo-wide convention for every enumeration, and
+     * which names **five** sites, not three.
      */
     #[Test]
     public function lowercaseSpellingsAreRefused(): void
@@ -139,9 +156,10 @@ final class EverythingIsSignedContractTest extends TestCase
     }
 
     /**
-     * §5.7 Sending: "A sender holding no key MUST refuse to send. It MUST NOT
-     * publish the message unsigned. It MUST log the refusal [...] and MUST NOT
-     * silently drop it without a record."
+     * §5.7 *Sending*, the row for "No session key held for the peer": "**Refuse
+     * to send.** The sender **MUST NOT** publish the message unsigned. It
+     * **MUST** log the refusal [...] and **MUST NOT** silently drop it without a
+     * record".
      *
      * Refusing loudly is the only option that is neither of the two the clause
      * forbids, so the signer raises rather than returning something.

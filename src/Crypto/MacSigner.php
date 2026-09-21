@@ -29,11 +29,12 @@ final class MacSigner
      * @param  string  $sessionKey  Base64-encoded session key
      * @return string Base64-encoded HMAC-SHA256 signature
      *
-     * @throws \RuntimeException when no usable session key is held. §5.7:
-     *   "A sender holding no key MUST refuse to send. It MUST NOT publish the
-     *   message unsigned. It MUST log the refusal and surface it to the
-     *   operator, and MUST NOT silently drop it without a record." Raising is
-     *   the only response that is neither of the two the clause forbids.
+     * @throws \RuntimeException when no usable session key is held. §5.7
+     *   *Sending*, the row for "No session key held for the peer": "**Refuse to
+     *   send.** The sender **MUST NOT** publish the message unsigned. It
+     *   **MUST** log the refusal and surface it to the operator, and **MUST
+     *   NOT** silently drop it without a record". Raising is the only response
+     *   that is neither of the two the clause forbids.
      */
     public function sign(array|\stdClass $payload, string $sessionKey): string
     {
@@ -98,8 +99,11 @@ final class MacSigner
     /**
      * Strip the top-level `mac` without mutating the caller's value.
      *
-     * §5.3 step 1: "Remove the `mac` field from the message envelope if present
-     * -- the MAC field cannot be part of the input that produces it."
+     * §5.3 step 1: "**Remove** the `mac` field from the message envelope if
+     * present (HMAC-specific -- the MAC field cannot be part of the input that
+     * produces it)." The qualifier is the spec's own and had been dropped from
+     * this quotation: the removal is a property of the HMAC construction, not of
+     * canonicalisation in general.
      *
      * @param  array<string, mixed>|\stdClass  $payload
      * @return array<string, mixed>|\stdClass

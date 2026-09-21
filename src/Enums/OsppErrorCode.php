@@ -492,7 +492,7 @@ enum OsppErrorCode: int
      *
      * The return is `string`, not `?string`, and the `default => null` arm is gone.
      * It was kept at first as a safety net for an enum case added ahead of its
-     * transcription — until phpstan level 9 pointed out that with 118 of 118 cases
+     * transcription — until phpstan level 9 pointed out that with 120 of 120 cases
      * matched the arm is UNREACHABLE. An unreachable net is not a net; it is a null
      * in the signature that no execution can produce, and every caller emitting the
      * REST Error Object (§2.4), where the field is REQUIRED, was being made to
@@ -653,15 +653,23 @@ enum OsppErrorCode: int
      * a permitted future rather than to the present contents.
      *
      * So this method answers a question the spec does not define, and `sdk-ts` answers it
-     * differently. Re-derived 2026-09-05 by dumping both registries: 118 codes each,
+     * differently. Re-derived 2026-09-21 by dumping both registries: 120 codes each,
      * identical code sets, names, severity, recoverable, category partition and vendored
-     * schemas; 76 agreements and 42 disagreements. The figure recorded in the spec's
-     * KNOWN-ISSUES.md read "51 of 114" and was stale on both halves. 40 of the 42 are
-     * THIS class falling through to `default => 500` while sdk-ts asserts a value —
-     * one library declining to answer, not two libraries disagreeing. Only 2001
-     * (php 422 / ts 401) is now a genuine two-sided disagreement; 2008 was the other
-     * and is settled above. Recorded in the spec's KNOWN-ISSUES.md together with
-     * `category()`, which has the same cause.
+     * schemas; 79 agreements and 41 disagreements. 40 of the 41 are THIS class falling
+     * through to `default => 500` while sdk-ts asserts a value — one library declining
+     * to answer, not two libraries disagreeing. Only 2001 (php 422 / ts 401) is a
+     * genuine two-sided disagreement; 2008 was the other and is settled above. Recorded
+     * in the spec's KNOWN-ISSUES.md together with `category()`, which has the same cause.
+     *
+     * AND THE DIVERGENCE IS PERFECTLY CORRELATED WITH THE SPEC'S SILENCE. §2.4's status
+     * table names 31 of the 120 codes. Of those 31, the two SDKs agree on all 31, and
+     * both already answer each one the way §2.4 does — 0 of 31 disagree on either side.
+     * All 41 disagreements are among the 89 codes the table does not name. So this is a
+     * gap rather than a bug: there was nothing to repair, and nothing that would have
+     * NOTICED if the agreement broke, because `check-error-registry` compares errorText,
+     * severity and recoverable and stops there. `scripts/check-http-status.sh` is the
+     * reader for the 31; the other 89 stay free, because pinning them would invent a
+     * normative rule the specification declines to state.
      *
      * Treat the result as a default for a server that has no better answer, never as the
      * status a code "has". A server that knows the state it is in knows the truer status;
@@ -681,7 +689,7 @@ enum OsppErrorCode: int
             // body failed schema validation, evaluated first in the §2 precedence chain.
             self::PROVISIONING_REQUEST_INVALID,
             // v0.8.2 FIX: 4010 is listed under 400 in the §2.4 status table
-            // (07-errors.md:241) and §3.4 states "At the provisioning endpoint:
+            // (07-errors.md:268 at `.spec-ref`) and §3.4 states "At the provisioning endpoint:
             // HTTP 400 Bad Request". It had no arm and fell through to the default
             // 500, turning a client error into a server error on the wire.
             self::CSR_INVALID,
@@ -774,8 +782,11 @@ enum OsppErrorCode: int
             self::COMMAND_PRE_EMPTED => 409,
             // v0.5.2: 2017 OFFLINE_RECEIPT_MISMATCH aligned cross-SDK to 422 —
             // signature itself verified per spec §3.2; the cross-check failure
-            // is "syntax correct, instructions inconsistent" ≡ RFC 9110 422
-            // Unprocessable Entity (NOT 401 — auth succeeded).
+            // is *syntax correct, instructions inconsistent* ≡ RFC 9110 422
+            // Unprocessable Entity (NOT 401 — auth succeeded). That phrase
+            // condenses RFC 9110 §15.5.21 and is this file's own; it is
+            // italicised because double quotes beside a §-citation are reserved
+            // for the spec's words.
             self::OFFLINE_RECEIPT_MISMATCH,
             self::DURATION_INVALID, self::MAX_DURATION_EXCEEDED, self::INVALID_SERVICE,
             self::STATION_NOT_REGISTERED,

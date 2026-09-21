@@ -16,9 +16,14 @@ use PHPUnit\Framework\TestCase;
  * "This is the canonical table. Nothing else in this specification restates it."
  *
  * The table has two parties in it and the `Effected by` column says which:
- * "Twenty `Station` rows by distinct `(from, to)` pair, and six `Server` rows —
- * twenty-six in all. [...] A station implements the `Station` rows. A server
- * implements all of them."
+ * "Twenty-one `Station` rows by distinct `(from, to)` pair, and six `Server`
+ * rows — twenty-seven in all." And, from the chapter-2 preamble rather than from
+ * §2.3: "A station implements the `Station` rows. A server implements all of
+ * them."
+ *
+ * The counts were one short in both halves — twenty and twenty-six — while
+ * `stationPairs()` below listed twenty-one and `transitionCount()` answered
+ * twenty-one and twenty-seven. Only the quoted prose was stale.
  *
  * The pair lists below are transcribed from §2.3 and are the SAME vectors the
  * sdk-ts mirror of this file asserts. Both SDKs are reference implementations
@@ -45,7 +50,12 @@ final class BayCanonicalTableContractTest extends TestCase
             // Unknown has SIX exits, not three. §2.3: "A station that reboots
             // mid-session MUST resume that session [...] `Occupied` and
             // `Finishing` are the two states a resumed session can leave a bay
-            // in, and they are the two added."
+            // in, and **they were the first two added**."
+            //
+            // The tail matters: the quotation used to end "and they are the two
+            // added", which is the pre-0.30.0 sentence and contradicted the SIX
+            // above it. `Reserved` became the sixth exit at 0.30.0 and the spec
+            // re-worded the clause with it.
             [BayStatus::UNKNOWN, BayStatus::AVAILABLE],
             [BayStatus::UNKNOWN, BayStatus::FAULTED],
             [BayStatus::UNKNOWN, BayStatus::UNAVAILABLE],

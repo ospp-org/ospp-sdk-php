@@ -173,6 +173,34 @@ jobs:
       - name: Every asserted number, and every method the README demonstrates
         run: scripts/check-doc-claims.sh
 
+  # An assertion whose every argument folds at compile time is green over an
+  # empty registry, a renamed enum and a deleted one alike. The sibling
+  # TypeScript SDK ran this census first and found fifteen, thirteen more than
+  # were known; this repository carries the mirrored gate tests and had never
+  # been inspected. Measured here: 0 inert out of 1811 assert* call sites across
+  # 86 files — because the same arithmetic was written into COMMENTS instead
+  # (see tests/Unit/Enums/OsppErrorCodeTest.php), which is check-doc-claims'
+  # territory rather than this one's.
+  #
+  # The zero was proved by control before it was believed: five planted
+  # assertions of the shapes sdk-ts found were all reported, and four that DO
+  # read src/ were all silent. The gate stays wired so the class cannot reopen.
+  #
+  # No spec checkout and no network: the whole judgement is about this
+  # repository's own test corpus.
+  inert-assertions:
+    name: Every assertion has a side src/ can move
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json, openssl
+      - run: composer install --no-interaction --prefer-dist
+      - name: No inert assertion, and no exemption that outlived its assertion
+        run: scripts/check-inert-assertions.sh
+
   error-registry:
     name: Error registry vs spec registry
     runs-on: ubuntu-latest
@@ -186,13 +214,42 @@ jobs:
       - name: Compare src/Enums/OsppErrorCode.php against spec/07-errors.md
         run: scripts/check-error-registry.sh
 
+  # error-registry above compares errorText, severity and recoverable and stops
+  # there, deliberately, because those are the columns spec 07-errors.md 3 carries.
+  # httpStatus is an SDK extension with no spec column at all -- so it could be
+  # edited to anything and every gate here would stay green.
+  #
+  # Measured at v0.42.0 by dumping both SDK registries: 120 codes each, 79
+  # agreements, 41 disagreements with sdk-ts. Section 2.4's status table names 31
+  # of the 120; the two SDKs agree on ALL 31 and both already answer each one the
+  # way the table does -- 0 of 31 disagree on either side. All 41 disagreements
+  # are among the 89 the table does not name, and 40 of those 41 are THIS SDK
+  # declining to answer at all (default => 500) while sdk-ts asserts a value.
+  # The divergence is perfectly correlated with the spec's silence, which makes
+  # it a gap rather than a bug: nothing needed repairing, and nothing was watching.
+  #
+  # This job reads the 31 and says nothing about the other 89. Pinning those would
+  # invent a normative rule the specification declines to state.
+  http-status:
+    name: HTTP status vs the spec status table, where it speaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: json, openssl
+      - run: composer install --no-interaction --prefer-dist
+      - name: Every code named by 07-errors.md 2.4 carries the status it gives
+        run: scripts/check-http-status.sh
+
   # The sibling of error-registry, on the column that gate does not read.
   #
   # check-error-registry.sh compares errorText, severity and recoverable and stops
   # there, so `recommendedAction()` answering 11 of 118 codes and returning null
   # for the other 107 sat behind a green column for as long as the accessor
   # existed. The 11 was read once as the registry being incomplete; §3 gives an
-  # action for 118 of 118 rows with no empty cell, so it was a transcription hole
+  # action for 120 of 120 rows with no empty cell, so it was a transcription hole
   # here, not a gap upstream.
   #
   # This gate checks COVERAGE and STRUCTURE and never compares an action to its

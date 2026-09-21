@@ -36,8 +36,11 @@ final class BayTransitionsContractTest extends TestCase
     #[Test]
     public function transition_count_is_exactly_21_for_a_station(): void
     {
-        // spec/05-state-machines.md §2.3: "Twenty `Station` rows by distinct
-        // `(from, to)` pair, and six `Server` rows -- twenty-six in all."
+        // spec/05-state-machines.md §2.3: "Twenty-one `Station` rows by distinct
+        // `(from, to)` pair, and six `Server` rows -- twenty-seven in all."
+        //
+        // The quotation said twenty and twenty-six, two lines above assertions
+        // of 21 and 27. The assertions were right; the prose was a release behind.
         self::assertSame(21, $this->transitions->transitionCount(EffectedBy::STATION));
         self::assertSame(27, $this->transitions->transitionCount(EffectedBy::SERVER));
     }

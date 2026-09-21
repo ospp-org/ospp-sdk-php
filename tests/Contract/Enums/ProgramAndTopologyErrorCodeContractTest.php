@@ -38,9 +38,13 @@ final class ProgramAndTopologyErrorCodeContractTest extends TestCase
 
     /**
      * §3.3: "3018 | `TOPOLOGY_MISMATCH` | Error | true | The topology the station
-     * declared in BootNotification does not match the topology recorded for it at
-     * provisioning [...] `recoverable: true` records exactly that — the station is
+     * declared in BootNotification does not match the station's **in-service
+     * topology** [...] `recoverable: true` records exactly that — the station is
      * out of service but reachable."
+     *
+     * NOT "the topology recorded for it at provisioning", which this docblock
+     * used to quote: spec 0.26.0 retired that referent because it counted bays
+     * the operator had taken out of service.
      */
     #[Test]
     public function topologyMismatchIs3018(): void

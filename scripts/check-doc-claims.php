@@ -394,6 +394,222 @@ foreach ($claims as $c) {
     }
 }
 
+// ── repo-wide claim phrases ────────────────────────────────────────────────
+//
+// SCOPED BY CLAIM PHRASE, NOT BY DOCUMENT — and that distinction is the whole
+// finding. The table above pins `Recommended Action for (\d+) of (\d+) rows` to
+// src/Enums/OsppErrorCode.php. That one site was gated and stayed right at 120
+// through every registry move. The IDENTICAL sentence stood in four other
+// files, gated by nothing, and all four still said 118:
+//
+//   scripts/check-recommended-action.php   `for 118 of 118 rows and no cell is empty`
+//   .github/workflows/tests.yml            `an action for 118 of 118 rows`
+//   KNOWN-ISSUES.md  (twice)               `for 118 of 118` / `for **118 of 118** rows`
+//
+// plus `with 118 of 118 cases matched` in OsppErrorCode.php itself — in the very
+// docblock whose neighbouring claim the file-scoped pattern was checking — and
+// `All 118 arms are currently the registry cell` in KNOWN-ISSUES.md. Seven live
+// sentences asserting a number about TODAY that moved two releases ago.
+//
+// A file-scoped gate cannot see this class by construction: it looks where it
+// was told to look, and prose is copied to where it is useful. So these
+// families are searched across every tracked text file instead.
+//
+// RECORDS ARE NOT CLAIMS. A sentence carrying its own measurement point —
+// "before 0.28.0", "as of 0.28.0", "Re-derived 2026-09-05", "at v0.15.0" — is
+// a statement about a past tree and is correct permanently. Those are skipped,
+// and the number skipped is PRINTED, so the exclusion has a size rather than
+// being a silent hole. CHANGELOG.md is excluded whole for the same reason: every
+// entry is a statement about the release it heads.
+
+$registryTotal = (string) count(OsppErrorCode::cases());
+
+/** @var list<array{0:string,1:string,2:string,3:string}> $repoWide */
+$repoWide = [
+    ['recommended-action coverage (numerator)',
+        '/[Aa]ction\*{0,2} for \*{0,2}(\d+)\*{0,2} of \*{0,2}\d+/',
+        $registryTotal, 'count(OsppErrorCode::cases())'],
+    ['recommended-action coverage (denominator)',
+        '/[Aa]ction\*{0,2} for \*{0,2}\d+\*{0,2} of \*{0,2}(\d+)/',
+        $registryTotal, 'count(OsppErrorCode::cases())'],
+    ['every case matched (numerator)',
+        '/with (\d+) of \d+ cases matched/',
+        $registryTotal, 'count(OsppErrorCode::cases())'],
+    ['every case matched (denominator)',
+        '/with \d+ of (\d+) cases matched/',
+        $registryTotal, 'count(OsppErrorCode::cases())'],
+    ['recommended-action arms',
+        '/All (\d+) arms are currently/',
+        $registryTotal, 'count(OsppErrorCode::cases())'],
+    ['recommended-action cells inspected',
+        '/verified across all (\d+) at the pinned ref/',
+        $registryTotal, 'count(OsppErrorCode::cases())'],
+];
+
+/**
+ * Flatten comment-continuation markers, keeping a map back to the original.
+ *
+ * A claim straddling a line break is one claim: `src/Enums/OsppErrorCode.php`
+ * writes "with 120 of 120 cases" at the end of one docblock line and "matched"
+ * at the start of the next, behind a ` * `. A pattern applied to the raw bytes
+ * cannot see it, and this was measured rather than supposed — the first cut of
+ * the repo-wide scan reported ten live sites and stayed GREEN when that
+ * sentence was mutated to 121, because it had never matched it at all.
+ *
+ * Returns [flattened, map] where map[i] is the original byte offset of
+ * flattened byte i, so a hit can still be reported at its real line.
+ *
+ * @return array{0: string, 1: list<int>}
+ */
+function flattenContinuations(string $text): array
+{
+    $out = '';
+    $map = [];
+    $n = strlen($text);
+    $i = 0;
+    while ($i < $n) {
+        if ($text[$i] === "\n") {
+            // a newline plus indentation plus an optional ` * `, `//` or `#`
+            // marker plus indentation collapses to a single space
+            $j = $i + 1;
+            while ($j < $n && ($text[$j] === ' ' || $text[$j] === "\t")) {
+                $j++;
+            }
+            if ($j < $n && $text[$j] === '*' && ($j + 1 >= $n || $text[$j + 1] !== '/')) {
+                $j++;
+            } elseif ($j + 1 < $n && $text[$j] === '/' && $text[$j + 1] === '/') {
+                $j += 2;
+            } elseif ($j < $n && $text[$j] === '#') {
+                $j++;
+            }
+            while ($j < $n && ($text[$j] === ' ' || $text[$j] === "\t")) {
+                $j++;
+            }
+            // a blank line is a paragraph break and is NOT joined
+            if ($j < $n && $text[$j] !== "\n") {
+                $out .= ' ';
+                $map[] = $i;
+                $i = $j;
+
+                continue;
+            }
+        }
+        $out .= $text[$i];
+        $map[] = $i;
+        $i++;
+    }
+
+    return [$out, $map];
+}
+
+/**
+ * Is the matched phrase wrapped in a code span or quotation marks?
+ *
+ * Only a delimiter that HUGS the phrase counts — at most a handful of
+ * characters of slack on each side — so a paragraph that happens to contain a
+ * backtick somewhere cannot launder an assertion into a quotation.
+ */
+function enclosedInQuotation(string $text, int $off, int $len): bool
+{
+    $slack = 24;
+    $before = substr($text, max(0, $off - $slack), min($slack, $off));
+    $after = substr($text, $off + $len, $slack);
+    foreach (['`', '"', '“'] as $open) {
+        $close = $open === '“' ? '”' : $open;
+        $b = strrpos($before, $open);
+        $a = strpos($after, $close);
+        if ($b !== false && $a !== false
+            && strpos(substr($before, $b + strlen($open)), $close) === false) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/** A sentence that carries its own measurement point states a past tree. */
+$stamped = '/\b(?:before|after|as of|since|in|at|through|throughout)\s+`?v?\d+\.\d+\.\d+`?'
+    .'|\bRe-derived\s+\d{4}-\d{2}-\d{2}'
+    .'|\bMEASURED[,:]?\s+\d{4}-\d{2}-\d{2}'
+    .'|\b(?:read|reported|said|says|carried)\s*[«"`\x{201C}]/u';
+
+$tracked = array_values(array_filter(
+    explode("\n", trim((string) shell_exec('git -C '.escapeshellarg($root).' ls-files'))),
+    static fn (string $f): bool => $f !== ''
+        && $f !== 'CHANGELOG.md'
+        && !preg_match('#^(vendor|schemas|tests/Fixtures|tests/Contract/Crypto/fixtures)/#', $f)
+        && (bool) preg_match('/\.(php|md|sh|yml|yaml|json|neon|xml)$/', $f)
+));
+
+$repoWideSites = 0;
+$repoWideRecords = 0;
+foreach ($repoWide as [$label, $rx, $want, $how]) {
+    foreach ($tracked as $rel) {
+        $abs = $root.'/'.$rel;
+        if (!is_file($abs)) {
+            continue;
+        }
+        $raw = (string) file_get_contents($abs);
+        [$text, $map] = flattenContinuations($raw);
+        if (preg_match_all($rx, $text, $hits, PREG_OFFSET_CAPTURE | PREG_SET_ORDER) === 0) {
+            continue;
+        }
+        foreach ($hits as $hit) {
+            $off = (int) $hit[0][1];
+            $line = substr_count(substr($raw, 0, $map[$off] ?? $off), "\n") + 1;
+            // the enclosing sentence, for the measurement-point test
+            // THE ENCLOSING SENTENCE, and no wider. A measurement point excuses
+            // the sentence it stands in, not its neighbours. Measured: with a
+            // flat 240-character window, `scripts/check-recommended-action.php`
+            // was excused by "answered ELEVEN of the 118 registry codes before
+            // 0.28.0" two sentences above — a true statement about a past tree —
+            // while the live claim beside it went unchecked, and mutating that
+            // claim to 121 left the gate GREEN.
+            $from = max(0, $off - 400);
+            $before = substr($text, $from, $off - $from);
+            if (preg_match_all('/[.!?]\s/', $before, $ends, PREG_OFFSET_CAPTURE) > 0) {
+                $last = end($ends[0]);
+                $before = substr($before, (int) $last[1] + strlen((string) $last[0]));
+            }
+            // and bounded forward too: a 160-character tail reached into the
+            // NEXT sentence, where "All 118 are transcribed as of 0.28.0"
+            // excused the live claim in front of it.
+            $tail = substr($text, $off, 200);
+            if (preg_match('/[.!?]\s/', $tail, $stop, PREG_OFFSET_CAPTURE, strlen((string) $hit[0][0])) === 1) {
+                $tail = substr($tail, 0, (int) $stop[0][1]);
+            }
+            $sentence = $before.$tail;
+            if (preg_match($stamped, $sentence) === 1) {
+                $repoWideRecords++;
+
+                continue;
+            }
+            // A claim phrase inside a code span or quotation marks is a
+            // QUOTATION, not an assertion. KNOWN-ISSUES.md quotes the exact
+            // message this gate printed while it was red — the
+            // `Action for 119 of 119 rows` pair — and rewriting that to 120
+            // would falsify the record of the failure. The same licence is what
+            // lets the block above quote the seven stale sentences it is
+            // describing. It is narrow on purpose: the delimiter must hug the
+            // phrase, so ordinary prose cannot launder an assertion.
+            if (enclosedInQuotation($text, $off, strlen($hit[0][0]))) {
+                $repoWideRecords++;
+
+                continue;
+            }
+            $repoWideSites++;
+            if ($hit[1][0] !== $want) {
+                $problems[] = "{$rel}:{$line} — {$label}: says {$hit[1][0]}, {$how} derives {$want}";
+            }
+        }
+    }
+}
+
+if ($repoWideSites < 6) {
+    $problems[] = 'repo-wide claim phrases matched only '.$repoWideSites
+        .' live site(s) — the patterns have stopped finding the prose they gate';
+}
+
 // ── the README's worked example must be callable ───────────────────────────
 //
 // The numbers above would all have passed on a README whose example fatals, and
@@ -448,6 +664,9 @@ if ($resolved === 0) {
 
 $files = array_values(array_unique(array_map(static fn ($c) => $c[0], $claims)));
 echo 'checked '.count($claims).' claims across '.count($files).' files: '.implode(', ', $files)."\n";
+echo '  plus '.$repoWideSites.' live site(s) of '.count($repoWide).' repo-wide claim phrase(s), '
+    .'over '.count($tracked)." tracked text files\n";
+echo '  ('.$repoWideRecords." site(s) skipped as records — the sentence carries its own measurement point)\n";
 echo '  plus '.$resolved." resolved `Class::method()` call sites in the README example\n";
 foreach ($claims as $c) {
     printf("  %-34s derived = %s\n", $c[1], $c[3]);

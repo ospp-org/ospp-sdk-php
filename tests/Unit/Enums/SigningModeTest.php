@@ -14,9 +14,13 @@ final class SigningModeTest extends TestCase
     #[Test]
     public function it_has_exactly_two_cases(): void
     {
-        // spec/06-security.md §5.1: "Two modes are defined". `Critical` is
-        // removed rather than deprecated -- with everything signed it selected
-        // nothing, and there is no installed base a window would serve.
+        // spec/06-security.md §5.1: "`MessageSigningMode` -- Chapter 08 registry
+        // key #18, with values `All` and `None` -- is **withdrawn**", and "the
+        // middle mode `Critical` had already been removed on the same reasoning:
+        // with everything signed it selected nothing."
+        //
+        // "Two modes are defined" is NOT in the spec -- zero hits at `.spec-ref`.
+        // §5.1 reads "There is no mode, and no configuration key selects one."
         self::assertCount(2, SigningMode::cases());
     }
 
@@ -43,8 +47,10 @@ final class SigningModeTest extends TestCase
     #[Test]
     public function try_from_refuses_the_removed_and_the_lowercase_forms(): void
     {
-        // §5.1: lowercase spellings "were drift, not an alternative form, and a
-        // receiver MUST NOT accept them".
+        // The lowercase spellings were removed as drift; a backed enum refuses
+        // them through `tryFrom()`. The sentence this comment used to attribute
+        // to §5.1 is not in the spec -- the record is the spec CHANGELOG at
+        // 0.34.0, which names five sites across four files.
         self::assertNull(SigningMode::tryFrom('Critical'));
         self::assertNull(SigningMode::tryFrom('all'));
         self::assertNull(SigningMode::tryFrom('none'));

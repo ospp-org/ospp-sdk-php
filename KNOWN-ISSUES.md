@@ -25,7 +25,7 @@ that duplicates this package.
 | CLOSED in **0.17.0** | `Enums\ConfigurationKey::profile()` | answered `Offline` where spec §1.5's new **Profile ID** column says `OfflineBLE`. The gate could not have caught it — it read only §§2--6, which carry no profile column at all |
 | PARTLY CLOSED in **0.26.0** | `scripts/check-schemas.sh` | mode corrected to `100755` in 0.17.0, on a script **nothing invokes**. `GateScriptsAreExecutableTest` now reds on any wrong mode, so the repair is confirmable; the script still has no caller — see below |
 | **OPEN** | `.github/workflows/tests.yml` `schemas` job | it inlines its own copy of `check-schemas.sh`'s diff. Two definitions of one check; closing it is options 1--2 below |
-| CLOSED in **0.28.0** | `Enums\OsppErrorCode::recommendedAction()` | answered **11 of 118** registry codes and `null` for the other 107. §3 has an action for 118 of 118 with no empty cell, so the gap was here. All 118 transcribed; `check-recommended-action` keeps it shut |
+| CLOSED in **0.28.0** | `Enums\OsppErrorCode::recommendedAction()` | answered **11 of 118** registry codes and `null` for the other 107. §3 has an action for 120 of 120 with no empty cell, so the gap was here. All 118 transcribed; `check-recommended-action` keeps it shut |
 | **OPEN** | `Enums\OsppErrorCode::recommendedAction()` | the new gate catches a *structural* drift and **cannot** catch a semantic one. Measured, not assumed — see below. §1.4 is what makes it uncloseable by a gate |
 | CLOSED in **0.39.0** | `Enums\OsppErrorCode::BINDING_UNCOVERED` | spec `v0.42.0` carries the `3020` row, `.spec-ref` points at it, and all nine gates are green. The spec set severity **`Error`**, not the `Warning` this enum reached by default — corrected here with an explicit arm — see below |
 
@@ -55,7 +55,7 @@ gate did with it.
 **The repair first, so the residue is in proportion.** `recommendedAction()` answered
 **11 of the 118** registry codes and returned `null` for the other 107. That 11 had been
 read once as the spec registry being incomplete; it is not — `07-errors.md` §3 gives a
-*Recommended Action* for **118 of 118** rows and **no cell is empty**. The hole was on
+*Recommended Action* for **120 of 120** rows and **no cell is empty**. The hole was on
 this side. All 118 are transcribed as of 0.28.0, and `check-recommended-action` fails the
 build if one goes missing again. That half is closed and stays closed.
 
@@ -82,7 +82,7 @@ that could see it would have to compare the prose — which is the assertion the
 forbids. So this is not an unfinished gate; it is the part of the problem a gate is not
 allowed to hold. The 4010 defect was found by reading, and its successor will be too.
 
-**The mitigation that is available, and what forfeits it.** All 118 arms are currently the
+**The mitigation that is available, and what forfeits it.** All 120 arms are currently the
 registry cell under one mechanical rule — flatten `[label](url)` to `label`, collapse
 whitespace — so at this release drift is impossible by construction rather than by
 inspection. **Re-transcribing rather than hand-editing at each spec sync preserves that**,

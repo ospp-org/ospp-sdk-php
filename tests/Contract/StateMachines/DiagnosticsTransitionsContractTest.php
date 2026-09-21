@@ -44,7 +44,8 @@ final class DiagnosticsTransitionsContractTest extends TestCase
      * has no `Uploading -> Uploading` edge and MUST NOT gain one: the progress
      * stream is the station re-reporting a state it has not left. A server that
      * drives this machine by feeding it arriving notifications MUST advance on a
-     * CHANGE of `status`."
+     * *change* of `status` and MUST NOT treat a second `Uploading` as an invalid
+     * transition."
      *
      * So a consumer must not call the machine per message. The refusal above is
      * correct; feeding it every notification is the error, and it is an error a

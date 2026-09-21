@@ -134,13 +134,19 @@ final class BayTopology implements \JsonSerializable
     }
 
     /**
-     * Does a declared topology match a provisioned one?
+     * Does a declared topology match the station's in-service topology?
      *
      * 05-state-machines.md §1.5: "The server compares that declaration, as a set
-     * in both directions, against the topology recorded for the station at
-     * provisioning. [...] The mismatch is symmetric: a bay or a program ordinal
-     * present on one side and absent on the other is a mismatch in either
-     * direction."
+     * in both directions, against the station's **in-service topology**. [...]
+     * The mismatch is symmetric: a bay or a program ordinal present on one side
+     * and absent on the other is a mismatch in either direction."
+     *
+     * The referent is NOT "the topology recorded for the station at
+     * provisioning", which this comment used to quote. Spec 0.26.0 retired that
+     * wording: §1.5 now reads "Provisioning creates that record; it does not
+     * freeze it", and bays the operator has taken out of service are excluded.
+     * Under the old reading one retired bay yields `3018` on every boot for
+     * ever, which by §1.4 stops the whole station selling.
      *
      * A mismatch is `3018 TOPOLOGY_MISMATCH` on a **`Pending`** response, never
      * `Rejected` — `Pending` keeps the command channel open so an operator can

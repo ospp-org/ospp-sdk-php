@@ -110,6 +110,18 @@ final class OsppAction
     /**
      * Actions sent from station to server (MQTT inbound).
      *
+     * Upstream is the Direction column of the MQTT Quick Reference in
+     * `spec/03-messages.md`, compared by `scripts/check-action-registry.php` on
+     * every run, in both directions. Two entries do not come from a plain
+     * `Station -> Server` cell and are here on purpose:
+     *
+     *   - `ConnectionLost` is `Broker -> Server, or Station -> Server`. The
+     *     second alternative is station-originated, so it belongs to this list;
+     *     there is no separate broker accessor to hold it.
+     *   - `DataTransfer` is `Bidirectional` and so appears in BOTH direction
+     *     lists. That overlap is the only one, and it is what makes these two
+     *     lists a cover of the MQTT set rather than a partition of it.
+     *
      * @return list<string>
      */
     public static function stationToServer(): array
@@ -133,6 +145,10 @@ final class OsppAction
 
     /**
      * Actions sent from server to station (MQTT outbound).
+     *
+     * Upstream is the same Direction column, same gate, both directions.
+     * `DataTransfer` is `Bidirectional` in the catalogue and is therefore in
+     * this list as well as in `stationToServer()`.
      *
      * @return list<string>
      */
@@ -160,6 +176,10 @@ final class OsppAction
     /**
      * Actions of type EVENT (fire-and-forget, no response expected).
      *
+     * Upstream is the Type column of the MQTT Quick Reference, which maps onto
+     * this accessor one to one — no projection, nothing left over on either
+     * side. `scripts/check-action-registry.php` compares it on every run.
+     *
      * @return list<string>
      */
     public static function events(): array
@@ -177,6 +197,11 @@ final class OsppAction
 
     /**
      * Actions of type REQUEST (expect a response).
+     *
+     * Upstream is the `REQ/RES` value of the Type column, one to one, compared
+     * by `scripts/check-action-registry.php` in both directions. Together with
+     * `events()` these two lists partition the MQTT set: the catalogue gives
+     * every row exactly one Type.
      *
      * @return list<string>
      */

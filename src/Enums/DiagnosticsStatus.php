@@ -15,7 +15,7 @@ namespace Ospp\Protocol\Enums;
  *   machine does not have: the interval between dispatching GetDiagnostics and
  *   receiving its RESPONSE. Two implementations reached for the same name for it —
  *   `pending` — and then disagreed about everything downstream, because a record of a
- *   REQUEST and a machine of a STATION are not the same object."
+ *   *request* and a machine of a *station* are not the same object."
  *
  * So the six edges below are the RECORD's and they are correct as they stand:
  *
