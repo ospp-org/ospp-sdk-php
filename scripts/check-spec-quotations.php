@@ -482,7 +482,8 @@ function precedingWindow(string $masked, int $start): string
  * function, so a control that fires is evidence about the real path.
  *
  * @param  array<string, string>  $texts
- * @return array{quotes: int, attributed: int, found: list<array<string, mixed>>, missing: list<array<string, mixed>>}
+ * @return array{quotes: int, attributed: int, found: list<array{file: string, line: int, quote: string, cite: string, where: string|null, order: string|null, source: string|null}>,
+ *                missing: list<array{file: string, line: int, quote: string, cite: string, where: string|null, order: string|null, source: string|null}>}
  */
 function examineBlock(
     array $texts,
@@ -823,9 +824,9 @@ foreach (explode("\0", $lsFiles) as $f) {
     }
 }
 
-/** @var list<array<string, mixed>> $found */
+/** @var list<array{file: string, line: int, quote: string, cite: string, where: string|null, order: string|null, source: string|null}> $found */
 $found = [];
-/** @var list<array<string, mixed>> $missing */
+/** @var list<array{file: string, line: int, quote: string, cite: string, where: string|null, order: string|null, source: string|null}> $missing */
 $missing = [];
 $stats = ['files' => count($files), 'blocks' => 0, 'quotes' => 0, 'attributed' => 0, 'verbatim' => 0, 'notfound' => 0];
 
@@ -887,7 +888,7 @@ if ($asJson) {
 
 $byClass = ['cited' => 0, 'normative' => 0, 'elsewhere' => 0];
 foreach ($found as $f) {
-    $cls = is_string($f['source']) ? $f['source'] : 'elsewhere';
+    $cls = $f['source'] ?? 'elsewhere';
     if ($cls === 'cited') {
         $byClass['cited']++;
     } elseif ($cls === 'normative') {
@@ -934,9 +935,9 @@ if ($stats['attributed'] < 40) {
 if ($missing !== []) {
     fwrite(STDERR, sprintf("%d spec-attributed quotation(s) are NOT in spec %s:\n\n", count($missing), $refLabel));
     foreach ($missing as $r) {
-        fwrite(STDERR, sprintf("  %s:%s\n", (string) $r['file'], (string) $r['line']));
-        fwrite(STDERR, sprintf("    cited as  %s\n", (string) $r['cite']));
-        fwrite(STDERR, sprintf("    quoted    %s\n\n", (string) $r['quote']));
+        fwrite(STDERR, sprintf("  %s:%d\n", $r['file'], $r['line']));
+        fwrite(STDERR, sprintf("    cited as  %s\n", $r['cite']));
+        fwrite(STDERR, sprintf("    quoted    %s\n\n", $r['quote']));
     }
     fwrite(STDERR,
         "A quotation in quotation marks next to a section number reads as the spec's own words.\n"
