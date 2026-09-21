@@ -30,7 +30,7 @@ jobs:
           fi
           git clone --quiet --depth 1 --branch "$ref" https://github.com/ospp-org/spec.git /tmp/spec-source
           echo "SPEC_REPO=/tmp/spec-source" >> "$GITHUB_ENV"
-      # THE SKIP FLOOR, and where the local/CI separation lives.
+      # THE SKIP AND INCOMPLETE FLOORS, and where the local/CI separation lives.
       #
       # phpunit.xml sets failOnRisky and failOnWarning and deliberately does NOT set
       # failOnSkipped: a contributor with no spec checkout to hand must still be able
@@ -51,8 +51,24 @@ jobs:
       # It is kept so the naming is requested outright rather than inherited from that
       # implication: a run that goes red without saying which test stopped is the same
       # unreadable green this flag exists to remove.
-      - name: Suite (CI floor — a skipped test is a failure)
-        run: vendor/bin/phpunit --fail-on-skipped --display-skipped
+      #
+      # INCOMPLETE IS THE SAME FLOOR, ON THE SAME LINE, FOR THE SAME REASON. A skipped
+      # test and an incomplete one are one class to this gate — a test that is not
+      # running while the column stays green — and PHPUnit separates them into two
+      # independent flags. There are ZERO incomplete tests today (0 markTestIncomplete
+      # across 86 test files), so this changes no run; that is exactly why it goes in
+      # now rather than when the first one appears, because the version of this that
+      # arrives too late is someone adding markTestIncomplete to park a failure and
+      # nothing noticing. Measured against a planted incomplete in a fresh test: the
+      # line as it stood exited 0 over 1335 tests and printed "OK, but there were
+      # issues!", and this line exits 1 and names the test.
+      #
+      # --display-incomplete carries the same redundancy as --display-skipped, verified
+      # the same way on the same planted test: --fail-on-incomplete alone already prints
+      # the name, the reason and the file:line. Both are written out so the pair stays
+      # symmetric — a flag added to one half and not the other is how the two drift.
+      - name: Suite (CI floor — a skipped or incomplete test is a failure)
+        run: vendor/bin/phpunit --fail-on-skipped --display-skipped --fail-on-incomplete --display-incomplete
       - run: vendor/bin/phpstan analyse --level=9 src/
 
   schemas:
@@ -112,33 +128,28 @@ jobs:
       # with, and the gate enforces it.
       - name: Clone spec at pinned ref
         run: git clone --depth 1 --branch "$SPEC_REF" https://github.com/ospp-org/spec.git /tmp/spec-source
-      # SCOPE — this diffs the WHOLE directory, and that is deliberate.
+      # THE DIFF LIVES IN scripts/check-schemas.sh AND NOWHERE ELSE.
       #
-      # ospp-sdk-php vendors the COMPLETE spec schema set at the pinned ref, not a
-      # subset, so "every vendored file matches the spec" and "the
-      # directory matches the spec" are the same assertion here. The
-      # full-directory form is the stronger one: it also catches a schema
-      # DELETED from the vendored copy, or one ADDED to the spec and never
-      # vendored — which is precisely how provisioning-request.schema.json was
-      # missed at v0.8.0.
+      # It was spelled out here while the script sat with no caller at all — two
+      # statements of one check, either of which could drift from the other with
+      # nothing going red. KNOWN-ISSUES.md carried that as an OPEN entry and named
+      # this as the option that closes it; the SCOPE reasoning it used to carry
+      # (whole directory, never a hand-maintained file list) moved into the script
+      # header, which is where the check now is.
       #
-      # Do NOT narrow this to a hand-maintained file list. A list is a second
-      # place to forget to update, and the failure it produces is silent: the
-      # gate goes green while an unlisted schema drifts. If a genuine reason to
-      # vendor a subset ever arises, derive the list from the vendored tree at
-      # run time (comm -12 of both file sets), never from a literal.
+      # Invoked bare rather than as `bash scripts/…`, like every other gate job in
+      # this file, which is the half of the entry that could not be closed any
+      # other way: the 100755 mode in the index has been ASSERTED since 0.17.0 and
+      # never exercised, because nothing ran the file. It is load-bearing now, so a
+      # wrong mode reds this job the way it redded the two gates that shipped
+      # 100644 in 0.14.0 and died `Permission denied` behind a green column.
+      #
+      # No PHP and no composer install in this job, deliberately: a byte diff of two
+      # directories should not pay for an install, and the script needs neither.
       - name: Byte-identity check (schemas/ ↔ spec/schemas/)
-        run: |
-          set -euo pipefail
-          if diff -rq --exclude=README.md /tmp/spec-source/schemas/ ./schemas/; then
-            echo "OK — vendored schemas/ byte-identical to spec $SPEC_REF"
-          else
-            echo ""
-            echo "DRIFT between vendored schemas/ and spec $SPEC_REF — fail."
-            echo "Fix: copy spec/schemas/* -> schemas/ (cp -r) and re-commit."
-            echo "Bump .spec-ref if vendoring against a newer spec release."
-            exit 1
-          fi
+        env:
+          SPEC_REPO: /tmp/spec-source
+        run: scripts/check-schemas.sh
 
   # The schemas job above proves the vendored SCHEMAS match the spec. The ERROR
   # REGISTRY sat outside it: it is a Markdown table in spec/07-errors.md, not a

@@ -15,6 +15,14 @@ Nothing is published and nothing is tagged here.
 ones NARROW. On a `0.x` version a caret locks the minor, so `^0.39.0` does not reach it and no
 consumer moves without saying so.
 
+**IT IS NOT CUT ON ITS OWN, AND THAT IS A DECISION RATHER THAN A DELAY.** This MINOR rides the next
+real protocol change; it is not tagged for the accessor work alone. Nothing here is urgent — the one
+consumer outside this repository cannot reach it without raising a constraint, and raising that
+constraint costs four changes in csms-server, enumerated under "What this does to existing callers"
+below. Cutting a release whose only effect is to make somebody else's next bump more expensive buys
+nothing; carrying it until there is a protocol reason to tag means that bump pays for itself. The
+sibling `@ospp/protocol` (TypeScript) MINOR is bound the same way, so the pair stays in lockstep.
+
 ### Added
 
 - **`OsppAction::brokerToServer()`** — the catalogue's `Broker → Server, or Station → Server` row,
@@ -46,12 +54,56 @@ consumer moves without saying so.
   shape `scripts/check-inert-assertions.php` refuses.
 
 **What this does to existing callers, measured rather than assumed.** `stationToServer()` and
-`serverToStation()` have **5 call sites each** across the whole repository: one apiece in
-`scripts/check-action-registry.php` and four apiece in `tests/Unit/Actions/OsppActionTest.php`.
-**Zero are in `src/`** — no shipped code in this package reads either list; `isValid()` and
-`isMqtt()` go through `all()` and `mqttActions()`, which are untouched. A caller outside this
-repository that wants everything which can ARRIVE from a station now composes `stationToServer()`,
-`brokerToServer()` and `bidirectional()`.
+`serverToStation()` have **4 call sites each** across the whole repository: one apiece in
+`scripts/check-action-registry.php` (`:548`, `:549`) and **three** apiece in
+`tests/Unit/Actions/OsppActionTest.php` — `stationToServer()` at `:122`, `:164`, `:185` and
+`serverToStation()` at `:130`, `:165`, `:205`.
+
+This read **5 each, one plus four**, until the count was re-derived for the release decision below.
+The four textual hits in `src/Actions/OsppAction.php` are two docblock mentions (`:121`, `:157`) and
+the two declarations (`:134`, `:162`), which is what a hit count that does not separate invocations
+from prose turns into a fifth call site.
+
+**Zero are in `src/`** — that half was and is correct. No shipped code in this package reads either
+list; `isValid()` and `isMqtt()` go through `all()` and `mqttActions()`, which are untouched. A
+caller outside this repository that wants everything which can ARRIVE from a station now composes
+`stationToServer()`, `brokerToServer()` and `bidirectional()`.
+
+**THE ONE CONSUMER OUTSIDE THIS REPOSITORY, AND WHAT IT OWES BEFORE IT CAN TAKE THIS.** csms-server
+requires `ospp/protocol: ^0.39.0`; on a `0.x` version a caret locks the MINOR, so it resolves
+`>=0.39.0 <0.40.0` and cannot reach this release by accident — its lock pins `v0.39.0` at
+`821ba946`. Measured at csms-server `8f167043`: **17 textual occurrences of the two names across 9
+files — 6 Markdown lines, 4 PHP comments, 7 code lines, of which 4 are invocations. All 4 are
+`serverToStation()`; `stationToServer()` has none.** Four things move when that constraint is
+raised, and they are written here rather than left to be rediscovered:
+
+1. **`app/Shared/Protocol/Services/CommandTimeoutScanner.php:233` — shipped behaviour, and the
+   narrowing makes a log line say something false.** `handleUncompensatedTimeout` tests membership
+   of `serverToStation()` to choose between `Log::warning('no compensation arm for this command')`
+   and `Log::error('unrecognised action name — nothing can compensate a command that was never
+   valid')`. Without `DataTransfer` in the list an expired `DataTransfer` takes the ERROR arm, whose
+   sentence is wrong — it is a valid action. Reachable rather than hypothetical:
+   `SendDataTransferAction:66` builds `MessageBuilder::request('DataTransfer')` and registers a
+   pending command, and `DataTransfer` is absent from `config/ospp.php`'s `command_timeouts`, so it
+   falls to `DEFAULT_TIMEOUT = 30` and expires like anything else. It wants the COMPOSED set —
+   `serverToStation()` with `bidirectional()`, plus `brokerToServer()` if the intent is "any valid
+   action" — which is the composition this entry recommends above.
+2. **`tests/Unit/Shared/Protocol/CommandTimeoutArmsAreAnEnumeratedSetTest.php:62` —
+   `expect($registry)->toHaveCount(15)` fails at 14.** A literal denominator, and it is doing its
+   job: it is the assertion that notices.
+3. **The same file's `unarmedByDesign()` still names `DataTransfer`, and the derived unarmed set no
+   longer contains it — 8 against 9.** Not a number to edit. Under the narrowing `DataTransfer` is
+   not a server→station command by that registry's own reckoning, so what the gate MEANS by "every
+   server-to-station command either has a compensation arm or is named as needing none" has to be
+   settled before the row is moved or dropped.
+4. **Four prose sites go stale, none of them load-bearing and all of them read as current.**
+   `CommandTimeoutScanner`'s docblock ("fourteen of the fifteen commands"),
+   `CommandTimeoutArmsAreAnEnumeratedSetTest:12` ("`serverToStation()` is FIFTEEN"),
+   `docs/SPEC-ASKS-SETTLED-AMOUNT.md:36` and `docs/guide-review/EXECUTION-2-RESOLVED.md:88`.
+
+`tests/Unit/Meta/CommandTimeoutJournalTest.php:97` and the CONTROL test at `:96` of the file above
+are the two invocations that do NOT move: all five `COMPENSATING_ACTIONS` and all six armed actions
+survive the narrowing, so both keep answering what they answered.
 
 **Both SDKs answer the Direction question the same way now.** `@ospp/protocol` (TypeScript) already
 held these as four disjoint lists — `STATION_TO_SERVER_ACTIONS` 11, `SERVER_TO_STATION_ACTIONS` 14,
@@ -70,6 +122,43 @@ does. That sibling has an unreleased MINOR of its own, so the two can be release
   planted skip in a guard-free test: the bare command exited **0** over 1334 tests, this command
   exited **1** and named it. `phpunit.xml` is unchanged, so a contributor with no spec checkout
   still gets a usable local run.
+
+- **The same floor for INCOMPLETE tests, on the same line.** `--fail-on-incomplete
+  --display-incomplete` join the flags above. PHPUnit separates skipped and incomplete into two
+  independent flags, and to this gate they are one class: a test that is not running while the
+  column stays green. There are **0 `markTestIncomplete` across 86 test files**, so this changes no
+  run today — which is the reason to add it now rather than when the first one appears, because the
+  version of this that arrives too late is someone parking a failure with `markTestIncomplete` and
+  nothing noticing. Proved the same way as the skip floor, with a planted incomplete in a fresh
+  test: the line as it stood exited **0** over 1335 tests and printed `OK, but there were issues!`;
+  the line with the floor exited **1** and named the test, its reason and its `file:line`.
+  `--display-incomplete` carries the same redundancy `--display-skipped` does — verified on the same
+  planted test, `--fail-on-incomplete` alone already prints all three — and is written out anyway so
+  the pair stays symmetric.
+
+- **The `schemas` job calls `scripts/check-schemas.sh` instead of inlining its diff.** The script
+  had **zero** invocations — not CI, not a composer script — while the job spelled out the same
+  `diff -rq --exclude=README.md` by hand: two statements of one check, either free to drift from the
+  other with nothing going red. `KNOWN-ISSUES.md` carried this as an **OPEN** entry with three
+  options; this is option 1, taken outside a release rather than during one, which was the only
+  condition `0.17.0` attached to it. The SCOPE reasoning (whole directory, never a hand-maintained
+  file list) moved into the script header, where the check now is.
+
+  **It also makes the file mode load-bearing for the first time.** `scripts/check-schemas.sh` has
+  been `100755` in the index since `0.17.0` and that was an ASSERTION, never an exercise, because
+  nothing ran the file — the trap `KNOWN-ISSUES.md` spells out. Invoked bare, like every other gate
+  job here, a wrong mode now reds this job the way it would have redded the two gates that shipped
+  `100644` in `0.14.0` and died `Permission denied` behind a green CI column.
+
+- **`scripts/check-schemas.sh` writes its diff to a `mktemp` file rather than to
+  `/tmp/schema-diff.txt`.** Not in the brief for this package and repaired here anyway, because
+  wiring the script into CI is what would have put the defect on the critical path: the inline steps
+  it replaces used no temporary file at all. Two runs sharing a machine shared that literal path and
+  the second writer won, so the first run printed the second's drift as its own. Measured on the
+  sibling's identical script, which is where it was reported: two spec copies with a different
+  planted byte in each, run concurrently, and the run whose own drift was `provisioning-request`
+  reported `provisioning-response`. The `TMPDIR` reassignment went with it — a second `trap … EXIT`
+  replaces the first rather than adding to it, so one handler now removes both temporaries.
 
 ---
 

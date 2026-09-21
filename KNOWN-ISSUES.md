@@ -24,7 +24,7 @@ that duplicates this package.
 | CLOSED in **0.15.0** | `.github/workflows/tests.yml` | the `config-registry` job now exists. It could not until the default was fixed: the gate was red on it, and a job that lands red is not a gate |
 | CLOSED in **0.17.0** | `Enums\ConfigurationKey::profile()` | answered `Offline` where spec §1.5's new **Profile ID** column says `OfflineBLE`. The gate could not have caught it — it read only §§2--6, which carry no profile column at all |
 | PARTLY CLOSED in **0.26.0** | `scripts/check-schemas.sh` | mode corrected to `100755` in 0.17.0, on a script **nothing invokes**. `GateScriptsAreExecutableTest` now reds on any wrong mode, so the repair is confirmable; the script still has no caller — see below |
-| **OPEN** | `.github/workflows/tests.yml` `schemas` job | it inlines its own copy of `check-schemas.sh`'s diff. Two definitions of one check; closing it is options 1--2 below |
+| CLOSED in **Unreleased** | `.github/workflows/tests.yml` `schemas` job | it inlined its own copy of `check-schemas.sh`'s diff. Option 1 below taken: the job calls the script, the inline steps are gone, and the `100755` mode is load-bearing on every push rather than asserted |
 | CLOSED in **0.28.0** | `Enums\OsppErrorCode::recommendedAction()` | answered **11 of 118** registry codes and `null` for the other 107. §3 has an action for 120 of 120 with no empty cell, so the gap was here. All 118 transcribed; `check-recommended-action` keeps it shut |
 | **OPEN** | `Enums\OsppErrorCode::recommendedAction()` | the new gate catches a *structural* drift and **cannot** catch a semantic one. Measured, not assumed — see below. §1.4 is what makes it uncloseable by a gate |
 | CLOSED in **0.39.0** | `Enums\OsppErrorCode::BINDING_UNCOVERED` | spec `v0.42.0` carries the `3020` row, `.spec-ref` points at it, and all nine gates are green. The spec set severity **`Error`**, not the `Warning` this enum reached by default — corrected here with an explicit arm — see below |
@@ -327,12 +327,20 @@ The same shape exists in `@ospp/sdk-ts`: its `scripts/check-schemas.sh` is `1007
 referenced by no npm script, and is invoked by no CI job, for the same reason — that repo's
 `schemas` job also inlines the diff.
 
-**Options, none taken here:**
+**Options — 1 TAKEN, in the Unreleased minor. The three are kept as written because the
+reasoning for choosing between them is the record, not the choice:**
 
 1. **Wire it and delete the inline steps.** One definition of the check instead of two, and
    the mode becomes load-bearing and therefore proven on every run. This is the option that
    closes the entry; it is not taken in 0.17.0 because rewriting a green CI job during a
    release is how a release breaks a gate.
+
+   **Taken in the Unreleased minor, outside a release rather than during one**, which is the
+   only condition 0.17.0 attached to it. The `schemas` job's last step is now
+   `run: scripts/check-schemas.sh` with `SPEC_REPO` pointed at the clone the two steps above
+   it already make; the SCOPE reasoning (whole directory, never a hand-maintained file list)
+   moved into the script header, which is where the check now lives. The sibling `@ospp/sdk-ts`
+   closed the same entry the same way, so both repositories now have one definition each.
 2. **Delete the script.** The inline steps are the real gate; a mirror that drifts from them
    is worse than no mirror. Costs the `SPEC_REPO=` local-checkout path, which the inline
    steps do not offer and which is genuinely used when working offline against a local spec.
