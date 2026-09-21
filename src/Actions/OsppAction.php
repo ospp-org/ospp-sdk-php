@@ -108,19 +108,26 @@ final class OsppAction
     }
 
     /**
-     * Actions sent from station to server (MQTT inbound).
+     * Actions the catalogue marks `Station -> Server`, and only those.
      *
      * Upstream is the Direction column of the MQTT Quick Reference in
      * `spec/03-messages.md`, compared by `scripts/check-action-registry.php` on
-     * every run, in both directions. Two entries do not come from a plain
-     * `Station -> Server` cell and are here on purpose:
+     * every run, in both directions.
      *
-     *   - `ConnectionLost` is `Broker -> Server, or Station -> Server`. The
-     *     second alternative is station-originated, so it belongs to this list;
-     *     there is no separate broker accessor to hold it.
-     *   - `DataTransfer` is `Bidirectional` and so appears in BOTH direction
-     *     lists. That overlap is the only one, and it is what makes these two
-     *     lists a cover of the MQTT set rather than a partition of it.
+     * **This list narrowed at 0.40.0, from 13 to 11.** It used to absorb the
+     * two rows the catalogue does not mark `Station -> Server` because there was
+     * nowhere else to put them: `ConnectionLost`, which is
+     * `Broker -> Server, or Station -> Server`, and `DataTransfer`, which is
+     * `Bidirectional` and was listed here AND in `serverToStation()`. Those two
+     * rows now have `brokerToServer()` and `bidirectional()`. With four lists
+     * the four Direction literals map one to one and the gate compares them at
+     * full resolution; with two it had to project, and a projection cannot tell
+     * a bidirectional row from a row written down twice.
+     *
+     * A caller that wants everything that can ARRIVE from a station wants this
+     * list, `brokerToServer()` and `bidirectional()` together. The sibling
+     * TypeScript SDK draws the same four lists the same way, so both answer the
+     * Direction question identically.
      *
      * @return list<string>
      */
@@ -130,8 +137,6 @@ final class OsppAction
             self::BOOT_NOTIFICATION,
             self::HEARTBEAT,
             self::STATUS_NOTIFICATION,
-            self::CONNECTION_LOST,
-            self::DATA_TRANSFER,
             self::METER_VALUES,
             self::TRANSACTION_EVENT,
             self::SESSION_ENDED,
@@ -144,11 +149,13 @@ final class OsppAction
     }
 
     /**
-     * Actions sent from server to station (MQTT outbound).
+     * Actions the catalogue marks `Server -> Station`, and only those.
      *
      * Upstream is the same Direction column, same gate, both directions.
-     * `DataTransfer` is `Bidirectional` in the catalogue and is therefore in
-     * this list as well as in `stationToServer()`.
+     *
+     * **This list narrowed at 0.40.0, from 15 to 14**, for the reason
+     * `stationToServer()` records: `DataTransfer` is `Bidirectional` and now
+     * sits in `bidirectional()` rather than in both direction lists.
      *
      * @return list<string>
      */
@@ -169,6 +176,34 @@ final class OsppAction
             self::CERTIFICATE_INSTALL,
             self::TRIGGER_CERTIFICATE_RENEWAL,
             self::TRIGGER_MESSAGE,
+        ];
+    }
+
+    /**
+     * Actions the catalogue marks `Broker → Server, or Station → Server`.
+     *
+     * One row: `ConnectionLost`, published as the broker's Last Will and
+     * Testament when a station's session drops without a DISCONNECT.
+     *
+     * @return list<string>
+     */
+    public static function brokerToServer(): array
+    {
+        return [
+            self::CONNECTION_LOST,
+        ];
+    }
+
+    /**
+     * Actions the catalogue marks `Bidirectional`.
+     *
+     * One row: `DataTransfer`, the action either side may originate.
+     *
+     * @return list<string>
+     */
+    public static function bidirectional(): array
+    {
+        return [
             self::DATA_TRANSFER,
         ];
     }

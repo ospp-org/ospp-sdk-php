@@ -48,30 +48,28 @@ declare(strict_types=1);
  * last week. Both columns are now parsed for all 27 rows and compared in both
  * directions, spec to SDK and SDK to spec.
  *
- * **Two accessors, four Direction literals.** Measured at `v0.42.0`, the
- * Direction column holds exactly four distinct strings across its 27 rows:
- * `Station → Server` (11 rows), `Server → Station` (14), `Bidirectional` (1 —
- * `DataTransfer`) and `Broker → Server, or Station → Server` (1 —
- * `ConnectionLost`). This class exposes two direction accessors and NO
- * bidirectional and NO broker accessor; that was searched for before it was
- * relied on, and the word `bidirectional` occurs in `src/` zero times, only in a
- * test method name. So the four spec literals are PROJECTED onto the two buckets
- * by `DIRECTION_BUCKETS` below, and the projection restates what the accessors
- * already claim rather than bending the spec to fit them: an action the spec
- * calls bidirectional travels both ways and belongs in both lists, and the
- * broker row names `Station → Server` as its own second alternative, which is
- * why `ConnectionLost` sits in the station list. Projected, the catalogue yields
- * 13 and 15; the accessors hold 13 and 15; the per-name comparison below is the
- * only thing that establishes they are the SAME 13 and the same 15.
+ * **Four Direction literals, four accessors, one to one.** Measured at
+ * `v0.42.0`, the Direction column holds exactly four distinct strings across its
+ * 27 rows: `Station → Server` (11 rows), `Server → Station` (14),
+ * `Bidirectional` (1 — `DataTransfer`) and
+ * `Broker → Server, or Station → Server` (1 — `ConnectionLost`). Each maps to
+ * one accessor and no accessor answers to two literals, so the comparison below
+ * runs at the catalogue's own resolution.
  *
- * The projection is lossy in one direction and deliberately so: it cannot tell
- * `Bidirectional` from a row listed twice, and it cannot tell the broker row
- * from a plain station row. A finer comparison needs accessors this class does
- * not have. That is a gap in the SDK, recorded here rather than papered over by
- * inventing an accessor the shipped API does not contain.
+ * It did not, until 0.40.0. This class exposed two direction accessors, holding
+ * 13 and 15 against the catalogue's 11 and 14, because the two rows with nowhere
+ * to go were absorbed: `ConnectionLost` into the station list, `DataTransfer`
+ * into BOTH. `DIRECTION_BUCKETS` reproduced that as a projection, four literals
+ * onto two buckets, and the projection was lossy in the direction that matters —
+ * it could not tell `Bidirectional` from a row written down twice, nor the
+ * broker row from a plain station row, so neither mistake could ever be reported.
+ * `brokerToServer()` and `bidirectional()` are what removed the need for it. The
+ * sibling TypeScript SDK had already made the same four lists disjoint; both
+ * SDKs now answer the Direction question at the same resolution and with the
+ * same membership.
  *
  * **Type maps one to one.** `REQ/RES` (20 rows) is `requests()`, `EVENT` (7) is
- * `events()`. No projection, nothing left over on either side.
+ * `events()`. That was always true; the directions have caught up with it.
  *
  * **An unknown literal is refused, never skipped.** A Direction or Type string
  * the tables below have no case for would otherwise fall out of both sides of
@@ -133,29 +131,34 @@ const COL_DIRECTION = 3;
 const COL_TYPE = 4;
 
 /**
- * The four Direction literals of the catalogue, projected onto the two
- * direction accessors this class exposes. See the header: there is no
- * bidirectional and no broker accessor to project onto.
+ * The four Direction literals of the catalogue, one literal to one accessor.
  *
  * A literal absent from this table is refused, not ignored.
  *
- * @var array<string, list<string>>
+ * The value is a STRING and not a list, and that is the whole repair. While it
+ * was a list, `Bidirectional` could name two buckets and the broker literal
+ * could name the station bucket, and the comparison below could not tell either
+ * one from a plain row. A string cannot express that, so the projection cannot
+ * come back without changing the type.
+ *
+ * @var array<string, string>
  */
 const DIRECTION_BUCKETS = [
-    'Station → Server' => ['stationToServer'],
-    'Server → Station' => ['serverToStation'],
-    'Bidirectional' => ['stationToServer', 'serverToStation'],
-    'Broker → Server, or Station → Server' => ['stationToServer'],
+    'Station → Server' => 'stationToServer',
+    'Server → Station' => 'serverToStation',
+    'Bidirectional' => 'bidirectional',
+    'Broker → Server, or Station → Server' => 'brokerToServer',
 ];
 
 /**
- * The two Type literals, one to one onto the two type accessors.
+ * The two Type literals, one to one onto the two type accessors. These were
+ * never projected; they are spelled the same way as the directions now are.
  *
- * @var array<string, list<string>>
+ * @var array<string, string>
  */
 const TYPE_BUCKETS = [
-    'REQ/RES' => ['requests'],
-    'EVENT' => ['events'],
+    'REQ/RES' => 'requests',
+    'EVENT' => 'events',
 ];
 
 /**
@@ -529,23 +532,23 @@ if ($partition !== $allSorted) {
 $expectedBuckets = [
     'stationToServer' => [],
     'serverToStation' => [],
+    'brokerToServer' => [],
+    'bidirectional' => [],
     'requests' => [],
     'events' => [],
 ];
 
 foreach ($rows as $r) {
-    foreach (DIRECTION_BUCKETS[$r['direction']] as $bucket) {
-        $expectedBuckets[$bucket][] = $r['action'];
-    }
-    foreach (TYPE_BUCKETS[$r['type']] as $bucket) {
-        $expectedBuckets[$bucket][] = $r['action'];
-    }
+    $expectedBuckets[DIRECTION_BUCKETS[$r['direction']]][] = $r['action'];
+    $expectedBuckets[TYPE_BUCKETS[$r['type']]][] = $r['action'];
 }
 
 /** @var array<string, list<string>> $actualBuckets */
 $actualBuckets = [
     'stationToServer' => OsppAction::stationToServer(),
     'serverToStation' => OsppAction::serverToStation(),
+    'brokerToServer' => OsppAction::brokerToServer(),
+    'bidirectional' => OsppAction::bidirectional(),
     'requests' => OsppAction::requests(),
     'events' => OsppAction::events(),
 ];
@@ -554,6 +557,8 @@ $actualBuckets = [
 $bucketColumn = [
     'stationToServer' => 'Direction',
     'serverToStation' => 'Direction',
+    'brokerToServer' => 'Direction',
+    'bidirectional' => 'Direction',
     'requests' => 'Type',
     'events' => 'Type',
 ];
@@ -665,7 +670,7 @@ echo '  Type over '.count($rows).' rows: '.implode(', ', array_map(
     array_keys($typeTally),
     $typeTally
 ))."\n";
-echo '  projected onto the accessors: '.implode(', ', array_map(
+echo '  routed onto the accessors: '.implode(', ', array_map(
     static fn (string $k, array $v): string => $k.'='.count(array_unique($v)),
     array_keys($expectedBuckets),
     $expectedBuckets

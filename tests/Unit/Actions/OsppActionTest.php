@@ -117,44 +117,66 @@ final class OsppActionTest extends TestCase
     // ---------------------------------------------------------------
 
     #[Test]
-    public function stationToServerReturns13Actions(): void
+    public function stationToServerReturns11Actions(): void
     {
         $s2s = OsppAction::stationToServer();
 
-        self::assertCount(13, $s2s);
+        self::assertCount(11, $s2s);
     }
 
     #[Test]
-    public function serverToStationReturns15Actions(): void
+    public function serverToStationReturns14Actions(): void
     {
         $s2st = OsppAction::serverToStation();
 
-        self::assertCount(15, $s2st);
+        self::assertCount(14, $s2st);
     }
 
     #[Test]
-    public function stationToServerAndServerToStationOverlapOnlyOnBidirectional(): void
+    public function brokerToServerHoldsConnectionLostAlone(): void
     {
-        $s2s = OsppAction::stationToServer();
-        $s2st = OsppAction::serverToStation();
-
-        $intersection = array_values(array_intersect($s2s, $s2st));
-
-        self::assertSame([OsppAction::DATA_TRANSFER], $intersection);
+        self::assertSame([OsppAction::CONNECTION_LOST], OsppAction::brokerToServer());
     }
 
     #[Test]
-    public function stationToServerAndServerToStationCoverAllMqtt(): void
+    public function bidirectionalHoldsDataTransferAlone(): void
     {
-        $s2s = OsppAction::stationToServer();
-        $s2st = OsppAction::serverToStation();
-        $combined = array_values(array_unique([...$s2s, ...$s2st]));
+        self::assertSame([OsppAction::DATA_TRANSFER], OsppAction::bidirectional());
+    }
 
-        sort($combined);
+    /**
+     * The four direction lists PARTITION the MQTT set: every action placed
+     * exactly once, nothing left over on either side.
+     *
+     * Until 0.40.0 there were two lists, they overlapped on `DataTransfer`, and
+     * the pair was a cover rather than a partition. The assertion that stood
+     * here named that overlap as the expected answer, so it would have stayed
+     * green through a second one.
+     *
+     * Both sides are derived. `assertSame(11 + 14 + 1 + 1, 27)` would fold to
+     * `27 === 27` before it reached the runner and would pass over an empty
+     * class — the shape `scripts/check-inert-assertions.php` exists to refuse.
+     */
+    #[Test]
+    public function theFourDirectionListsPartitionTheMqttSet(): void
+    {
+        $buckets = [
+            'stationToServer' => OsppAction::stationToServer(),
+            'serverToStation' => OsppAction::serverToStation(),
+            'brokerToServer' => OsppAction::brokerToServer(),
+            'bidirectional' => OsppAction::bidirectional(),
+        ];
+
+        $placed = array_merge(...array_values($buckets));
+        $twice = array_values(array_unique(array_diff_assoc($placed, array_unique($placed))));
+
+        self::assertSame([], $twice, 'an action placed in more than one direction list');
+
+        sort($placed);
         $mqtt = OsppAction::mqttActions();
         sort($mqtt);
 
-        self::assertSame($mqtt, $combined);
+        self::assertSame($mqtt, $placed, 'the four direction lists must place every MQTT action exactly once');
     }
 
     #[Test]
@@ -165,7 +187,6 @@ final class OsppActionTest extends TestCase
         self::assertContains('BootNotification', $s2s);
         self::assertContains('Heartbeat', $s2s);
         self::assertContains('StatusNotification', $s2s);
-        self::assertContains('ConnectionLost', $s2s);
         self::assertContains('MeterValues', $s2s);
         self::assertContains('TransactionEvent', $s2s);
         self::assertContains('SessionEnded', $s2s);
@@ -174,7 +195,8 @@ final class OsppActionTest extends TestCase
         self::assertContains('AuthorizeOfflinePass', $s2s);
         self::assertContains('SecurityEvent', $s2s);
         self::assertContains('SignCertificate', $s2s);
-        self::assertContains('DataTransfer', $s2s);
+        self::assertNotContains('ConnectionLost', $s2s, 'the broker row belongs to brokerToServer()');
+        self::assertNotContains('DataTransfer', $s2s, 'the bidirectional row belongs to bidirectional()');
     }
 
     #[Test]
@@ -196,7 +218,7 @@ final class OsppActionTest extends TestCase
         self::assertContains('CertificateInstall', $s2st);
         self::assertContains('TriggerCertificateRenewal', $s2st);
         self::assertContains('TriggerMessage', $s2st);
-        self::assertContains('DataTransfer', $s2st);
+        self::assertNotContains('DataTransfer', $s2st, 'the bidirectional row belongs to bidirectional()');
     }
 
     // ---------------------------------------------------------------

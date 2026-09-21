@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## Unreleased
+
+Nothing is published and nothing is tagged here.
+
+**The next release is a MINOR.** Two public accessors are ADDED to `OsppAction` and two existing
+ones NARROW. On a `0.x` version a caret locks the minor, so `^0.39.0` does not reach it and no
+consumer moves without saying so.
+
+### Added
+
+- **`OsppAction::brokerToServer()`** — the catalogue's `Broker → Server, or Station → Server` row,
+  `ConnectionLost`, alone.
+- **`OsppAction::bidirectional()`** — the catalogue's `Bidirectional` row, `DataTransfer`, alone.
+
+### Changed
+
+- **`stationToServer()` 13 → 11 and `serverToStation()` 15 → 14: the two direction accessors were a
+  COVER of the MQTT set and are now a PARTITION of it.** The MQTT Quick Reference in
+  `spec/03-messages.md` assigns every one of its 27 rows one of four Direction literals — measured
+  at `v0.42.0`: `Station → Server` 11, `Server → Station` 14,
+  `Broker → Server, or Station → Server` 1, `Bidirectional` 1. This package exposed two accessors,
+  so the two rows with no home were absorbed: `ConnectionLost` into the station list and
+  `DataTransfer` into BOTH, which is where 13 and 15 came from and why the pair overlapped on one
+  action. With the two accessors above, 11 + 14 + 1 + 1 places all 27 exactly once.
+- **`scripts/check-action-registry.php` compares all four Direction literals, one to one.** Its
+  `DIRECTION_BUCKETS` mapped four spec literals onto two buckets and the gate said so in its own
+  header: the projection "cannot tell `Bidirectional` from a row listed twice, and it cannot tell
+  the broker row from a plain station row". Neither mistake could be reported while it stood. The
+  table's values are now strings rather than lists, so a projection cannot return without changing
+  the type. Measured on the way through: with the gate at one-to-one and the accessors still at
+  13/15 it named 5 problems — `ConnectionLost` and `DataTransfer` unrouted in `stationToServer`,
+  `DataTransfer` unrouted in `serverToStation`, and both counts. That is the resolution the
+  projection was costing.
+- **`tests/Unit/Actions/OsppActionTest.php`** replaces the overlap and cover assertions with one
+  partition assertion over the four lists, deriving both sides. `assertSame(11 + 14 + 1 + 1, 27)`
+  folds to `27 === 27` before the runner sees it and would pass over an empty class, which is the
+  shape `scripts/check-inert-assertions.php` refuses.
+
+**What this does to existing callers, measured rather than assumed.** `stationToServer()` and
+`serverToStation()` have **5 call sites each** across the whole repository: one apiece in
+`scripts/check-action-registry.php` and four apiece in `tests/Unit/Actions/OsppActionTest.php`.
+**Zero are in `src/`** — no shipped code in this package reads either list; `isValid()` and
+`isMqtt()` go through `all()` and `mqttActions()`, which are untouched. A caller outside this
+repository that wants everything which can ARRIVE from a station now composes `stationToServer()`,
+`brokerToServer()` and `bidirectional()`.
+
+**Both SDKs answer the Direction question the same way now.** `@ospp/protocol` (TypeScript) already
+held these as four disjoint lists — `STATION_TO_SERVER_ACTIONS` 11, `SERVER_TO_STATION_ACTIONS` 14,
+`BROKER_TO_SERVER_ACTIONS` 1, `BIDIRECTIONAL_ACTIONS` 1 — and its own header recorded that this
+package "draws the same four literals onto only two accessors and has to project". It no longer
+does. That sibling has an unreleased MINOR of its own, so the two can be released as a pair.
+
+### CI
+
+- **`vendor/bin/phpunit --fail-on-skipped --display-skipped` on the CI invocation only.**
+  `phpunit.xml` sets `failOnRisky` and `failOnWarning` and does not set `failOnSkipped`, so a test
+  that stopped running exited 0 and printed `OK, but some tests were skipped!`. Measured: the seven
+  `RecommendedActionGateTest` cases skip with no spec checkout — **7 of 1333** — and
+  `requireSpec()`'s own `getenv('CI')` guard already failed them outright under CI, so the class was
+  closed for those seven and open for every test not carrying that hand-written guard. Proved with a
+  planted skip in a guard-free test: the bare command exited **0** over 1334 tests, this command
+  exited **1** and named it. `phpunit.xml` is unchanged, so a contributor with no spec checkout
+  still gets a usable local run.
+
+---
+
 ## 0.39.0 — 2026-09-18
 
 **MINOR — `3020 BINDING_UNCOVERED` enters the registry, and its severity is now a decision rather

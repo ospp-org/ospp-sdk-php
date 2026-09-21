@@ -15,8 +15,10 @@ jobs:
       # including the case that proves the gate does NOT assert the byte-identity
       # 07-errors.md §1.4 forbids. It needs a real registry to mutate, and without
       # SPEC_REPO it SKIPS. Seven skips read exactly like seven passes in the run
-      # summary, so the test fails outright under CI when this is missing rather
-      # than quietly stopping. Shallow clone at the pinned ref; no network cost
+      # summary, so `RecommendedActionGateTest::requireSpec()` checks getenv('CI')
+      # and fails outright rather than quietly stopping when this step is dropped.
+      # That guard is per-file and hand-written; the general floor is the flag on
+      # the phpunit step below. Shallow clone at the pinned ref; no network cost
       # beyond the one every other gate job here already pays.
       - name: Clone spec at pinned ref (for the gate mutation tests)
         run: |
@@ -28,7 +30,29 @@ jobs:
           fi
           git clone --quiet --depth 1 --branch "$ref" https://github.com/ospp-org/spec.git /tmp/spec-source
           echo "SPEC_REPO=/tmp/spec-source" >> "$GITHUB_ENV"
-      - run: vendor/bin/phpunit
+      # THE SKIP FLOOR, and where the local/CI separation lives.
+      #
+      # phpunit.xml sets failOnRisky and failOnWarning and deliberately does NOT set
+      # failOnSkipped: a contributor with no spec checkout to hand must still be able
+      # to run `vendor/bin/phpunit` and get a usable answer, and for them the seven
+      # RecommendedActionGateTest cases SKIP by design. Under CI a skip is the exact
+      # opposite of acceptable — a test that has stopped running prints the same green
+      # as a test that passed — so the floor is raised on the CI invocation and only
+      # there. One phpunit.xml, one extra flag on the one line CI owns; a second
+      # config file would be a second place to drift.
+      #
+      # The guard inside RecommendedActionGateTest covers those seven twice over. The
+      # flag is what covers the eighth test, the one nobody has written yet: measured
+      # against a planted skip in a guard-free test, the bare command exited 0 over
+      # 1334 tests and this command exited 1 and named it.
+      #
+      # --display-skipped is redundant at PHPUnit 11.5.55 — --fail-on-skipped already
+      # prints the name and the skip reason, verified against the same planted skip.
+      # It is kept so the naming is requested outright rather than inherited from that
+      # implication: a run that goes red without saying which test stopped is the same
+      # unreadable green this flag exists to remove.
+      - name: Suite (CI floor — a skipped test is a failure)
+        run: vendor/bin/phpunit --fail-on-skipped --display-skipped
       - run: vendor/bin/phpstan analyse --level=9 src/
 
   schemas:
