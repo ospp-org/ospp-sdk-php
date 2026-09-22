@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## Unreleased
+## 0.40.0 — 2026-09-22
 
-Nothing is published and nothing is tagged here.
+**The protocol change this release was waiting for arrived.** The `Unreleased` section that stood here said the accessor MINOR "rides the next real protocol change; it is not tagged for the accessor work alone". Spec `v0.43.0` is that change — it repairs both halves of `06-security.md` §5.9, giving the session key a `PlannedShutdown` discard trigger and narrowing the clock prohibition from every time bound to every time bound used as the LIFECYCLE. So the accessor work below is tagged now, with the pin move, and the consumer's constraint raise pays for both at once.
+
+### Spec pin
+
+- **`.spec-ref` `v0.42.0` → `v0.43.0`.** **This package carries none of the changed rules and nothing in `src/` moves for them**, which was measured before the pin was touched rather than assumed: there is no session-key lifecycle enum, no discard-trigger set, no TTL constant for the key and no gated documentation claim about its lifetime. The key appears in this package only as bytes to sign and verify with (`Crypto/MacSigner.php`, `Crypto/Ble/SessionCrypto.php`) and as prose in `Enums/StationState.php`'s `holdsSessionKey()`, which is a fact about the STATION's state machine and is unchanged. This package ships no payload DTOs, so the `ConnectionLost.reason` enum has no type layer here either; it remains the same two members it has had since spec `0.36.0`, in the vendored schema alone.
+- **Vendored artefacts re-synced at the new tag and both byte-identity gates pass against it.** `schemas/` is byte-identical to spec `v0.43.0` across all **86** files, unchanged from `v0.42.0` — the release moved **0 schema bytes**. `tests/Fixtures/test-vectors/` re-vendored: **346** files, of which exactly **1** moved, `README.md`, and only its document-version header. **0 of 345 vectors** changed a byte or a verdict.
 
 **The next release is a MINOR.** Two public accessors are ADDED to `OsppAction` and two existing
 ones NARROW. On a `0.x` version a caret locks the minor, so `^0.39.0` does not reach it and no
