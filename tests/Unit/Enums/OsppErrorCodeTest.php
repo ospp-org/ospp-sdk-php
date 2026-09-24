@@ -34,12 +34,12 @@ final class OsppErrorCodeTest extends TestCase
     public function v0_8_0_provisioning_codes_are_present_with_spec_metadata(): void
     {
         // Attributes quoted from the registry rows, not chosen here:
-        //   2019 PROVISIONING_TOKEN_INVALID   Error false 401  (07-errors.md:302)
-        //   4015 PROVISIONING_KEY_MISMATCH    Error false 409  (07-errors.md:357)
-        //   4016 PROVISIONING_KEY_REUSE       Error true  422  (07-errors.md:358)
-        //   4017 PROVISIONING_REQUEST_INVALID Error true  400  (07-errors.md:359)
-        //   4018 PROVISIONING_TOKEN_CONSUMED  Error true  409  (07-errors.md:362)
-        //   4019 PUBLIC_KEY_INVALID           Error true  400  (07-errors.md:363)
+        //   2019 PROVISIONING_TOKEN_INVALID   Error false 401  (07-errors.md §3.2)
+        //   4015 PROVISIONING_KEY_MISMATCH    Error false 409  (07-errors.md 4.02x)
+        //   4016 PROVISIONING_KEY_REUSE       Error true  422  (07-errors.md 4.02x)
+        //   4017 PROVISIONING_REQUEST_INVALID Error true  400  (07-errors.md 4.02x)
+        //   4018 PROVISIONING_TOKEN_CONSUMED  Error true  409  (07-errors.md 4.02x)
+        //   4019 PUBLIC_KEY_INVALID           Error true  400  (07-errors.md 4.02x)
         //   4020 BAY_COUNT_MISMATCH          Error true  422  (07-errors.md 4.02x)
         $expected = [
             [OsppErrorCode::PROVISIONING_TOKEN_INVALID, 2019, 'auth', false, 401],
@@ -120,8 +120,8 @@ final class OsppErrorCodeTest extends TestCase
     #[Test]
     public function provisioning_reachable_codes_map_to_the_status_the_registry_gives(): void
     {
-        // spec 07-errors.md §2.4 status table (07-errors.md:241 and the rows below
-        // it). A code that falls through to the default 500 silently turns a
+        // spec 07-errors.md §2.4 status table. A code that falls through to the
+        // default 500 silently turns a
         // client error into a server error on the wire, which is what happened to
         // 4010: it is listed under 400 in the table but had no arm.
         $expected = [
@@ -288,7 +288,7 @@ final class OsppErrorCodeTest extends TestCase
     {
         // spec 07-errors.md §3.2: 2018 SERVER_AUTH_NONCE_MISMATCH — BLE Partial-A
         // ServerSignedAuth anti-replay (signed appNonce != Hello.appNonce).
-        // Severity Critical, recoverable=false (07-errors.md:245), auth category.
+        // Severity Critical, recoverable=false, auth category.
         self::assertSame(2018, OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->value);
         self::assertSame('SERVER_AUTH_NONCE_MISMATCH', OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->errorText());
         self::assertSame(Severity::CRITICAL, OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->severity());
@@ -708,7 +708,8 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::WEBHOOK_SIGNATURE_INVALID,
             OsppErrorCode::PUMP_SYSTEM,
             // 5004 moved here from the recoverable list. The spec made it
-            // recoverable=false in v0.8.0 (07-errors.md:396) as a safety fix —
+            // recoverable=false in v0.8.0 (07-errors.md §3.5, sub-table 5.0xx
+            // Hardware Errors) as a safety fix —
             // a welded relay or a lost phase persists while measured voltage
             // reads nominal — and this list, being a hand-transcription, kept
             // asserting the value the enum happened to have.

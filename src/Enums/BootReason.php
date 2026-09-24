@@ -52,7 +52,8 @@ enum BootReason: string
      * firmware restarting.
      *
      * A station MUST send this when it re-dials without having restarted, and
-     * MUST NOT send it when the firmware did restart (§5.2 rule 1).
+     * MUST NOT send it when the firmware did restart (boot-notification.md §5.2
+     * rule 1).
      */
     case RECONNECT = 'Reconnect';
 
@@ -60,9 +61,9 @@ enum BootReason: string
      * Does this value name an actual boot?
      *
      * True for seven of the eight. `uptimeSeconds` MUST be consistent with the
-     * answer (§5.2 rule 2): a `Reconnect` carries the uptime the station already
-     * had — it spans the outage — while every other value carries an uptime
-     * measured from the restart it names.
+     * answer (boot-notification.md §5.2 rule 2): a `Reconnect` carries the uptime
+     * the station already had — it spans the outage — while every other value
+     * carries an uptime measured from the restart it names.
      */
     public function namesAnActualBoot(): bool
     {
