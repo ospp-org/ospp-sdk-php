@@ -152,7 +152,8 @@ cross-SDK disagreement rather than opening one — no lockstep needed for this h
 
 The original entry, kept because the shape is the point:
 
-`spec/08-configuration.md:114`:
+The registry row as it read then (`MessageSigningMode` was **withdrawn in spec 0.34.0** and
+no longer has a row to point at):
 
 > | `MessageSigningMode` | string | `"All"` | RW | **Static** | `"All"`, `"None"` | … **Static**, not Dynamic: the
 > mode is bound to the session key, which is issued at boot, so a mid-session change would leave one peer

@@ -399,7 +399,8 @@ enum OsppErrorCode: int
             // cleared — and a welded relay may leave the bay energised after the
             // station believes it cut power. It is a §7.2 Level 3 entry trigger:
             // physical intervention + operator verification + reboot, never
-            // self-clearing. Spec made this false in v0.8.0 (07-errors.md:396);
+            // self-clearing. Spec made this false in v0.8.0 (07-errors.md §3.5,
+            // sub-table 5.0xx Hardware Errors);
             // both SDKs kept saying true until check-error-registry caught it.
             self::ELECTRICAL_SYSTEM,
             self::PAYMENT_HARDWARE,
@@ -689,12 +690,13 @@ enum OsppErrorCode: int
             // body failed schema validation, evaluated first in the §2 precedence chain.
             self::PROVISIONING_REQUEST_INVALID,
             // v0.8.2 FIX: 4010 is listed under 400 in the §2.4 status table
-            // (07-errors.md:268 at `.spec-ref`) and §3.4 states "At the provisioning endpoint:
+            // of 07-errors.md, and its §3.4 states "At the provisioning endpoint:
             // HTTP 400 Bad Request". It had no arm and fell through to the default
             // 500, turning a client error into a server error on the wire.
             self::CSR_INVALID,
-            // v0.8.3: 4019 → 400 — the bare-key counterpart of 4010; 07-errors.md:363
-            // states both answer 400 so the same defect does not vary by packaging.
+            // v0.8.3: 4019 → 400 — the bare-key counterpart of 4010; 07-errors.md
+            // sub-table 4.02x Provisioning Errors states both answer 400 so the same
+            // defect does not vary by packaging.
             self::PUBLIC_KEY_INVALID => 400,
             // v0.5.2: 2014 OFFLINE_PASS_REVOKED aligned cross-SDK to 401 (revoked
             // credential ≡ credential no longer valid; RFC 9110 401 "credential invalid").
@@ -744,7 +746,8 @@ enum OsppErrorCode: int
             // the one the token already bound; not a replay, and no second cert issued.
             self::PROVISIONING_KEY_MISMATCH,
             // v0.8.3: 4018 → 409 — the token authenticated but is already consumed
-            // and this is not a replay of the provision that consumed it (07-errors.md:362).
+            // and this is not a replay of the provision that consumed it
+            // (07-errors.md, sub-table 4.02x Provisioning Errors).
             self::PROVISIONING_TOKEN_CONSUMED,
             // v0.9.0: both reachable over REST and both fell to the default 500.
             // 3002 from POST /sessions/start and 3007 from POST /sessions/{id}/stop
