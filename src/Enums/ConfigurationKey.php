@@ -114,7 +114,13 @@ enum ConfigurationKey: string
             self::METER_VALUES_INTERVAL => 60,
             self::METER_VALUES_SAMPLE_INTERVAL => 10,
             self::MAX_SESSION_DURATION_SECONDS => 900,
-            self::SESSION_TIMEOUT => 120,
+            // spec 0.44.0 08-configuration.md §3 and the §9 summary: `0`, the timer
+            // off. It was 120 until 0.44.0. A station whose only customer input is
+            // the start button -- a self-service wash bay -- has no continuous
+            // user-interaction signal, so a non-zero default stopped every session
+            // still running at the timeout. An operator whose station does have
+            // such a signal enables the timer by setting a non-zero value.
+            self::SESSION_TIMEOUT => 0,
             self::RESERVATION_DEFAULT_TTL => 300,
             self::DEFAULT_CREDITS_PER_SESSION => 100,
             self::AUTHORIZATION_CACHE_ENABLED => true,

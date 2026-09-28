@@ -38,6 +38,11 @@ enum SessionEndReason: string
      * *no MeterValues or user interaction* was an unswept restatement and the
      * registry always governed.
      *
+     * Off unless an operator turns it on. Since spec 0.44.0 `SessionTimeout`
+     * defaults to `0`, and at `0` the station must not stop a session on
+     * inactivity (08-configuration.md §3), so a station left on its defaults never
+     * reports this value. It defaulted to 120 before 0.44.0.
+     *
      * Billed **pro-rata on delivered duration** — the customer received service
      * and then stopped engaging with it, the same shape as `Local`, and settled
      * the same way (04-flows.md §6). It is therefore NOT one of the zero-billing

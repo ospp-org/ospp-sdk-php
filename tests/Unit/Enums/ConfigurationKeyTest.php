@@ -162,6 +162,30 @@ final class ConfigurationKeyTest extends TestCase
         self::assertSame(100, ConfigurationKey::DEFAULT_CREDITS_PER_SESSION->defaultValue());
     }
 
+    /**
+     * spec 0.44.0 08-configuration.md §3 (and the §9 summary row): `SessionTimeout`
+     * defaults to `0`, the timer off. It was `120` until 0.44.0, and no test here
+     * pinned either value -- the only thing that noticed the move was
+     * `scripts/check-config-registry.sh`, which needs a spec checkout. This is the
+     * assertion that fails first, locally and without one.
+     *
+     * `0` is a value, not an absence: the key keeps its type, access and range, and
+     * `0` is what disables the timer, so a null or a missing arm would be a different
+     * claim. `assertSame` against the integer is what tells them apart.
+     */
+    #[Test]
+    public function session_timeout_defaults_to_zero_the_timer_off(): void
+    {
+        $k = ConfigurationKey::SESSION_TIMEOUT;
+
+        self::assertSame('SessionTimeout', $k->value);
+        self::assertSame(0, $k->defaultValue());
+        self::assertSame('integer', $k->type());
+        self::assertSame('RW', $k->access());
+        self::assertTrue($k->isMutable(), 'Chapter 08 marks SessionTimeout Dynamic');
+        self::assertSame('Transaction', $k->profile());
+    }
+
     #[Test]
     public function default_values_for_security_profile(): void
     {
