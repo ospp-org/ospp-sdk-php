@@ -28,7 +28,11 @@ final class V0111CodesTest extends TestCase
     public function test_operator_stopped_is_distinct_from_deauthorized(): void
     {
         // The whole reason it was added: `Deauthorized` carries "Session MUST be
-        // billed at zero", while a forced stop bills the delivered quantity.
+        // billed at zero", while a forced stop reports the delivered quantity. What
+        // the server bills from that depends on the service kind (spec 0.44.0,
+        // 04-flows.md §6, Settlement by Service Kind): pro-rata for a `UserDuration`
+        // session, a full refund for a `FixedDuration` or `MultiUnit` one. Reusing
+        // `Deauthorized` would erase the delivered time the first is billed on.
         self::assertNotSame(
             SessionEndReason::DEAUTHORIZED,
             SessionEndReason::OPERATOR_STOPPED,
