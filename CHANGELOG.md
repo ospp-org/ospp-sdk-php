@@ -7,6 +7,129 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## Unreleased
+
+Nothing is published and nothing is tagged here.
+
+**The next release is `0.41.0`, a MINOR: the SDK pair with `@ospp/protocol` (TypeScript) `0.41.0`,
+carrying spec `v0.44.0`**
+([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
+This section holds the code and the prose. The pin move and the re-vendor are not here yet, because
+the spec tag does not exist yet and `.spec-ref` MUST NOT anticipate an unreleased spec version; they
+are listed under *Still to land before the tag*. Every gate named below was run against the spec's
+release text for `v0.44.0`, not against the pinned `v0.43.0`.
+
+> **BREAKING, for a caller that string-compares `OsppErrorCode::category()`: all six labels change.**
+>
+> `transport`, `auth`, `session`, `payment`, `station`, `server` become `Transport`, `Auth`,
+> `Session`, `Payment`, `Hardware`, `Server`. These are the string values `category()` returns, and
+> nothing else about it moves: every code stays in the band it was in.
+>
+> **An API break and NOT a protocol break.** No category reaches the wire: none of the 86 vendored
+> schema files mentions one, and the Error Object of `07-errors.md` §1.3 has no such member. No byte
+> of any MQTT, BLE or REST payload changes. What moves is a value a caller may have compared against.
+
+### Changed
+
+- **`OsppErrorCode::category()` returns the words of Appendix A's legend, spelled as
+  `@ospp/protocol` spells them.** `07-errors.md` Appendix A carries a *Cat.* column for every code,
+  and its legend spells the letters out: T = Transport, A = Auth, S = Session, P = Payment,
+  H = Hardware/Software, X = Server. The TypeScript SDK has returned `Transport`, `Auth`, `Session`,
+  `Payment`, `Hardware`, `Server` since its first commit; this package returned the lowercase words
+  and `station` for 5xxx, so one code reported two categories across the pair. The derivation does
+  not move — one letter per thousands band, which is also how Appendix A fills its column (measured
+  on the release text: 15 `T`, 20 `A`, 21 `S`, 20 `P`, 35 `H`, 9 `X`, and no band with a second
+  letter) — so the six band sizes hold. `H` covers the whole 5xxx band, the 5100s software codes
+  included, and is `Hardware`. The unreachable `default => 'unknown'` arm is left as it was. A
+  literal `@return` union now names the possible values, so a static analyser can report a caller's
+  comparison against an old label as always false.
+
+  Decided in spec `v0.44.0`'s KNOWN-ISSUES entry on `httpStatus()` and `category()`: no code gains
+  an HTTP status, both accessors stay SDK extensions, and this SDK pair settles the two
+  disagreements the entry found. This is one of them; `2001` is the other.
+
+- **`2001 STATION_NOT_REGISTERED` stays `422`, which is now the answer in both SDKs.** Nothing moves
+  here: `@ospp/protocol` moves from `401`, which a client reads as an expired credential, while a
+  station answered `2001` holds credentials the broker accepted and lacks only its registration.
+  §2.4 names no status for `2001`, so the value stays an SDK extension that `check-http-status` does
+  not read. The `httpStatus()` docblock called `2001` the one genuine two-sided disagreement as a
+  present fact; it now records it as settled, which leaves the 40 codes on which this class falls
+  through to `default => 500` while `sdk-ts` names a status. Re-derived on 2026-09-28 against the
+  `@ospp/protocol` 0.41.0 release branch, both registries dumped: 120 codes each, statuses agree
+  on 80 and differ on 40, every one of the 40 this class declining to answer, none two-sided; and
+  `category()` agrees on 120 of 120.
+
+- **`ConfigurationKey::SESSION_TIMEOUT->defaultValue()` is `0`, the timer off.** Spec `v0.44.0`
+  moves the default `120` → `0` in `08-configuration.md` §3 and its §9 summary: a station whose only
+  customer input is the start button has no continuous user-interaction signal, so a non-zero
+  default stops every session still running at the timeout. Range `0`–`600`, type, access and
+  mutability are unchanged. The `config-registry` gate was the only thing that saw the move — red
+  against the release text at the base, `SessionTimeout: default spec='0' sdk='120'` — because no
+  test pinned the default at all.
+
+- **An operator-stopped session settles by service kind — docblocks, no behaviour.** Spec `v0.44.0`
+  refunds an operator-stopped `FixedDuration` or `MultiUnit` session in full; `UserDuration` stays
+  pro-rata on delivered time. `SessionEndReason::OPERATOR_STOPPED` called itself the ONLY member that
+  bills a non-zero amount for a session the station did not run to completion, and the spec drops
+  that sentence with this change. The docblock now quotes the settlement rule from `03-messages.md`
+  §5.4 and notes that a stop the server issues for an operator settles the same way.
+  `INACTIVITY`'s pro-rata sentence is scoped to `UserDuration` as well — a preset kind takes a full
+  charge on that reason, as on `Local` — and it notes that the timer is now off by default.
+  `V0111CodesTest`'s comment said a forced stop bills the delivered quantity; it now says the
+  station reports that quantity and the server settles it by kind. This package carries no
+  settlement logic, so nothing executable moves.
+
+- **Two pieces of prose that stated the old state as current.** `scripts/check-error-registry.php`'s
+  header said a category exists only as section headings — Appendix A carries a letter for every
+  code — and that KNOWN-ISSUES tracked the two SDKs' different answers. Both are corrected, and the
+  header says plainly that the gate does not compare `category()` with the *Cat.* column.
+  `KNOWN-ISSUES.md`'s preamble records that the spec entry is decided.
+
+### Tests
+
+- Every category literal moves, in `OsppErrorCodeTest`, `OsppErrorCodeContractTest`,
+  `ProgramAndTopologyErrorCodeContractTest` and `BindingUncoveredCodeTest`. The two tests named for
+  `station` are renamed for `hardware`.
+- **New: `OsppErrorCodeTest::category_labels_are_the_appendix_a_legend_words`** — one code per band,
+  `5100 SOFTWARE_GENERIC` included, and the label set derived from the enum. A planted `station`
+  fails it.
+- **New: `ConfigurationKeyTest::session_timeout_defaults_to_zero_the_timer_off`** — fails first,
+  locally and without a spec checkout. A planted `120` fails it.
+- Suite **1336 tests, 6820 assertions** (1334 and 6806 at the base), with the CI skip and
+  incomplete floors and `SPEC_REPO` set.
+
+### Still to land before the tag
+
+- **`.spec-ref` `v0.43.0` → `v0.44.0`**, once the spec tag exists.
+- **`schemas/` re-vendored at the tag.** Two files move, and in each only its `description` string
+  carrying the settlement wording: `mqtt/reset-request.schema.json` (`force`) and
+  `mqtt/session-ended-event.schema.json` (`reason`). Every other byte of both, and the other 84
+  schema files, match the release text already. `schemas/README.md` goes with them: its version header
+  still reads `0.41.0`, two pin moves behind, because `check-schemas.sh` excludes `README.md`.
+- **`tests/Fixtures/test-vectors/README.md` re-vendored**, its document-version header alone; no
+  vector changes.
+
+Against the release text, `check-schemas.sh` is red on the two schema files and
+`check-vector-corpus.sh` on that README, and on nothing else.
+
+### What this does to the one consumer outside this repository
+
+`csms-server` requires `ospp/protocol: ^0.40.0`, so it cannot reach this release by accident.
+Measured at `dd1b5ea8`, raising the constraint fails two test files; nothing under `app/` behaves
+differently, and one prose site there goes stale:
+
+1. **`tests/Unit/Shared/Exceptions/OsppErrorCodeTest.php:9`–`43`** — 20 expectations of the old
+   lowercase labels. No code under `app/` calls `category()`.
+2. **`tests/Unit/Modules/DeviceManagement/Config/TheRegistryAgreesWithTheSpecOnAccessMutabilityAndDefaultTest.php`**
+   — `RS_PINNED` (`:58`) holds `SessionTimeout` as `120` against the server's `0` and reads the
+   `120` from this enum, so the disagreement assertion (`:77`) and its CONTROL (`:92`) both fail:
+   the enum now answers the `0` the server already pushes at boot. The divergence closes from this
+   side, and the pin goes with it, along with the `ConfigRegistry.php` prose (`:65`, `:98`) that
+   calls the `0` held on purpose. `scripts/check-config-defaults.php:163` pins the same pair against
+   the spec itself and moves with `csms-server`'s own `.spec-ref`, not with this package.
+
+---
+
 ## 0.40.0 — 2026-09-22
 
 **The protocol change this release was waiting for arrived.** The `Unreleased` section that stood here said the accessor MINOR "rides the next real protocol change; it is not tagged for the accessor work alone". Spec `v0.43.0` is that change — it repairs both halves of `06-security.md` §5.9, giving the session key a `PlannedShutdown` discard trigger and narrowing the clock prohibition from every time bound to every time bound used as the LIFECYCLE. So the accessor work below is tagged now, with the pin move, and the consumer's constraint raise pays for both at once.
