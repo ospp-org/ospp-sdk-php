@@ -61,7 +61,7 @@ final class BindingUncoveredCodeTest extends TestCase
         // An operator re-binds the service to a declared ordinal and the next start
         // succeeds. No firmware, no visit.
         self::assertTrue($c->isRecoverable());
-        self::assertSame('session', $c->category());
+        self::assertSame('Session', $c->category());
     }
 
     #[Test]

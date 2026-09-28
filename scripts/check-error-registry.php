@@ -10,11 +10,20 @@ declare(strict_types=1);
  * per code — `errorText`, `severity`, `recoverable` — plus the code set itself,
  * in both directions.
  *
- * `httpStatus()` and `category()` are deliberately NOT checked. The spec
- * declines to give a code either one (07-errors.md §4.4 is explicit that HTTP
- * status is not a property of a code, and category exists only as section
- * headings), so both are SDK extensions with nothing upstream to compare to.
- * KNOWN-ISSUES tracks the fact that the two SDKs invented different answers.
+ * `httpStatus()` and `category()` are NOT checked here. The spec declines to
+ * give a code an HTTP status (07-errors.md §4.4 is explicit that HTTP status is
+ * not a property of a code), so `httpStatus()` is an SDK extension, and the only
+ * part of it with anything upstream — the codes §2.4 names — is read by
+ * `check-http-status.php`.
+ *
+ * `category()` is in a different position, and this header had it wrong. It said
+ * category exists only as section headings; Appendix A carries a *Cat.* letter
+ * for every code, derived from the thousands band exactly as `category()` derives
+ * it. From 0.41.0 `category()` returns that letter's legend word, spelled as
+ * sdk-ts has always spelled it, and the spec KNOWN-ISSUES.md entry that recorded
+ * the two SDKs answering differently is DECIDED at spec 0.44.0. Comparing
+ * `category()` with the *Cat.* column is not implemented by this gate: the ROW
+ * pattern below reads §3 and deliberately skips Appendix A.
  *
  * ---
  *

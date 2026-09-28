@@ -26,7 +26,7 @@ final class OsppErrorCodeContractTest extends TestCase
     #[Test]
     public function transport_category_has_15_codes(): void
     {
-        $count = $this->countByCategory('transport');
+        $count = $this->countByCategory('Transport');
         self::assertSame(15, $count);
     }
 
@@ -35,7 +35,7 @@ final class OsppErrorCodeContractTest extends TestCase
     {
         // v0.5.2: 14 + 4 (2014/2015/2016/2017 from spec v0.4.2 §3.2) = 18;
         // v0.6.2: + 1 (2018 SERVER_AUTH_NONCE_MISMATCH) = 19.
-        $count = $this->countByCategory('auth');
+        $count = $this->countByCategory('Auth');
         self::assertSame(20, $count);
     }
 
@@ -44,40 +44,40 @@ final class OsppErrorCodeContractTest extends TestCase
     {
         // 3020 BINDING_UNCOVERED moves this band 20 -> 21. It is the only band the
         // 120th code touches: the other five are unchanged and are left alone.
-        $count = $this->countByCategory('session');
+        $count = $this->countByCategory('Session');
         self::assertSame(21, $count);
     }
 
     #[Test]
     public function payment_category_has_20_codes(): void
     {
-        $count = $this->countByCategory('payment');
+        $count = $this->countByCategory('Payment');
         self::assertSame(20, $count);
     }
 
     #[Test]
-    public function station_category_has_35_codes(): void
+    public function hardware_category_has_35_codes(): void
     {
-        $count = $this->countByCategory('station');
+        $count = $this->countByCategory('Hardware');
         self::assertSame(35, $count);
     }
 
     #[Test]
     public function server_category_has_9_codes(): void
     {
-        $count = $this->countByCategory('server');
+        $count = $this->countByCategory('Server');
         self::assertSame(9, $count);
     }
 
     #[Test]
     public function category_counts_sum_to_120(): void
     {
-        $sum = $this->countByCategory('transport')
-            + $this->countByCategory('auth')
-            + $this->countByCategory('session')
-            + $this->countByCategory('payment')
-            + $this->countByCategory('station')
-            + $this->countByCategory('server');
+        $sum = $this->countByCategory('Transport')
+            + $this->countByCategory('Auth')
+            + $this->countByCategory('Session')
+            + $this->countByCategory('Payment')
+            + $this->countByCategory('Hardware')
+            + $this->countByCategory('Server');
 
         self::assertSame(120, $sum);
     }

@@ -236,15 +236,42 @@ enum OsppErrorCode: int
      */
     case COMMAND_PRE_EMPTED = 6008;
 
+    /**
+     * The code's category, spelled as the word Appendix A's legend gives its letter.
+     *
+     * 07-errors.md Appendix A carries a *Cat.* column for every code, and its legend
+     * reads "T = Transport, A = Auth, S = Session, P = Payment, H = Hardware/Software,
+     * X = Server" (07-errors.md, Appendix A). The letter follows the thousands band,
+     * one letter per band, and this method derives it the same way.
+     *
+     * The words are the legend's as `@ospp/protocol` (TypeScript) spells them, so both
+     * SDKs return the same string for every code: `Transport`, `Auth`, `Session`,
+     * `Payment`, `Hardware`, `Server`. `H = Hardware/Software` is one letter for the
+     * whole 5xxx band, the 5000s hardware codes and the 5100s software codes alike,
+     * and it is `Hardware` here as it has always been in sdk-ts.
+     *
+     * Until 0.41.0 this returned `transport`, `auth`, `session`, `payment`, `station`
+     * and `server`: the two SDKs disagreed on the case of every label and on the 5xxx
+     * word besides. A caller that string-compares the result must move with it. The
+     * partition did not move -- every code is in the band it was in -- only the string
+     * naming the band did. Decided at spec 0.44.0 in the spec's KNOWN-ISSUES.md entry
+     * on `httpStatus()` and `category()`, which also corrects that entry's premise:
+     * the per-code category is the specification's own, not an SDK invention.
+     *
+     * `default => 'unknown'` is unreachable, since every case lies in 1xxx to 6xxx. It
+     * is kept as it was, so the method stays total if a band is ever added.
+     *
+     * @return 'Transport'|'Auth'|'Session'|'Payment'|'Hardware'|'Server'|'unknown'
+     */
     public function category(): string
     {
         return match (intdiv($this->value, 1000)) {
-            1 => 'transport',
-            2 => 'auth',
-            3 => 'session',
-            4 => 'payment',
-            5 => 'station',
-            6 => 'server',
+            1 => 'Transport',
+            2 => 'Auth',
+            3 => 'Session',
+            4 => 'Payment',
+            5 => 'Hardware',
+            6 => 'Server',
             default => 'unknown',
         };
     }
@@ -658,17 +685,24 @@ enum OsppErrorCode: int
      * identical code sets, names, severity, recoverable, category partition and vendored
      * schemas; 79 agreements and 41 disagreements. 40 of the 41 are THIS class falling
      * through to `default => 500` while sdk-ts asserts a value — one library declining
-     * to answer, not two libraries disagreeing. Only 2001 (php 422 / ts 401) is a
-     * genuine two-sided disagreement; 2008 was the other and is settled above. Recorded
-     * in the spec's KNOWN-ISSUES.md together with `category()`, which has the same cause.
+     * to answer, not two libraries disagreeing. The 41st was 2001 (php 422 / ts 401),
+     * the one genuine two-sided disagreement; 2008 had been another and is settled
+     * above. The spec's KNOWN-ISSUES.md recorded both accessors in one entry, and spec
+     * 0.44.0 decided it: no code gains a status and both accessors stay SDK
+     * extensions, while the SDK pair 0.41.0 settles the two disagreements the entry
+     * found. 2001 answers 422 in both — sdk-ts moves from 401, which a client reads as
+     * an expired credential, and this arm does not move — and the `category()` labels
+     * align. What remains between the two SDKs here is the 40, each of them this class
+     * declining to answer.
      *
      * AND THE DIVERGENCE IS PERFECTLY CORRELATED WITH THE SPEC'S SILENCE. §2.4's status
      * table names 31 of the 120 codes. Of those 31, the two SDKs agree on all 31, and
      * both already answer each one the way §2.4 does — 0 of 31 disagree on either side.
-     * All 41 disagreements are among the 89 codes the table does not name. So this is a
-     * gap rather than a bug: there was nothing to repair, and nothing that would have
-     * NOTICED if the agreement broke, because `check-error-registry` compares errorText,
-     * severity and recoverable and stops there. `scripts/check-http-status.sh` is the
+     * All 41 disagreements measured then were among the 89 codes the table does not
+     * name, and so are the 40 that remain. So this is a gap rather than a bug: there
+     * was nothing to repair, and nothing that would have NOTICED if the agreement
+     * broke, because `check-error-registry` compares errorText, severity and
+     * recoverable and stops there. `scripts/check-http-status.sh` is the
      * reader for the 31; the other 89 stay free, because pinning them would invent a
      * normative rule the specification declines to state.
      *
@@ -792,6 +826,12 @@ enum OsppErrorCode: int
             // for the spec's words.
             self::OFFLINE_RECEIPT_MISMATCH,
             self::DURATION_INVALID, self::MAX_DURATION_EXCEEDED, self::INVALID_SERVICE,
+            // 2001 -> 422, and from the SDK pair 0.41.0 in both SDKs; sdk-ts answered
+            // 401, which a client reads as an expired credential. The station is
+            // through mTLS holding credentials the broker accepted, and what the server
+            // lacks is its registration, so nothing about the credential is wrong.
+            // Decided with spec 0.44.0, which names no status for 2001 in §2.4: this
+            // stays an SDK extension, and check-http-status.sh does not read it.
             self::STATION_NOT_REGISTERED,
             // v0.8.0: 4016 → 422 — the body is well-formed but two submitted key kinds
             // carry the same key; a defect in the request, visible without stored state.

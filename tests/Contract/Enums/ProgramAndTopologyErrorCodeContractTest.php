@@ -64,8 +64,8 @@ final class ProgramAndTopologyErrorCodeContractTest extends TestCase
     #[Test]
     public function topologyMismatchIsASessionAndBayCodeNotATransportOne(): void
     {
-        self::assertSame('session', OsppErrorCode::TOPOLOGY_MISMATCH->category());
-        self::assertSame('session', OsppErrorCode::PROGRAM_NOT_DECLARED->category());
+        self::assertSame('Session', OsppErrorCode::TOPOLOGY_MISMATCH->category());
+        self::assertSame('Session', OsppErrorCode::PROGRAM_NOT_DECLARED->category());
     }
 
     /**

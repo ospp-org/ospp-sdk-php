@@ -42,13 +42,13 @@ final class OsppErrorCodeTest extends TestCase
         //   4019 PUBLIC_KEY_INVALID           Error true  400  (07-errors.md 4.02x)
         //   4020 BAY_COUNT_MISMATCH          Error true  422  (07-errors.md 4.02x)
         $expected = [
-            [OsppErrorCode::PROVISIONING_TOKEN_INVALID, 2019, 'auth', false, 401],
-            [OsppErrorCode::PROVISIONING_KEY_MISMATCH, 4015, 'payment', false, 409],
-            [OsppErrorCode::PROVISIONING_KEY_REUSE, 4016, 'payment', true, 422],
-            [OsppErrorCode::PROVISIONING_REQUEST_INVALID, 4017, 'payment', true, 400],
-            [OsppErrorCode::PROVISIONING_TOKEN_CONSUMED, 4018, 'payment', true, 409],
-            [OsppErrorCode::PUBLIC_KEY_INVALID, 4019, 'payment', true, 400],
-            [OsppErrorCode::BAY_COUNT_MISMATCH, 4020, 'payment', true, 422],
+            [OsppErrorCode::PROVISIONING_TOKEN_INVALID, 2019, 'Auth', false, 401],
+            [OsppErrorCode::PROVISIONING_KEY_MISMATCH, 4015, 'Payment', false, 409],
+            [OsppErrorCode::PROVISIONING_KEY_REUSE, 4016, 'Payment', true, 422],
+            [OsppErrorCode::PROVISIONING_REQUEST_INVALID, 4017, 'Payment', true, 400],
+            [OsppErrorCode::PROVISIONING_TOKEN_CONSUMED, 4018, 'Payment', true, 409],
+            [OsppErrorCode::PUBLIC_KEY_INVALID, 4019, 'Payment', true, 400],
+            [OsppErrorCode::BAY_COUNT_MISMATCH, 4020, 'Payment', true, 422],
         ];
 
         foreach ($expected as [$case, $value, $category, $recoverable, $status]) {
@@ -232,10 +232,10 @@ final class OsppErrorCodeTest extends TestCase
     #[Test]
     public function v0_5_2_codes_use_auth_category(): void
     {
-        self::assertSame('auth', OsppErrorCode::OFFLINE_PASS_REVOKED->category());
-        self::assertSame('auth', OsppErrorCode::OFFLINE_ORG_MISMATCH->category());
-        self::assertSame('auth', OsppErrorCode::OFFLINE_USER_MISMATCH->category());
-        self::assertSame('auth', OsppErrorCode::OFFLINE_RECEIPT_MISMATCH->category());
+        self::assertSame('Auth', OsppErrorCode::OFFLINE_PASS_REVOKED->category());
+        self::assertSame('Auth', OsppErrorCode::OFFLINE_ORG_MISMATCH->category());
+        self::assertSame('Auth', OsppErrorCode::OFFLINE_USER_MISMATCH->category());
+        self::assertSame('Auth', OsppErrorCode::OFFLINE_RECEIPT_MISMATCH->category());
     }
 
     #[Test]
@@ -288,12 +288,12 @@ final class OsppErrorCodeTest extends TestCase
     {
         // spec 07-errors.md §3.2: 2018 SERVER_AUTH_NONCE_MISMATCH — BLE Partial-A
         // ServerSignedAuth anti-replay (signed appNonce != Hello.appNonce).
-        // Severity Critical, recoverable=false, auth category.
+        // Severity Critical, recoverable=false, Auth category.
         self::assertSame(2018, OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->value);
         self::assertSame('SERVER_AUTH_NONCE_MISMATCH', OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->errorText());
         self::assertSame(Severity::CRITICAL, OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->severity());
         self::assertFalse(OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->isRecoverable());
-        self::assertSame('auth', OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->category());
+        self::assertSame('Auth', OsppErrorCode::SERVER_AUTH_NONCE_MISMATCH->category());
     }
 
     #[Test]
@@ -310,6 +310,40 @@ final class OsppErrorCodeTest extends TestCase
     // =========================================================================
     // category()
     // =========================================================================
+
+    /**
+     * The six labels are Appendix A's legend words as sdk-ts spells them, pinned for
+     * one code per band and for both halves of 5xxx. Until 0.41.0 this SDK answered
+     * `transport`, `auth`, `session`, `payment`, `station` and `server` while sdk-ts
+     * answered the words below, so one code reported two categories across the pair.
+     *
+     * The legend is transcribed here, not read off `category()`: T = Transport,
+     * A = Auth, S = Session, P = Payment, H = Hardware/Software, X = Server
+     * (07-errors.md, Appendix A). H is one letter for the whole 5xxx band, which is
+     * why SOFTWARE_GENERIC answers `Hardware` as well.
+     */
+    #[Test]
+    public function category_labels_are_the_appendix_a_legend_words(): void
+    {
+        self::assertSame('Transport', OsppErrorCode::TRANSPORT_GENERIC->category()); // 1000, T
+        self::assertSame('Auth', OsppErrorCode::AUTH_GENERIC->category());           // 2000, A
+        self::assertSame('Session', OsppErrorCode::SESSION_GENERIC->category());     // 3000, S
+        self::assertSame('Payment', OsppErrorCode::PAYMENT_GENERIC->category());     // 4000, P
+        self::assertSame('Hardware', OsppErrorCode::HARDWARE_GENERIC->category());   // 5000, H
+        self::assertSame('Hardware', OsppErrorCode::SOFTWARE_GENERIC->category());   // 5100, H
+        self::assertSame('Server', OsppErrorCode::SERVER_GENERIC->category());       // 6000, X
+
+        // The whole set, derived from the enum: exactly the six words -- none of the
+        // lowercase labels answered before 0.41.0, and never the `unknown` of the
+        // unreachable default arm.
+        $labels = array_values(array_unique(array_map(
+            static fn (OsppErrorCode $c): string => $c->category(),
+            OsppErrorCode::cases(),
+        )));
+        sort($labels);
+
+        self::assertSame(['Auth', 'Hardware', 'Payment', 'Server', 'Session', 'Transport'], $labels);
+    }
 
     #[Test]
     public function transport_errors_have_transport_category(): void
@@ -333,7 +367,7 @@ final class OsppErrorCodeTest extends TestCase
         ];
 
         foreach ($transportCodes as $code) {
-            self::assertSame('transport', $code->category(), "{$code->name} should be transport");
+            self::assertSame('Transport', $code->category(), "{$code->name} should be Transport");
         }
     }
 
@@ -365,7 +399,7 @@ final class OsppErrorCodeTest extends TestCase
         ];
 
         foreach ($authCodes as $code) {
-            self::assertSame('auth', $code->category(), "{$code->name} should be auth");
+            self::assertSame('Auth', $code->category(), "{$code->name} should be Auth");
         }
     }
 
@@ -393,7 +427,7 @@ final class OsppErrorCodeTest extends TestCase
         ];
 
         foreach ($sessionCodes as $code) {
-            self::assertSame('session', $code->category(), "{$code->name} should be session");
+            self::assertSame('Session', $code->category(), "{$code->name} should be Session");
         }
     }
 
@@ -418,14 +452,14 @@ final class OsppErrorCodeTest extends TestCase
         ];
 
         foreach ($paymentCodes as $code) {
-            self::assertSame('payment', $code->category(), "{$code->name} should be payment");
+            self::assertSame('Payment', $code->category(), "{$code->name} should be Payment");
         }
     }
 
     #[Test]
-    public function station_errors_have_station_category(): void
+    public function hardware_errors_have_hardware_category(): void
     {
-        $stationCodes = [
+        $hardwareCodes = [
             OsppErrorCode::HARDWARE_GENERIC,
             OsppErrorCode::PUMP_SYSTEM,
             OsppErrorCode::FLUID_SYSTEM,
@@ -462,8 +496,8 @@ final class OsppErrorCodeTest extends TestCase
             OsppErrorCode::FIRMWARE_SIGNATURE_INVALID,
         ];
 
-        foreach ($stationCodes as $code) {
-            self::assertSame('station', $code->category(), "{$code->name} should be station");
+        foreach ($hardwareCodes as $code) {
+            self::assertSame('Hardware', $code->category(), "{$code->name} should be Hardware");
         }
     }
 
@@ -482,14 +516,14 @@ final class OsppErrorCodeTest extends TestCase
         ];
 
         foreach ($serverCodes as $code) {
-            self::assertSame('server', $code->category(), "{$code->name} should be server");
+            self::assertSame('Server', $code->category(), "{$code->name} should be Server");
         }
     }
 
     #[Test]
     public function category_covers_all_cases(): void
     {
-        $validCategories = ['transport', 'auth', 'session', 'payment', 'station', 'server'];
+        $validCategories = ['Transport', 'Auth', 'Session', 'Payment', 'Hardware', 'Server'];
 
         foreach (OsppErrorCode::cases() as $code) {
             self::assertContains(
@@ -895,6 +929,9 @@ final class OsppErrorCodeTest extends TestCase
         self::assertSame(422, OsppErrorCode::DURATION_INVALID->httpStatus());
         self::assertSame(422, OsppErrorCode::MAX_DURATION_EXCEEDED->httpStatus());
         self::assertSame(422, OsppErrorCode::INVALID_SERVICE->httpStatus());
+        // 2001 was the one code the two SDKs answered differently (php 422 / ts 401).
+        // Decided with spec 0.44.0: 422 in both from the SDK pair 0.41.0, so this
+        // assertion stays and sdk-ts moves.
         self::assertSame(422, OsppErrorCode::STATION_NOT_REGISTERED->httpStatus());
         self::assertSame(422, OsppErrorCode::INVALID_TIME_WINDOW->httpStatus());
     }
@@ -1032,7 +1069,7 @@ final class OsppErrorCodeTest extends TestCase
     {
         $count = count(array_filter(
             OsppErrorCode::cases(),
-            static fn (OsppErrorCode $c): bool => $c->category() === 'transport',
+            static fn (OsppErrorCode $c): bool => $c->category() === 'Transport',
         ));
         self::assertSame(15, $count);
     }
@@ -1044,7 +1081,7 @@ final class OsppErrorCodeTest extends TestCase
         // v0.6.2: + 1 (2018 SERVER_AUTH_NONCE_MISMATCH) = 19.
         $count = count(array_filter(
             OsppErrorCode::cases(),
-            static fn (OsppErrorCode $c): bool => $c->category() === 'auth',
+            static fn (OsppErrorCode $c): bool => $c->category() === 'Auth',
         ));
         self::assertSame(20, $count);
     }
@@ -1055,7 +1092,7 @@ final class OsppErrorCodeTest extends TestCase
         // 20 -> 21 with 3020 BINDING_UNCOVERED. The other five bands are untouched.
         $count = count(array_filter(
             OsppErrorCode::cases(),
-            static fn (OsppErrorCode $c): bool => $c->category() === 'session',
+            static fn (OsppErrorCode $c): bool => $c->category() === 'Session',
         ));
         self::assertSame(21, $count);
     }
@@ -1065,17 +1102,17 @@ final class OsppErrorCodeTest extends TestCase
     {
         $count = count(array_filter(
             OsppErrorCode::cases(),
-            static fn (OsppErrorCode $c): bool => $c->category() === 'payment',
+            static fn (OsppErrorCode $c): bool => $c->category() === 'Payment',
         ));
         self::assertSame(20, $count);
     }
 
     #[Test]
-    public function station_category_has_thirty_five_codes(): void
+    public function hardware_category_has_thirty_five_codes(): void
     {
         $count = count(array_filter(
             OsppErrorCode::cases(),
-            static fn (OsppErrorCode $c): bool => $c->category() === 'station',
+            static fn (OsppErrorCode $c): bool => $c->category() === 'Hardware',
         ));
         self::assertSame(35, $count);
     }
@@ -1085,7 +1122,7 @@ final class OsppErrorCodeTest extends TestCase
     {
         $count = count(array_filter(
             OsppErrorCode::cases(),
-            static fn (OsppErrorCode $c): bool => $c->category() === 'server',
+            static fn (OsppErrorCode $c): bool => $c->category() === 'Server',
         ));
         self::assertSame(9, $count);
     }

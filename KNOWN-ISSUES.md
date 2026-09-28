@@ -3,8 +3,10 @@
 Divergences between this SDK and the specification, where the SPEC IS UNAMBIGUOUS and
 this package does not follow it. Issues where the *specification itself* is ambiguous,
 silent, or contradictory belong in the spec repository's `KNOWN-ISSUES.md` instead — that
-is where `OsppErrorCode::httpStatus()` and `category()` are already recorded, and this
-file deliberately does not duplicate them.
+is where `OsppErrorCode::httpStatus()` and `category()` are recorded, and this file
+deliberately does not duplicate them. That entry is DECIDED at spec `0.44.0`, and this
+package's half lands in `0.41.0`: `category()` returns Appendix A's legend words, and
+`2001` stays `422` while `sdk-ts` moves to it.
 
 Read before cutting a release. An entry stays until the release that closes it, and then
 says which one did.
