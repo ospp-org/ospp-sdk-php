@@ -7,17 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## Unreleased
+## 0.41.0 — 2026-09-29
 
-Nothing is published and nothing is tagged here.
-
-**The next release is `0.41.0`, a MINOR: the SDK pair with `@ospp/protocol` (TypeScript) `0.41.0`,
-carrying spec `v0.44.0`**
+**MINOR — SDK-pair release with `@ospp/protocol` (TypeScript) `0.41.0` against spec `v0.44.0`**
 ([ADR-001](https://github.com/ospp-org/spec/blob/main/adr/ADR-001-cross-repo-lockstep-versioning.md)).
-This section holds the code and the prose. The pin move and the re-vendor are not here yet, because
-the spec tag does not exist yet and `.spec-ref` MUST NOT anticipate an unreleased spec version; they
-are listed under *Still to land before the tag*. Every gate named below was run against the spec's
-release text for `v0.44.0`, not against the pinned `v0.43.0`.
+The spec release decides three things this package answers: an operator-stopped preset session is
+refunded in full, `SessionTimeout` defaults to `0`, and the two SDKs settle `2001` and the
+`category()` labels. The code and prose below were written ahead of the tag and checked against its
+release text; the pin moved when the tag existed, and every gate named here was re-run against the
+tag itself.
+
+### Spec pin
+
+- **`.spec-ref` `v0.43.0` → `v0.44.0`.** Three of the spec release's changes reach this package —
+  the operator-stopped refund, the `SessionTimeout` default and the decision on `httpStatus()` and
+  `category()` — and *Changed* below is all of them. The others were measured before the pin moved
+  rather than assumed, and none has anything here to change: TriggerMessage and DataTransfer now expire at
+  60 s, and this package carries no per-action MQTT Expiry Interval; `errorText` on
+  DiagnosticsNotification and FirmwareStatusNotification is prose, and nothing here validates an
+  `errorText`; `BruteForceAttempt`'s threshold, window and source are implementation-defined, and
+  `SecurityEventType::BRUTE_FORCE_ATTEMPT` is the wire value alone.
+- **Vendored artefacts re-synced at the tag, and both byte-identity gates pass against it.**
+  `schemas/` is byte-identical to spec `v0.44.0` across all **87** files, the **86** schemas and
+  `README.md`, md5 for md5. **3** moved: `mqtt/reset-request.schema.json` (`force`) and
+  `mqtt/session-ended-event.schema.json` (`reason`), in each only the `description` string carrying
+  the settlement wording, and `schemas/README.md`, whose version header had read `0.41.0` since
+  `0.38.1` because `check-schemas.sh` excludes `README.md` and the last two pin moves left it
+  behind. `tests/Fixtures/test-vectors/` re-vendored: **346** files outside `crypto/`, of which
+  exactly **1** moved, `README.md`, and only its document-version header. **0 of 345 vectors**
+  changed a byte or a verdict. No file mode moved.
 
 > **BREAKING, for a caller that string-compares `OsppErrorCode::category()`: all six labels change.**
 >
@@ -38,7 +56,7 @@ release text for `v0.44.0`, not against the pinned `v0.43.0`.
   `Payment`, `Hardware`, `Server` since its first commit; this package returned the lowercase words
   and `station` for 5xxx, so one code reported two categories across the pair. The derivation does
   not move — one letter per thousands band, which is also how Appendix A fills its column (measured
-  on the release text: 15 `T`, 20 `A`, 21 `S`, 20 `P`, 35 `H`, 9 `X`, and no band with a second
+  at `v0.44.0`: 120 rows, 15 `T`, 20 `A`, 21 `S`, 20 `P`, 35 `H`, 9 `X`, and no band with a second
   letter) — so the six band sizes hold. `H` covers the whole 5xxx band, the 5100s software codes
   included, and is `Hardware`. The unreachable `default => 'unknown'` arm is left as it was. A
   literal `@return` union now names the possible values, so a static analyser can report a caller's
@@ -64,7 +82,7 @@ release text for `v0.44.0`, not against the pinned `v0.43.0`.
   customer input is the start button has no continuous user-interaction signal, so a non-zero
   default stops every session still running at the timeout. Range `0`–`600`, type, access and
   mutability are unchanged. The `config-registry` gate was the only thing that saw the move — red
-  against the release text at the base, `SessionTimeout: default spec='0' sdk='120'` — because no
+  against the `v0.44.0` text at the base, `SessionTimeout: default spec='0' sdk='120'` — because no
   test pinned the default at all.
 
 - **An operator-stopped session settles by service kind — docblocks, no behaviour.** Spec `v0.44.0`
@@ -88,7 +106,7 @@ release text for `v0.44.0`, not against the pinned `v0.43.0`.
 ### Tests
 
 - Every category literal moves, in `OsppErrorCodeTest`, `OsppErrorCodeContractTest`,
-  `ProgramAndTopologyErrorCodeContractTest` and `BindingUncoveredCodeTest`. The two tests named for
+  `ProgramAndTopologyErrorCodeContractTest` and `BindingUncoveredCodeTest`. The three tests named for
   `station` are renamed for `hardware`.
 - **New: `OsppErrorCodeTest::category_labels_are_the_appendix_a_legend_words`** — one code per band,
   `5100 SOFTWARE_GENERIC` included, and the label set derived from the enum. A planted `station`
@@ -98,35 +116,41 @@ release text for `v0.44.0`, not against the pinned `v0.43.0`.
 - Suite **1336 tests, 6820 assertions** (1334 and 6806 at the base), with the CI skip and
   incomplete floors and `SPEC_REPO` set.
 
-### Still to land before the tag
+**All 14 gates green against a clone of the `v0.44.0` tag:** the 12 script gates, `phpstan
+--level=9` on `src/` with no errors, and the suite at `1336 tests, 6820 assertions` with the skip and
+incomplete floors, `CI` and `SPEC_REPO` set. Among the script gates, `config-registry` agrees on all
+28 keys, `error-registry` and `recommended-action` on all 120 codes, and `spec-quotations` finds 83
+of 83 attributed quotations verbatim — 80 at the base, plus the settlement rule and the Appendix A
+legend quoted here, and the `Deauthorized` quotation that now stands beside its citation.
 
-- **`.spec-ref` `v0.43.0` → `v0.44.0`**, once the spec tag exists.
-- **`schemas/` re-vendored at the tag.** Two files move, and in each only its `description` string
-  carrying the settlement wording: `mqtt/reset-request.schema.json` (`force`) and
-  `mqtt/session-ended-event.schema.json` (`reason`). Every other byte of both, and the other 84
-  schema files, match the release text already. `schemas/README.md` goes with them: its version header
-  still reads `0.41.0`, two pin moves behind, because `check-schemas.sh` excludes `README.md`.
-- **`tests/Fixtures/test-vectors/README.md` re-vendored**, its document-version header alone; no
-  vector changes.
+### Also in this release
 
-Against the release text, `check-schemas.sh` is red on the two schema files and
-`check-vector-corpus.sh` on that README, and on nothing else.
+Comment and prose text only, on `main` since `0.40.0` (`3fd7936`). Comments that cited
+`07-errors.md` by line number cite it by section or sub-table instead, or drop the citation where
+the sentence already names one, because a line rots at every spec release with nothing going red.
+Two bare section references in `BootReason.php` gain the file they meant
+(`boot-notification.md §5.2`), and a KNOWN-ISSUES pointer to a configuration row the spec withdrew
+in `0.34.0` is removed rather than re-pointed.
 
 ### What this does to the one consumer outside this repository
 
-`csms-server` requires `ospp/protocol: ^0.40.0`, so it cannot reach this release by accident.
-Measured at `dd1b5ea8`, raising the constraint fails two test files; nothing under `app/` behaves
-differently, and one prose site there goes stale:
+`csms-server` at `dd1b5ea8` requires `ospp/protocol: ^0.40.0`, so it cannot reach this release by
+accident. Measured there and by a rehearsal of the raise, it fails three test files; nothing under
+`app/` behaves differently, and four prose sites there go stale:
 
-1. **`tests/Unit/Shared/Exceptions/OsppErrorCodeTest.php:9`–`43`** — 20 expectations of the old
+1. **`tests/Unit/Shared/Exceptions/OsppErrorCodeTest.php:9`–`44`** — 21 expectations of the old
    lowercase labels. No code under `app/` calls `category()`.
 2. **`tests/Unit/Modules/DeviceManagement/Config/TheRegistryAgreesWithTheSpecOnAccessMutabilityAndDefaultTest.php`**
    — `RS_PINNED` (`:58`) holds `SessionTimeout` as `120` against the server's `0` and reads the
    `120` from this enum, so the disagreement assertion (`:77`) and its CONTROL (`:92`) both fail:
    the enum now answers the `0` the server already pushes at boot. The divergence closes from this
-   side, and the pin goes with it, along with the `ConfigRegistry.php` prose (`:65`, `:98`) that
-   calls the `0` held on purpose. `scripts/check-config-defaults.php:163` pins the same pair against
-   the spec itself and moves with `csms-server`'s own `.spec-ref`, not with this package.
+   side, and the pin goes with it, along with the prose that calls the `0` held on purpose against
+   the spec's `120` — `ConfigRegistry.php` (`:65`, `:98`, `:406`) and `BootNotificationHandler.php`
+   (`:1318`). `scripts/check-config-defaults.php:163` pins the same pair against the spec itself and
+   moves with `csms-server`'s own `.spec-ref`, not with this package.
+3. **`tests/Unit/Shared/Protocol/ErrorCodeRegistryTest.php:71`, `:92`, `:111`** — three
+   `byCategoryRange` expectations of the lowercase labels, which the measurement at `dd1b5ea8` missed
+   and the rehearsal found.
 
 ---
 
