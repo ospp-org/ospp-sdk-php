@@ -729,8 +729,8 @@ enum OsppErrorCode: int
             // 500, turning a client error into a server error on the wire.
             self::CSR_INVALID,
             // v0.8.3: 4019 → 400 — the bare-key counterpart of 4010; 07-errors.md
-            // sub-table 4.02x Provisioning Errors states both answer 400 so the same
-            // defect does not vary by packaging.
+            // sub-table 4.01x Certificate Management Errors states both answer 400 so
+            // the same defect does not vary by packaging.
             self::PUBLIC_KEY_INVALID => 400,
             // v0.5.2: 2014 OFFLINE_PASS_REVOKED aligned cross-SDK to 401 (revoked
             // credential ≡ credential no longer valid; RFC 9110 401 "credential invalid").
@@ -781,7 +781,7 @@ enum OsppErrorCode: int
             self::PROVISIONING_KEY_MISMATCH,
             // v0.8.3: 4018 → 409 — the token authenticated but is already consumed
             // and this is not a replay of the provision that consumed it
-            // (07-errors.md, sub-table 4.02x Provisioning Errors).
+            // (07-errors.md, sub-table 4.01x Certificate Management Errors).
             self::PROVISIONING_TOKEN_CONSUMED,
             // v0.9.0: both reachable over REST and both fell to the default 500.
             // 3002 from POST /sessions/start and 3007 from POST /sessions/{id}/stop

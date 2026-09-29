@@ -35,11 +35,11 @@ final class OsppErrorCodeTest extends TestCase
     {
         // Attributes quoted from the registry rows, not chosen here:
         //   2019 PROVISIONING_TOKEN_INVALID   Error false 401  (07-errors.md §3.2)
-        //   4015 PROVISIONING_KEY_MISMATCH    Error false 409  (07-errors.md 4.02x)
-        //   4016 PROVISIONING_KEY_REUSE       Error true  422  (07-errors.md 4.02x)
-        //   4017 PROVISIONING_REQUEST_INVALID Error true  400  (07-errors.md 4.02x)
-        //   4018 PROVISIONING_TOKEN_CONSUMED  Error true  409  (07-errors.md 4.02x)
-        //   4019 PUBLIC_KEY_INVALID           Error true  400  (07-errors.md 4.02x)
+        //   4015 PROVISIONING_KEY_MISMATCH    Error false 409  (07-errors.md 4.01x)
+        //   4016 PROVISIONING_KEY_REUSE       Error true  422  (07-errors.md 4.01x)
+        //   4017 PROVISIONING_REQUEST_INVALID Error true  400  (07-errors.md 4.01x)
+        //   4018 PROVISIONING_TOKEN_CONSUMED  Error true  409  (07-errors.md 4.01x)
+        //   4019 PUBLIC_KEY_INVALID           Error true  400  (07-errors.md 4.01x)
         //   4020 BAY_COUNT_MISMATCH          Error true  422  (07-errors.md 4.02x)
         $expected = [
             [OsppErrorCode::PROVISIONING_TOKEN_INVALID, 2019, 'Auth', false, 401],
